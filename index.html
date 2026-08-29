@@ -428,6 +428,46 @@
         .dk-info { font-size: .78rem; opacity: .8; }
         .teilen-reihe { display: flex; gap: 8px; margin-top: 14px; }
         .teilen-reihe button { margin-top: 0; }
+
+        .hilfe-knopf {
+            background: transparent !important;
+            color: var(--primary) !important;
+            border: none; font-size: .82rem; font-weight: 600;
+            margin-top: 8px !important; padding: 4px !important;
+            min-height: 0 !important; width: auto !important;
+            text-decoration: underline; cursor: pointer;
+        }
+        #hilfeOverlay {
+            display: none; position: fixed; inset: 0; z-index: 200;
+            background: rgba(0,0,0,.6); align-items: center; justify-content: center;
+            padding: 16px;
+        }
+        .hilfe-fenster {
+            background: var(--card); border-radius: 14px;
+            max-width: 420px; width: 100%; max-height: 88vh;
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        .hilfe-kopf {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 14px 16px; border-bottom: 1px solid var(--border);
+            font-weight: 600;
+        }
+        .hilfe-inhalt { padding: 16px; overflow-y: auto; flex: 1; }
+        .hilfe-bild {
+            width: 100%; max-width: 200px; display: block; margin: 0 auto 14px auto;
+        }
+        .hilfe-text { font-size: .9rem; line-height: 1.5; margin: 0; }
+        .hilfe-fuss {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 10px; padding: 12px 16px; border-top: 1px solid var(--border);
+        }
+        .hilfe-fuss button { width: auto !important; margin: 0 !important; padding: 9px 16px !important; min-height: 0 !important; }
+        .hilfe-punkte { display: flex; gap: 6px; }
+        .hilfe-punkt {
+            width: 7px; height: 7px; border-radius: 50%;
+            background: var(--border); display: block;
+        }
+        .hilfe-punkt.aktiv { background: var(--primary); }
         .klickbar-karte { cursor: pointer; border-radius: 8px; padding: 8px; margin: -8px; }
         .klickbar-karte:hover { background: var(--bg); }
 
@@ -751,6 +791,7 @@
             <label class="upload-label" for="dienstplanBild">📷 Dienstzettel fotografieren oder auswählen</label>
             <input type="file" id="dienstplanBild" accept="image/*" multiple onchange="dateienVerarbeiten(this)">
             <div id="statusText">Ein oder mehrere Fotos auswählen – die KI liest alles automatisch aus.</div>
+            <button class="hilfe-knopf" onclick="hilfeOeffnen('upload')">ℹ️ Wie funktioniert das?</button>
             <button class="btn-secondary" id="btnManuellKorrigieren" style="display:none;" onclick="oeffneCropperManuell()">✂️ Erkennung manuell korrigieren</button>
         </div>
 
@@ -1262,6 +1303,22 @@
         <h2 id="fremdAnsichtTitel">Schichten von …</h2>
         <button class="btn-secondary" onclick="zurueckZuEigenenDaten()">↩️ Zurück zu meinen eigenen Daten</button>
         <p class="auth-hinweis" style="margin-top:12px;">Du siehst gerade fremde Daten. Kalender und Statistik zeigen diese Person. Bearbeiten ist nicht möglich.</p>
+    </div>
+</div>
+
+<!-- Hilfe-Fenster -->
+<div id="hilfeOverlay" onclick="hilfeSchliessen(event)">
+    <div class="hilfe-fenster" onclick="event.stopPropagation()">
+        <div class="hilfe-kopf">
+            <span id="hilfeTitel">Hilfe</span>
+            <button class="icon-btn" onclick="hilfeSchliessen()">✕</button>
+        </div>
+        <div class="hilfe-inhalt" id="hilfeInhalt"></div>
+        <div class="hilfe-fuss">
+            <button class="btn-secondary" id="hilfeZurueck" onclick="hilfeSchritt(-1)">‹ Zurück</button>
+            <span class="hilfe-punkte" id="hilfePunkte"></span>
+            <button id="hilfeWeiter" onclick="hilfeSchritt(1)">Weiter ›</button>
+        </div>
     </div>
 </div>
 
@@ -2259,6 +2316,140 @@
 
 
 
+
+
+    // ============================================================
+    //  HILFE-ANLEITUNGEN (Bildfolge mit gezeichneten Schritten)
+    // ============================================================
+    let hilfeAktuell = null;
+    let hilfeIndex = 0;
+
+    // Kleine Zeichnung eines Handys mit Inhalt
+    function handyBild(inhalt, hoehe) {
+        return `<svg viewBox="0 0 200 ${hoehe || 260}" class="hilfe-bild" xmlns="http://www.w3.org/2000/svg">
+            <rect x="30" y="8" width="140" height="${(hoehe || 260) - 20}" rx="16"
+                  fill="var(--card)" stroke="var(--border)" stroke-width="2"/>
+            <rect x="78" y="14" width="44" height="5" rx="2.5" fill="var(--border)"/>
+            ${inhalt}
+        </svg>`;
+    }
+
+    const HILFEN = {
+        upload: {
+            titel: 'Dienst erfassen',
+            schritte: [
+                {
+                    text: '<b>1. Foto machen oder auswählen</b><br>Tippe auf den grünen Knopf und fotografiere deinen Dienstzettel – oder wähle ein Bild aus der Galerie. Du kannst auch mehrere auf einmal auswählen.',
+                    bild: handyBild(`
+                        <rect x="44" y="40" width="112" height="46" rx="8" fill="var(--upload-bg)"
+                              stroke="#10b981" stroke-width="2" stroke-dasharray="4 3"/>
+                        <rect x="62" y="52" width="76" height="20" rx="10" fill="#10b981"/>
+                        <text x="100" y="66" font-size="10" fill="white" text-anchor="middle">📷 Foto</text>
+                        <circle cx="100" cy="63" r="20" fill="none" stroke="var(--primary)"
+                                stroke-width="2" opacity=".5"/>
+                        <path d="M118 78 l10 14 -6 1 -1 6 z" fill="var(--text)"/>
+                        <rect x="44" y="100" width="112" height="10" rx="4" fill="var(--bg)"/>
+                        <rect x="44" y="118" width="112" height="10" rx="4" fill="var(--bg)"/>
+                        <rect x="44" y="136" width="70" height="10" rx="4" fill="var(--bg)"/>`)
+                },
+                {
+                    text: '<b>2. Die KI liest den Zettel</b><br>Datum, Beginn, Ende, Pausen, Linien und Umläufe werden automatisch erkannt. Das dauert ein paar Sekunden.',
+                    bild: handyBild(`
+                        <rect x="44" y="40" width="112" height="30" rx="8" fill="var(--total-bg)"/>
+                        <text x="100" y="59" font-size="9" fill="var(--primary)" text-anchor="middle">🤖 KI liest...</text>
+                        <rect x="44" y="82" width="52" height="26" rx="5" fill="var(--bg)"/>
+                        <text x="50" y="92" font-size="6" fill="var(--text-soft)">Datum</text>
+                        <text x="50" y="103" font-size="8" fill="var(--text)">28.08.2026</text>
+                        <rect x="104" y="82" width="52" height="26" rx="5" fill="var(--bg)"/>
+                        <text x="110" y="92" font-size="6" fill="var(--text-soft)">Dienst</text>
+                        <text x="110" y="103" font-size="8" fill="var(--text)">B 36</text>
+                        <rect x="44" y="116" width="52" height="26" rx="5" fill="var(--bg)"/>
+                        <text x="50" y="126" font-size="6" fill="var(--text-soft)">Beginn</text>
+                        <text x="50" y="137" font-size="8" fill="var(--text)">15:37</text>
+                        <rect x="104" y="116" width="52" height="26" rx="5" fill="var(--bg)"/>
+                        <text x="110" y="126" font-size="6" fill="var(--text-soft)">Ende</text>
+                        <text x="110" y="137" font-size="8" fill="var(--text)">00:29</text>`)
+                },
+                {
+                    text: '<b>3. Werte prüfen</b><br>Schau kurz drüber, ob alles stimmt. Falls die KI etwas falsch gelesen hat, kannst du jedes Feld von Hand ändern.',
+                    bild: handyBild(`
+                        <rect x="44" y="40" width="112" height="26" rx="5" fill="var(--bg)"
+                              stroke="var(--primary)" stroke-width="2"/>
+                        <text x="50" y="50" font-size="6" fill="var(--text-soft)">Beginn</text>
+                        <text x="50" y="61" font-size="9" fill="var(--text)">15:37</text>
+                        <path d="M138 68 l8 12 -5 1 -1 5 z" fill="var(--text)"/>
+                        <rect x="44" y="74" width="112" height="26" rx="5" fill="var(--bg)"/>
+                        <text x="50" y="84" font-size="6" fill="var(--text-soft)">Unbezahlte Pause</text>
+                        <text x="50" y="95" font-size="9" fill="var(--text)">20:09 – 20:39</text>
+                        <rect x="44" y="110" width="112" height="22" rx="6" fill="var(--primary)"/>
+                        <text x="100" y="124" font-size="9" fill="white" text-anchor="middle">Berechnen</text>`)
+                },
+                {
+                    text: '<b>4. Kontrolle</b><br>Nach dem Berechnen vergleicht die App ihr Ergebnis mit den Werten auf deinem Dienstzettel. Grün heißt: alles stimmt überein.',
+                    bild: handyBild(`
+                        <rect x="44" y="40" width="112" height="14" rx="4" fill="var(--bg)"/>
+                        <text x="50" y="50" font-size="7" fill="var(--text)">Bezahlte Zeit</text>
+                        <text x="150" y="50" font-size="7" fill="var(--text)" text-anchor="end">08:22</text>
+                        <rect x="44" y="58" width="112" height="14" rx="4" fill="var(--bg)"/>
+                        <text x="50" y="68" font-size="7" fill="var(--text)">🌙 Nacht</text>
+                        <text x="150" y="68" font-size="7" fill="var(--text)" text-anchor="end">17,29 €</text>
+                        <rect x="44" y="80" width="112" height="30" rx="6" fill="rgba(22,163,74,.15)"/>
+                        <text x="100" y="93" font-size="7" fill="#16a34a" text-anchor="middle">✓ Stimmt mit dem</text>
+                        <text x="100" y="103" font-size="7" fill="#16a34a" text-anchor="middle">Dienstzettel überein</text>`)
+                },
+                {
+                    text: '<b>5. Speichern</b><br>Mit „Speichern" landet der Dienst in deinem Kalender. Du kannst ihn später jederzeit antippen und nachträglich ändern – etwa wenn du länger gefahren bist.',
+                    bild: handyBild(`
+                        <rect x="44" y="40" width="112" height="22" rx="6" fill="#10b981"/>
+                        <text x="100" y="54" font-size="9" fill="white" text-anchor="middle">💾 Speichern</text>
+                        <g transform="translate(44,74)">
+                            ${[0,1,2,3,4,5,6].map(i => `<rect x="${i*16}" y="0" width="14" height="14" rx="3" fill="var(--bg)"/>`).join('')}
+                            ${[0,1,2,3,4,5,6].map(i => `<rect x="${i*16}" y="18" width="14" height="14" rx="3" fill="${i===3?'#dcfce7':'var(--bg)'}" ${i===3?'stroke="#10b981"':''}/>`).join('')}
+                            ${[0,1,2,3,4,5,6].map(i => `<rect x="${i*16}" y="36" width="14" height="14" rx="3" fill="var(--bg)"/>`).join('')}
+                        </g>
+                        <text x="100" y="146" font-size="7" fill="var(--text-soft)" text-anchor="middle">im Kalender gespeichert</text>`)
+                }
+            ]
+        }
+    };
+
+    function hilfeOeffnen(name) {
+        hilfeAktuell = HILFEN[name];
+        if (!hilfeAktuell) return;
+        hilfeIndex = 0;
+        document.getElementById('hilfeTitel').innerText = hilfeAktuell.titel;
+        document.getElementById('hilfeOverlay').style.display = 'flex';
+        hilfeRendern();
+    }
+
+    function hilfeSchliessen(ereignis) {
+        if (ereignis && ereignis.target !== document.getElementById('hilfeOverlay')) return;
+        document.getElementById('hilfeOverlay').style.display = 'none';
+    }
+
+    function hilfeSchritt(richtung) {
+        const anzahl = hilfeAktuell.schritte.length;
+        if (hilfeIndex + richtung < 0) return;
+        if (hilfeIndex + richtung >= anzahl) { hilfeSchliessen(); return; }
+        hilfeIndex += richtung;
+        hilfeRendern();
+    }
+
+    function hilfeRendern() {
+        const schritt = hilfeAktuell.schritte[hilfeIndex];
+        const anzahl = hilfeAktuell.schritte.length;
+
+        document.getElementById('hilfeInhalt').innerHTML =
+            schritt.bild + `<p class="hilfe-text">${schritt.text}</p>`;
+
+        document.getElementById('hilfePunkte').innerHTML =
+            hilfeAktuell.schritte.map((_, i) =>
+                `<span class="hilfe-punkt ${i === hilfeIndex ? 'aktiv' : ''}"></span>`).join('');
+
+        document.getElementById('hilfeZurueck').style.visibility = hilfeIndex === 0 ? 'hidden' : 'visible';
+        document.getElementById('hilfeWeiter').innerText =
+            hilfeIndex === anzahl - 1 ? 'Fertig' : 'Weiter ›';
+    }
 
     // ============================================================
     //  HILFE-ZUGRIFF (Admin sieht fremde Daten nur nach Freigabe)
