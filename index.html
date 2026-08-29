@@ -468,6 +468,30 @@
             background: var(--border); display: block;
         }
         .hilfe-punkt.aktiv { background: var(--primary); }
+
+        @keyframes h-tippen {
+            0%, 100% { transform: translate(0,0); opacity: 0; }
+            20% { opacity: 1; }
+            45% { transform: translate(-14px,-26px); opacity: 1; }
+            60% { transform: translate(-14px,-22px); }
+            80% { opacity: 1; }
+        }
+        @keyframes h-balken { from { width: 0; } to { width: 104px; } }
+        @keyframes h-auftauchen { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes h-haken { from { stroke-dashoffset: 30; } to { stroke-dashoffset: 0; } }
+        @keyframes h-pulsieren { 0%, 100% { opacity: .4; } 50% { opacity: 1; } }
+
+        .h-tippen { animation: h-tippen 2.2s ease-in-out infinite; }
+        .h-balken { animation: h-balken 1.8s ease-out infinite; }
+        .h-pulsieren { animation: h-pulsieren 2s ease-in-out infinite; }
+        .h-haken { stroke-dasharray: 30; animation: h-haken .6s ease-out .9s both; }
+        .hf { animation: h-auftauchen .5s ease-out both; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .h-tippen, .h-balken, .h-pulsieren, .h-haken, .hf { animation: none; }
+            .h-balken { width: 104px; }
+            .h-haken { stroke-dashoffset: 0; }
+        }
         .klickbar-karte { cursor: pointer; border-radius: 8px; padding: 8px; margin: -8px; }
         .klickbar-karte:hover { background: var(--bg); }
 
@@ -848,7 +872,9 @@
         </div>
 
         <div class="form-group" id="pausenBereich">
-            <label>Unbezahlte Pausen</label>
+            <label>Unbezahlte Pausen
+                <button class="hilfe-knopf" style="margin:0 0 0 6px !important;" onclick="hilfeOeffnen('pausen')">ℹ️ Erklärung</button>
+            </label>
             <div id="pausenListe"></div>
             <button class="btn-secondary" style="margin-top:6px;" onclick="pauseHinzufuegen()">+ Pause hinzufügen</button>
             <div id="pausenSumme" class="auth-hinweis" style="margin-top:6px;"></div>
@@ -1004,6 +1030,7 @@
     <div class="container">
         <h2>Noch ein Schritt: Verdienst einrichten</h2>
         <p class="auth-hinweis">Damit die App deinen Verdienst berechnen kann, wähle deine Entgeltgruppe und Stufe. Das Monatsentgelt wird dann automatisch aus der TV-N-Berlin-Tabelle übernommen.</p>
+        <button class="hilfe-knopf" style="margin-bottom:10px !important;" onclick="hilfeOeffnen('verdienst')">ℹ️ Wo finde ich diese Werte?</button>
 
         <div class="row">
             <div class="form-group">
@@ -1038,6 +1065,7 @@
     <div class="container">
         <h2>Verdienst-Einstellungen</h2>
         <p class="auth-hinweis">Diese Werte stehen auf deiner Verdienstabrechnung. Sie werden für alle Berechnungen genutzt.</p>
+        <button class="hilfe-knopf" style="margin-bottom:10px !important;" onclick="hilfeOeffnen('verdienst')">ℹ️ Wo finde ich diese Werte?</button>
 
         <div class="row">
             <div class="form-group">
@@ -2324,14 +2352,28 @@
     let hilfeAktuell = null;
     let hilfeIndex = 0;
 
-    // Kleine Zeichnung eines Handys mit Inhalt
-    function handyBild(inhalt, hoehe) {
-        return `<svg viewBox="0 0 200 ${hoehe || 260}" class="hilfe-bild" xmlns="http://www.w3.org/2000/svg">
-            <rect x="30" y="8" width="140" height="${(hoehe || 260) - 20}" rx="16"
-                  fill="var(--card)" stroke="var(--border)" stroke-width="2"/>
-            <rect x="78" y="14" width="44" height="5" rx="2.5" fill="var(--border)"/>
+    // Handy-Rahmen für die Anleitungen
+    function handyRahmen(inhalt) {
+        return `<svg viewBox="0 0 200 250" class="hilfe-bild" xmlns="http://www.w3.org/2000/svg">
+            <rect x="24" y="6" width="152" height="238" rx="18"
+                  fill="var(--bg)" stroke="var(--border)" stroke-width="1"/>
+            <rect x="82" y="14" width="36" height="4" rx="2" fill="var(--border)"/>
             ${inhalt}
         </svg>`;
+    }
+
+    // Kalendergitter für die letzte Seite
+    function kalenderGitter() {
+        let g = '';
+        for (let r = 0; r < 3; r++) {
+            for (let c = 0; c < 7; c++) {
+                const aktiv = r === 1 && c === 3;
+                g += `<rect x="${c * 17}" y="${r * 20}" width="15" height="15" rx="3"
+                       fill="${aktiv ? '#dcfce7' : 'var(--card)'}"
+                       ${aktiv ? 'stroke="#10b981" stroke-width="1" class="hf" style="animation-delay:.7s"' : ''}/>`;
+            }
+        }
+        return g;
     }
 
     const HILFEN = {
@@ -2339,75 +2381,236 @@
             titel: 'Dienst erfassen',
             schritte: [
                 {
-                    text: '<b>1. Foto machen oder auswählen</b><br>Tippe auf den grünen Knopf und fotografiere deinen Dienstzettel – oder wähle ein Bild aus der Galerie. Du kannst auch mehrere auf einmal auswählen.',
-                    bild: handyBild(`
-                        <rect x="44" y="40" width="112" height="46" rx="8" fill="var(--upload-bg)"
-                              stroke="#10b981" stroke-width="2" stroke-dasharray="4 3"/>
-                        <rect x="62" y="52" width="76" height="20" rx="10" fill="#10b981"/>
-                        <text x="100" y="66" font-size="10" fill="white" text-anchor="middle">📷 Foto</text>
-                        <circle cx="100" cy="63" r="20" fill="none" stroke="var(--primary)"
-                                stroke-width="2" opacity=".5"/>
-                        <path d="M118 78 l10 14 -6 1 -1 6 z" fill="var(--text)"/>
-                        <rect x="44" y="100" width="112" height="10" rx="4" fill="var(--bg)"/>
-                        <rect x="44" y="118" width="112" height="10" rx="4" fill="var(--bg)"/>
-                        <rect x="44" y="136" width="70" height="10" rx="4" fill="var(--bg)"/>`)
+                    text: '<b>1. Foto auswählen</b><br>Dienstzettel fotografieren oder aus der Galerie wählen. Mehrere auf einmal gehen auch.',
+                    bild: handyRahmen(`
+                        <rect x="40" y="40" width="120" height="52" rx="8" fill="var(--upload-bg)"
+                              stroke="#10b981" stroke-width="1" stroke-dasharray="4 3"/>
+                        <rect x="62" y="55" width="76" height="22" rx="11" fill="#10b981"/>
+                        <text x="100" y="70" font-size="11" fill="#fff" text-anchor="middle">Foto</text>
+                        <circle cx="128" cy="96" r="9" fill="var(--text)" opacity=".8" class="h-tippen"/>
+                        <rect x="40" y="110" width="120" height="9" rx="4" fill="var(--card)"/>
+                        <rect x="40" y="126" width="120" height="9" rx="4" fill="var(--card)"/>
+                        <rect x="40" y="142" width="74" height="9" rx="4" fill="var(--card)"/>`)
                 },
                 {
-                    text: '<b>2. Die KI liest den Zettel</b><br>Datum, Beginn, Ende, Pausen, Linien und Umläufe werden automatisch erkannt. Das dauert ein paar Sekunden.',
-                    bild: handyBild(`
-                        <rect x="44" y="40" width="112" height="30" rx="8" fill="var(--total-bg)"/>
-                        <text x="100" y="59" font-size="9" fill="var(--primary)" text-anchor="middle">🤖 KI liest...</text>
-                        <rect x="44" y="82" width="52" height="26" rx="5" fill="var(--bg)"/>
-                        <text x="50" y="92" font-size="6" fill="var(--text-soft)">Datum</text>
-                        <text x="50" y="103" font-size="8" fill="var(--text)">28.08.2026</text>
-                        <rect x="104" y="82" width="52" height="26" rx="5" fill="var(--bg)"/>
-                        <text x="110" y="92" font-size="6" fill="var(--text-soft)">Dienst</text>
-                        <text x="110" y="103" font-size="8" fill="var(--text)">B 36</text>
-                        <rect x="44" y="116" width="52" height="26" rx="5" fill="var(--bg)"/>
-                        <text x="50" y="126" font-size="6" fill="var(--text-soft)">Beginn</text>
-                        <text x="50" y="137" font-size="8" fill="var(--text)">15:37</text>
-                        <rect x="104" y="116" width="52" height="26" rx="5" fill="var(--bg)"/>
-                        <text x="110" y="126" font-size="6" fill="var(--text-soft)">Ende</text>
-                        <text x="110" y="137" font-size="8" fill="var(--text)">00:29</text>`)
+                    text: '<b>2. Die KI liest den Zettel</b><br>Datum, Zeiten, Pausen, Linien und Umläufe werden automatisch erkannt.',
+                    bild: handyRahmen(`
+                        <rect x="40" y="40" width="120" height="30" rx="8" fill="var(--total-bg)"/>
+                        <text x="100" y="59" font-size="11" fill="var(--primary)" text-anchor="middle">liest aus</text>
+                        <rect x="48" y="76" width="104" height="5" rx="2.5" fill="var(--card)"/>
+                        <rect x="48" y="76" height="5" rx="2.5" fill="var(--primary)" class="h-balken"/>
+                        <g class="hf" style="animation-delay:.5s">
+                            <rect x="40" y="94" width="56" height="30" rx="6" fill="var(--card)"/>
+                            <text x="47" y="106" font-size="10" fill="var(--text-soft)">Datum</text>
+                            <text x="47" y="119" font-size="11" fill="var(--text)">28.08.</text></g>
+                        <g class="hf" style="animation-delay:.9s">
+                            <rect x="104" y="94" width="56" height="30" rx="6" fill="var(--card)"/>
+                            <text x="111" y="106" font-size="10" fill="var(--text-soft)">Dienst</text>
+                            <text x="111" y="119" font-size="11" fill="var(--text)">B 36</text></g>
+                        <g class="hf" style="animation-delay:1.3s">
+                            <rect x="40" y="130" width="56" height="30" rx="6" fill="var(--card)"/>
+                            <text x="47" y="142" font-size="10" fill="var(--text-soft)">Beginn</text>
+                            <text x="47" y="155" font-size="11" fill="var(--text)">15:37</text></g>
+                        <g class="hf" style="animation-delay:1.7s">
+                            <rect x="104" y="130" width="56" height="30" rx="6" fill="var(--card)"/>
+                            <text x="111" y="142" font-size="10" fill="var(--text-soft)">Ende</text>
+                            <text x="111" y="155" font-size="11" fill="var(--text)">00:29</text></g>`)
                 },
                 {
-                    text: '<b>3. Werte prüfen</b><br>Schau kurz drüber, ob alles stimmt. Falls die KI etwas falsch gelesen hat, kannst du jedes Feld von Hand ändern.',
-                    bild: handyBild(`
-                        <rect x="44" y="40" width="112" height="26" rx="5" fill="var(--bg)"
-                              stroke="var(--primary)" stroke-width="2"/>
-                        <text x="50" y="50" font-size="6" fill="var(--text-soft)">Beginn</text>
-                        <text x="50" y="61" font-size="9" fill="var(--text)">15:37</text>
-                        <path d="M138 68 l8 12 -5 1 -1 5 z" fill="var(--text)"/>
-                        <rect x="44" y="74" width="112" height="26" rx="5" fill="var(--bg)"/>
-                        <text x="50" y="84" font-size="6" fill="var(--text-soft)">Unbezahlte Pause</text>
-                        <text x="50" y="95" font-size="9" fill="var(--text)">20:09 – 20:39</text>
-                        <rect x="44" y="110" width="112" height="22" rx="6" fill="var(--primary)"/>
-                        <text x="100" y="124" font-size="9" fill="white" text-anchor="middle">Berechnen</text>`)
+                    text: '<b>3. Werte prüfen</b><br>Kurz drüberschauen. Jedes Feld lässt sich von Hand ändern, falls etwas nicht stimmt.',
+                    bild: handyRahmen(`
+                        <rect x="40" y="44" width="120" height="30" rx="6" fill="var(--card)"
+                              stroke="var(--primary)" stroke-width="1" class="h-pulsieren"/>
+                        <text x="47" y="56" font-size="10" fill="var(--text-soft)">Beginn</text>
+                        <text x="47" y="69" font-size="11" fill="var(--text)">15:37</text>
+                        <rect x="40" y="82" width="120" height="30" rx="6" fill="var(--card)"/>
+                        <text x="47" y="94" font-size="10" fill="var(--text-soft)">Pause</text>
+                        <text x="47" y="107" font-size="11" fill="var(--text)">20:09 – 20:39</text>
+                        <rect x="40" y="122" width="120" height="26" rx="7" fill="var(--primary)"/>
+                        <text x="100" y="139" font-size="11" fill="#fff" text-anchor="middle">Berechnen</text>
+                        <circle cx="140" cy="158" r="9" fill="var(--text)" opacity=".8" class="h-tippen" style="animation-delay:1s"/>`)
                 },
                 {
-                    text: '<b>4. Kontrolle</b><br>Nach dem Berechnen vergleicht die App ihr Ergebnis mit den Werten auf deinem Dienstzettel. Grün heißt: alles stimmt überein.',
-                    bild: handyBild(`
-                        <rect x="44" y="40" width="112" height="14" rx="4" fill="var(--bg)"/>
-                        <text x="50" y="50" font-size="7" fill="var(--text)">Bezahlte Zeit</text>
-                        <text x="150" y="50" font-size="7" fill="var(--text)" text-anchor="end">08:22</text>
-                        <rect x="44" y="58" width="112" height="14" rx="4" fill="var(--bg)"/>
-                        <text x="50" y="68" font-size="7" fill="var(--text)">🌙 Nacht</text>
-                        <text x="150" y="68" font-size="7" fill="var(--text)" text-anchor="end">17,29 €</text>
-                        <rect x="44" y="80" width="112" height="30" rx="6" fill="rgba(22,163,74,.15)"/>
-                        <text x="100" y="93" font-size="7" fill="#16a34a" text-anchor="middle">✓ Stimmt mit dem</text>
-                        <text x="100" y="103" font-size="7" fill="#16a34a" text-anchor="middle">Dienstzettel überein</text>`)
+                    text: '<b>4. Kontrolle</b><br>Die App vergleicht ihr Ergebnis mit den Werten auf deinem Dienstzettel. Grün heißt: passt.',
+                    bild: handyRahmen(`
+                        <rect x="40" y="44" width="120" height="20" rx="5" fill="var(--card)"/>
+                        <text x="47" y="58" font-size="10" fill="var(--text)">Bezahlte Zeit</text>
+                        <text x="153" y="58" font-size="10" fill="var(--text)" text-anchor="end">08:22</text>
+                        <rect x="40" y="70" width="120" height="20" rx="5" fill="var(--card)"/>
+                        <text x="47" y="84" font-size="10" fill="var(--text)">Nacht</text>
+                        <text x="153" y="84" font-size="10" fill="var(--text)" text-anchor="end">17,29 €</text>
+                        <g class="hf" style="animation-delay:.6s">
+                            <rect x="40" y="100" width="120" height="40" rx="8" fill="rgba(22,163,74,.15)"/>
+                            <path d="M62 120 l7 8 14 -16" fill="none" stroke="#16a34a" stroke-width="2.5"
+                                  stroke-linecap="round" stroke-linejoin="round" class="h-haken"/>
+                            <text x="96" y="124" font-size="10" fill="#16a34a">stimmt überein</text></g>`)
                 },
                 {
-                    text: '<b>5. Speichern</b><br>Mit „Speichern" landet der Dienst in deinem Kalender. Du kannst ihn später jederzeit antippen und nachträglich ändern – etwa wenn du länger gefahren bist.',
-                    bild: handyBild(`
-                        <rect x="44" y="40" width="112" height="22" rx="6" fill="#10b981"/>
-                        <text x="100" y="54" font-size="9" fill="white" text-anchor="middle">💾 Speichern</text>
-                        <g transform="translate(44,74)">
-                            ${[0,1,2,3,4,5,6].map(i => `<rect x="${i*16}" y="0" width="14" height="14" rx="3" fill="var(--bg)"/>`).join('')}
-                            ${[0,1,2,3,4,5,6].map(i => `<rect x="${i*16}" y="18" width="14" height="14" rx="3" fill="${i===3?'#dcfce7':'var(--bg)'}" ${i===3?'stroke="#10b981"':''}/>`).join('')}
-                            ${[0,1,2,3,4,5,6].map(i => `<rect x="${i*16}" y="36" width="14" height="14" rx="3" fill="var(--bg)"/>`).join('')}
-                        </g>
-                        <text x="100" y="146" font-size="7" fill="var(--text-soft)" text-anchor="middle">im Kalender gespeichert</text>`)
+                    text: '<b>5. Speichern</b><br>Der Dienst landet im Kalender. Du kannst ihn später antippen und nachträglich ändern.',
+                    bild: handyRahmen(`
+                        <rect x="40" y="44" width="120" height="26" rx="7" fill="#10b981"/>
+                        <text x="100" y="61" font-size="11" fill="#fff" text-anchor="middle">Speichern</text>
+                        <g transform="translate(40,86)">${kalenderGitter()}</g>
+                        <text x="100" y="168" font-size="10" fill="var(--text-soft)" text-anchor="middle">im Kalender</text>`)
+                }
+            ]
+        },
+
+        pausen: {
+            titel: 'Pausenregelung',
+            schritte: [
+                {
+                    text: '<b>Wo steht die Regel?</b><br>Im Kopf deines Dienstzettels findest du das Feld „Pausenregel". Die App liest es beim Scannen automatisch mit aus.',
+                    bild: handyRahmen(`
+                        <rect x="40" y="40" width="120" height="90" rx="6" fill="var(--card)"/>
+                        <text x="47" y="54" font-size="9" fill="var(--text-soft)">Dienstdauer</text>
+                        <text x="47" y="66" font-size="10" fill="var(--text)">08:52</text>
+                        <text x="110" y="54" font-size="9" fill="var(--text-soft)">Bezahlte Zeit</text>
+                        <text x="110" y="66" font-size="10" fill="var(--text)">08:22</text>
+                        <rect x="44" y="74" width="60" height="30" rx="4" fill="var(--total-bg)" class="h-pulsieren"/>
+                        <text x="47" y="86" font-size="9" fill="var(--text-soft)">Pausenregel</text>
+                        <text x="47" y="99" font-size="11" fill="var(--primary)">B30</text>
+                        <text x="110" y="86" font-size="9" fill="var(--text-soft)">Unbez. Pause</text>
+                        <text x="110" y="99" font-size="10" fill="var(--text)">00:30</text>
+                        <text x="100" y="150" font-size="10" fill="var(--text-soft)" text-anchor="middle">Kopfbereich des Zettels</text>`)
+                },
+                {
+                    text: '<b>B30</b><br>Eine Pause, davon sind genau 30 Minuten unbezahlt – und zwar die letzten 30. Der Rest der Pause zählt als bezahlte Zeit.',
+                    bild: handyRahmen(`
+                        <text x="100" y="46" font-size="10" fill="var(--text-soft)" text-anchor="middle">Pause 20:09 – 20:39</text>
+                        <rect x="40" y="56" width="120" height="26" rx="5" fill="var(--card)"/>
+                        <rect x="40" y="56" width="120" height="26" rx="5" fill="rgba(245,158,11,.3)" class="hf" style="animation-delay:.4s"/>
+                        <text x="100" y="73" font-size="10" fill="var(--text)" text-anchor="middle">30 Min. unbezahlt</text>
+                        <text x="100" y="104" font-size="10" fill="var(--text-soft)" text-anchor="middle">Ist die Pause länger,</text>
+                        <text x="100" y="118" font-size="10" fill="var(--text-soft)" text-anchor="middle">zählt der Anfang als</text>
+                        <text x="100" y="132" font-size="10" fill="var(--text-soft)" text-anchor="middle">bezahlte Zeit.</text>
+                        <rect x="40" y="146" width="120" height="22" rx="5" fill="var(--card)"/>
+                        <rect x="40" y="146" width="44" height="22" rx="5" fill="rgba(22,163,74,.25)"/>
+                        <text x="62" y="161" font-size="9" fill="#16a34a" text-anchor="middle">bezahlt</text>
+                        <text x="122" y="161" font-size="9" fill="var(--text-soft)" text-anchor="middle">unbezahlt</text>`)
+                },
+                {
+                    text: '<b>Sechste</b><br>Mehrere Pausen über den Dienst verteilt. Bei jeder trägst du ein, wie viele Minuten davon unbezahlt sind.',
+                    bild: handyRahmen(`
+                        <g class="hf" style="animation-delay:.2s">
+                            <rect x="40" y="44" width="120" height="34" rx="6" fill="var(--card)"/>
+                            <text x="47" y="58" font-size="10" fill="var(--text)">13:45 – 13:51</text>
+                            <text x="153" y="58" font-size="9" fill="var(--text-soft)" text-anchor="end">6 Min.</text>
+                            <text x="47" y="71" font-size="9" fill="var(--text-soft)">davon unbezahlt</text></g>
+                        <g class="hf" style="animation-delay:.6s">
+                            <rect x="40" y="84" width="120" height="34" rx="6" fill="var(--card)"/>
+                            <text x="47" y="98" font-size="10" fill="var(--text)">16:06 – 16:10</text>
+                            <text x="153" y="98" font-size="9" fill="var(--text-soft)" text-anchor="end">4 Min.</text>
+                            <text x="47" y="111" font-size="9" fill="var(--text-soft)">davon unbezahlt</text></g>
+                        <g class="hf" style="animation-delay:1s">
+                            <rect x="40" y="124" width="120" height="34" rx="6" fill="var(--card)"/>
+                            <text x="47" y="138" font-size="10" fill="var(--text)">18:35 – 18:42</text>
+                            <text x="153" y="138" font-size="9" fill="var(--text-soft)" text-anchor="end">7 Min.</text>
+                            <text x="47" y="151" font-size="9" fill="var(--text-soft)">davon unbezahlt</text></g>
+                        <text x="100" y="180" font-size="10" fill="var(--primary)" text-anchor="middle">zusammen 17 Min.</text>`)
+                },
+                {
+                    text: '<b>Reserve</b><br>Bei Reservediensten ist die gesamte Zeit bezahlt. Die App blendet die Pausenliste dann aus.',
+                    bild: handyRahmen(`
+                        <rect x="40" y="50" width="120" height="30" rx="6" fill="var(--card)"/>
+                        <text x="47" y="63" font-size="9" fill="var(--text-soft)">Pausenregel</text>
+                        <text x="47" y="76" font-size="11" fill="var(--text)">Reserve</text>
+                        <g class="hf" style="animation-delay:.5s">
+                            <rect x="40" y="94" width="120" height="46" rx="8" fill="rgba(22,163,74,.15)"/>
+                            <text x="100" y="113" font-size="10" fill="#16a34a" text-anchor="middle">gesamte Zeit</text>
+                            <text x="100" y="128" font-size="10" fill="#16a34a" text-anchor="middle">bezahlt</text></g>
+                        <text x="100" y="164" font-size="10" fill="var(--text-soft)" text-anchor="middle">erkennbar am Typ „Res"</text>`)
+                },
+                {
+                    text: '<b>Durchgearbeitet?</b><br>Musstest du in der Pause fahren, trag die Minuten bei „davon gearbeitet" ein. Sie zählen dann als Mehrarbeit mit Zuschlag.',
+                    bild: handyRahmen(`
+                        <rect x="40" y="44" width="120" height="70" rx="6" fill="var(--card)"
+                              stroke="#f59e0b" stroke-width="1"/>
+                        <text x="47" y="58" font-size="10" fill="var(--text)">20:09 – 20:39</text>
+                        <text x="47" y="74" font-size="9" fill="var(--text-soft)">davon unbezahlt</text>
+                        <text x="153" y="74" font-size="10" fill="var(--text)" text-anchor="end">30</text>
+                        <text x="47" y="92" font-size="9" fill="var(--text-soft)">davon gearbeitet</text>
+                        <rect x="120" y="82" width="33" height="14" rx="3" fill="var(--total-bg)" class="h-pulsieren"/>
+                        <text x="136" y="93" font-size="10" fill="var(--primary)" text-anchor="middle">12</text>
+                        <g class="hf" style="animation-delay:.6s">
+                            <rect x="40" y="126" width="120" height="34" rx="6" fill="rgba(245,158,11,.18)"/>
+                            <text x="100" y="141" font-size="9" fill="#b45309" text-anchor="middle">12 Min. Mehrarbeit</text>
+                            <text x="100" y="154" font-size="9" fill="#b45309" text-anchor="middle">18 Min. unbezahlt</text></g>`)
+                }
+            ]
+        },
+
+        verdienst: {
+            titel: 'Verdienst eintragen',
+            schritte: [
+                {
+                    text: '<b>Wo finde ich die Werte?</b><br>Alle Angaben stehen auf deiner Verdienstabrechnung. Nimm sie am besten zur Hand.',
+                    bild: handyRahmen(`
+                        <rect x="40" y="34" width="120" height="150" rx="6" fill="var(--card)"/>
+                        <text x="100" y="50" font-size="10" fill="var(--text)" text-anchor="middle">Verdienstabrechnung</text>
+                        <line x1="48" y1="58" x2="152" y2="58" stroke="var(--border)" stroke-width="1"/>
+                        ${[0,1,2,3,4,5,6].map(i => `<rect x="48" y="${68 + i*15}" width="${i%3===0?90:104}" height="7" rx="3" fill="var(--bg)"/>`).join('')}
+                        <text x="100" y="200" font-size="10" fill="var(--text-soft)" text-anchor="middle">monatlich per Post</text>`)
+                },
+                {
+                    text: '<b>Entgeltgruppe wählen</b><br>Wähle deine Gruppe und Stufe – das Monatsentgelt wird dann automatisch aus der Tariftabelle übernommen.',
+                    bild: handyRahmen(`
+                        <rect x="40" y="44" width="56" height="30" rx="6" fill="var(--card)"
+                              stroke="var(--primary)" stroke-width="1" class="h-pulsieren"/>
+                        <text x="47" y="56" font-size="9" fill="var(--text-soft)">Gruppe</text>
+                        <text x="47" y="69" font-size="11" fill="var(--text)">EG 5</text>
+                        <rect x="104" y="44" width="56" height="30" rx="6" fill="var(--card)"
+                              stroke="var(--primary)" stroke-width="1" class="h-pulsieren"/>
+                        <text x="111" y="56" font-size="9" fill="var(--text-soft)">Stufe</text>
+                        <text x="111" y="69" font-size="11" fill="var(--text)">5</text>
+                        <g class="hf" style="animation-delay:.7s">
+                            <rect x="40" y="88" width="120" height="40" rx="8" fill="var(--total-bg)"/>
+                            <text x="100" y="104" font-size="9" fill="var(--text-soft)" text-anchor="middle">Monatsentgelt</text>
+                            <text x="100" y="120" font-size="12" fill="var(--primary)" text-anchor="middle">3.365,46 €</text></g>
+                        <text x="100" y="156" font-size="9" fill="var(--text-soft)" text-anchor="middle">aus der TV-N-Tabelle</text>`)
+                },
+                {
+                    text: '<b>Zuschlagsentgelt</b><br>Suche auf der Abrechnung die Zeile „Entgelt stdl. ZZ". Dieser Wert ist die Grundlage für alle Zuschläge – nicht dein Stundenlohn.',
+                    bild: handyRahmen(`
+                        <rect x="36" y="40" width="128" height="112" rx="6" fill="var(--card)"/>
+                        <text x="44" y="54" font-size="9" fill="var(--text-soft)">Entgelt mit Stufe</text>
+                        <text x="156" y="54" font-size="9" fill="var(--text)" text-anchor="end">3.365,46</text>
+                        <text x="44" y="70" font-size="9" fill="var(--text-soft)">Entg.pers.stdl.</text>
+                        <text x="156" y="70" font-size="9" fill="var(--text)" text-anchor="end">20,64</text>
+                        <rect x="40" y="76" width="120" height="18" rx="4" fill="rgba(245,158,11,.25)" class="hf" style="animation-delay:.5s"/>
+                        <text x="44" y="89" font-size="9" fill="#b45309">Entgelt stdl. ZZ</text>
+                        <text x="156" y="89" font-size="10" fill="#b45309" text-anchor="end">19,85</text>
+                        <text x="44" y="108" font-size="9" fill="var(--text-soft)">Entg.Stufe 1 ZZ</text>
+                        <text x="156" y="108" font-size="9" fill="var(--text)" text-anchor="end">19,20</text>
+                        <text x="100" y="176" font-size="10" fill="var(--text-soft)" text-anchor="middle">diese Zeile brauchst du</text>`)
+                },
+                {
+                    text: '<b>Zulagen</b><br>„Unregelm. Dienste" und „Pausch. Dienstklasse" stehen als eigene Zeilen auf der Abrechnung. Sie sind bei jedem anders.',
+                    bild: handyRahmen(`
+                        <rect x="36" y="46" width="128" height="80" rx="6" fill="var(--card)"/>
+                        <text x="44" y="62" font-size="9" fill="var(--text-soft)">Monatsentgelt</text>
+                        <text x="156" y="62" font-size="9" fill="var(--text)" text-anchor="end">3.365,46</text>
+                        <rect x="40" y="70" width="120" height="17" rx="4" fill="rgba(37,99,235,.18)" class="hf" style="animation-delay:.4s"/>
+                        <text x="44" y="82" font-size="9" fill="var(--primary)">unregelm. Dienste</text>
+                        <text x="156" y="82" font-size="9" fill="var(--primary)" text-anchor="end">255,00</text>
+                        <rect x="40" y="92" width="120" height="17" rx="4" fill="rgba(37,99,235,.18)" class="hf" style="animation-delay:.8s"/>
+                        <text x="44" y="104" font-size="9" fill="var(--primary)">Pausch. Dienstkl.</text>
+                        <text x="156" y="104" font-size="9" fill="var(--primary)" text-anchor="end">80,00</text>
+                        <text x="100" y="152" font-size="10" fill="var(--text-soft)" text-anchor="middle">beide Werte eintragen</text>`)
+                },
+                {
+                    text: '<b>Fertig</b><br>Wochenstunden noch ergänzen, speichern – und die App rechnet ab jetzt mit deinen Werten. Bei einer Tarifrunde einfach anpassen.',
+                    bild: handyRahmen(`
+                        <rect x="40" y="44" width="120" height="24" rx="5" fill="var(--card)"/>
+                        <text x="47" y="60" font-size="10" fill="var(--text-soft)">Wochenstunden</text>
+                        <text x="153" y="60" font-size="10" fill="var(--text)" text-anchor="end">37,5</text>
+                        <rect x="40" y="78" width="120" height="26" rx="7" fill="var(--primary)"/>
+                        <text x="100" y="95" font-size="11" fill="#fff" text-anchor="middle">Speichern</text>
+                        <g class="hf" style="animation-delay:.6s">
+                            <rect x="40" y="118" width="120" height="44" rx="8" fill="rgba(22,163,74,.15)"/>
+                            <path d="M60 138 l7 8 14 -16" fill="none" stroke="#16a34a" stroke-width="2.5"
+                                  stroke-linecap="round" stroke-linejoin="round" class="h-haken"/>
+                            <text x="96" y="143" font-size="10" fill="#16a34a">eingerichtet</text></g>`)
                 }
             ]
         }
@@ -2439,8 +2642,11 @@
         const schritt = hilfeAktuell.schritte[hilfeIndex];
         const anzahl = hilfeAktuell.schritte.length;
 
-        document.getElementById('hilfeInhalt').innerHTML =
-            schritt.bild + `<p class="hilfe-text">${schritt.text}</p>`;
+        const inhalt = document.getElementById('hilfeInhalt');
+        inhalt.innerHTML = '';
+        requestAnimationFrame(() => {
+            inhalt.innerHTML = schritt.bild + `<p class="hilfe-text">${schritt.text}</p>`;
+        });
 
         document.getElementById('hilfePunkte').innerHTML =
             hilfeAktuell.schritte.map((_, i) =>
