@@ -421,7 +421,11 @@
             border-left: 3px solid #FFD100; padding-left: 10px; margin: 2px 0;
         }
         .dk-kopf { font-weight: 700; font-size: .86rem; margin-bottom: 5px; }
-        .dk-zeile { font-size: .84rem; padding: 2px 0; }
+        .dk-zeile { font-size: .84rem; padding: 1px 0; }
+        .dk-punkt { margin-bottom: 8px; }
+        .dk-punkt:last-child { margin-bottom: 0; }
+        .dk-ort { font-size: .82rem; opacity: .92; }
+        .dk-info { font-size: .78rem; opacity: .8; }
         .klickbar-karte { cursor: pointer; border-radius: 8px; padding: 8px; margin: -8px; }
         .klickbar-karte:hover { background: var(--bg); }
 
@@ -584,6 +588,8 @@
         }
         .badge.admin { background: #fef3c7; color: #b45309; }
         .badge.entfernt { background: #fee2e2; color: #b91c1c; }
+        .badge.frei { background: #dcfce7; color: #15803d; }
+        body.dark .badge.frei { background: #14532d; color: #86efac; }
         body.dark .badge.entfernt { background: #450a0a; color: #fca5a5; }
         body.dark .badge.admin { background: #451a03; color: #fcd34d; }
 
@@ -707,6 +713,12 @@
     </div>
 
     <button class="btn-scan" onclick="wechselSeite('erfassen')">📷 Dienst erfassen</button>
+
+    <div class="container" id="hilfeAktivBox" style="display:none; border-left:4px solid #f59e0b;">
+        <h3 style="margin-bottom:6px;">🔓 Hilfe-Zugriff aktiv</h3>
+        <p class="auth-hinweis" style="margin-top:0;" id="hilfeAktivText"></p>
+        <button class="btn-danger" onclick="hilfeBeenden()">Zugriff jetzt beenden</button>
+    </div>
 
     <div class="container" id="tarifErinnerung" style="display:none; border-left:4px solid #f59e0b;">
         <h3 style="margin-bottom:6px;">Verdienst prüfen</h3>
@@ -1066,7 +1078,12 @@
             </div>
         </div>
 
-        <button onclick="einstellungenSpeichern()">Einstellungen speichern</button>
+        <h3 style="margin-top:22px;">Hilfe durch den Admin</h3>
+        <p class="auth-hinweis">Standardmäßig kann niemand deine Daten sehen. Wenn du Hilfe brauchst, kannst du dem Admin für 24 Stunden Zugriff geben. Er kann dann deine Dienste sehen und Einstellungen für dich anpassen.</p>
+        <div id="hilfeStatus" class="auth-hinweis" style="margin-bottom:10px;"></div>
+        <button class="btn-secondary" id="hilfeKnopf" onclick="hilfeUmschalten()">Zugriff für 24 Std. freigeben</button>
+
+        <button onclick="einstellungenSpeichern()" style="margin-top:22px;">Einstellungen speichern</button>
         <div class="meldung" id="einMeldung"></div>
         <button class="btn-secondary" onclick="wechselSeite('erfassen')">↩️ Zurück</button>
     </div>
@@ -1598,7 +1615,9 @@
                     (n.rolle === 'admin' ? '<span class="badge admin">Admin</span>' : '') +
                     (entfernt ? `<span class="badge entfernt">wird in ${restTage} Tagen gelöscht</span>`
                               : (!n.aktiv ? '<span class="badge">nicht aktiv</span>' : '')) +
-                    (istIch ? '<span class="badge">du</span>' : '');
+                    (istIch ? '<span class="badge">du</span>' : '') +
+                    ((n.hilfe_bis && new Date(n.hilfe_bis) > new Date())
+                      ? '<span class="badge frei">Hilfe freigegeben</span>' : '');
 
                 const zweiteZeile = n.betriebshof
                     ? `<br><small style="opacity:.75;">${n.betriebshof}</small>` : '';
@@ -1610,8 +1629,11 @@
                             <button class="btn-save stapel-btn" onclick="nutzerWiederherstellen('${n.id}','${name}')">↩️ Zurück</button>
                             <button class="btn-danger stapel-btn" onclick="nutzerSofortLoeschen('${n.id}','${name}')">🗑️ Sofort</button>`;
                     } else {
+                        const freigabe = n.hilfe_bis && new Date(n.hilfe_bis) > new Date();
                         knoepfe = `
-                            <button class="btn-secondary stapel-btn" onclick="fremdeDatenAnzeigen('${n.id}','${name}')">Daten</button>
+                            ${freigabe
+                              ? `<button class="btn-save stapel-btn" onclick="fremdeDatenAnzeigen('${n.id}','${name}')">🔓 Daten</button>`
+                              : `<button class="btn-secondary stapel-btn" onclick="hilfeAnfragen('${n.id}','${name}')">Hilfe anfragen</button>`}
                             <button class="btn-danger stapel-btn" onclick="nutzerEntfernen('${n.id}','${name}')">Entfernen</button>`;
                     }
                 }
@@ -2234,6 +2256,87 @@
 
 
 
+
+    // ============================================================
+    //  HILFE-ZUGRIFF (Admin sieht fremde Daten nur nach Freigabe)
+    // ============================================================
+    function hilfeRestzeit() {
+        if (!aktuellesProfil || !aktuellesProfil.hilfe_bis) return 0;
+        const rest = new Date(aktuellesProfil.hilfe_bis) - Date.now();
+        return rest > 0 ? rest : 0;
+    }
+
+    function hilfeAnzeigeAktualisieren() {
+        const rest = hilfeRestzeit();
+        const box = document.getElementById('hilfeAktivBox');
+        const status = document.getElementById('hilfeStatus');
+        const knopf = document.getElementById('hilfeKnopf');
+
+        if (rest > 0) {
+            const stunden = Math.floor(rest / 3600000);
+            const minuten = Math.floor((rest % 3600000) / 60000);
+            const text = `Der Admin kann deine Dienste noch ${stunden} Std. ${minuten} Min. lang sehen und Einstellungen für dich anpassen.`;
+            if (box) { box.style.display = 'block'; document.getElementById('hilfeAktivText').innerText = text; }
+            if (status) status.innerText = '🔓 ' + text;
+            if (knopf) { knopf.innerText = 'Zugriff jetzt beenden'; knopf.className = 'btn-danger'; }
+        } else {
+            if (box) box.style.display = 'none';
+            if (status) status.innerText = '🔒 Zurzeit kann niemand deine Daten sehen.';
+            if (knopf) { knopf.innerText = 'Zugriff für 24 Std. freigeben'; knopf.className = 'btn-secondary'; }
+        }
+    }
+
+    async function hilfeUmschalten() {
+        if (hilfeRestzeit() > 0) return hilfeBeenden();
+
+        if (!confirm('Dem Admin für 24 Stunden Zugriff geben?\n\nEr kann dann deine Dienste sehen und Einstellungen für dich anpassen. Du kannst den Zugriff jederzeit wieder beenden.')) return;
+        try {
+            const { data, error } = await sb.rpc('hilfe_freigeben');
+            if (error) throw error;
+            aktuellesProfil.hilfe_bis = data;
+            hilfeAnzeigeAktualisieren();
+        } catch (e) {
+            alert('Freigabe fehlgeschlagen: ' + (e.message || e));
+        }
+    }
+
+    async function hilfeBeenden() {
+        try {
+            const { error } = await sb.rpc('hilfe_beenden');
+            if (error) throw error;
+            aktuellesProfil.hilfe_bis = null;
+            hilfeAnzeigeAktualisieren();
+        } catch (e) {
+            alert('Beenden fehlgeschlagen: ' + (e.message || e));
+        }
+    }
+
+    // Admin bittet einen Nutzer per Chat um Freigabe
+    async function hilfeAnfragen(nutzerId, name) {
+        if (!confirm(`${name} um Hilfe-Zugriff bitten?\n\nEr bekommt eine Nachricht im Chat und kann dort freigeben. Ohne seine Zustimmung siehst du seine Daten nicht.`)) return;
+        try {
+            const { data: chatId, error } = await sb.rpc('einzelchat_oeffnen', { partner_id: nutzerId });
+            if (error) throw error;
+
+            const text = 'Hallo! Ich würde dir gerne bei den Einstellungen helfen. ' +
+                'Dafür brauche ich für 24 Stunden Zugriff auf deine Daten.\n\n' +
+                'Wenn das für dich in Ordnung ist: Zahnrad oben rechts → ganz unten ' +
+                '"Zugriff für 24 Std. freigeben".\n\n' +
+                'Du kannst den Zugriff jederzeit selbst wieder beenden, und nach ' +
+                '24 Stunden läuft er automatisch ab.';
+
+            const { error: fehler } = await sb.from('nachrichten').insert({
+                unterhaltung_id: chatId, absender_id: aktuellerNutzer.id, text: text
+            });
+            if (fehler) throw fehler;
+
+            zeigeMeldung('adminMeldung', `Anfrage an ${name} gesendet.`, 'ok');
+            await chatListeLaden();
+        } catch (e) {
+            zeigeMeldung('adminMeldung', 'Fehler: ' + (e.message || e), 'fehler');
+        }
+    }
+
     // ============================================================
     //  CHAT
     // ============================================================
@@ -2464,29 +2567,49 @@
     }
 
     // Geteilter Dienstverlauf: nur wann und wo, keine Beträge
-    function dienstKarteHtml(d) {
-        const ort = (name, kuerzel) => {
-            const n = (name || '').trim(), k = (kuerzel || '').trim();
-            if (!n && !k) return '';
-            return n || k;
-        };
-        const linie = (l, u) => {
-            const t = [];
-            if (l) t.push('Linie ' + l);
-            if (u) t.push('Umlauf ' + u);
-            return t.length ? `<small style="opacity:.8;"> · ${t.join(' · ')}</small>` : '';
-        };
+    function dienstSymbol(art) {
+        const a = (art || '').toLowerCase();
+        if (a.startsWith('dienstbeginn')) return '▶️';
+        if (a.startsWith('dienstende')) return '⏹️';
+        if (a.startsWith('pause')) return '☕';
+        if (/(ü|ue|u)bergabe/.test(a)) return '📤';
+        if (/(ü|ue|u)bernahme/.test(a)) return '📥';
+        if (a.startsWith('aussetz')) return '🅿️';
+        if (a.startsWith('einsetz')) return '🚏';
+        return '•';
+    }
 
-        let zeilen = '';
-        if (d.beginn) zeilen += `<div class="dk-zeile">▶️ ${d.beginn} · ${sicher(ort(d.beginn_ort, d.beginn_ort_kuerzel))}${linie(d.beginn_linie, d.beginn_umlauf)}</div>`;
-        (d.pausen || []).forEach(p => {
-            zeilen += `<div class="dk-zeile">☕ ${p.von || ''}–${p.bis || ''} · ${sicher(ort(p.ort, p.ort_kuerzel))}</div>`;
-        });
-        if (d.ende) zeilen += `<div class="dk-zeile">⏹️ ${d.ende} · ${sicher(ort(d.ende_ort, d.ende_ort_kuerzel))}${linie(d.ende_linie, d.ende_umlauf)}</div>`;
+    function dienstKarteHtml(d) {
+        const kopf = `📋 ${sicher(d.datum ? d.datum.split('-').reverse().join('.') : '')}` +
+                     `${d.dienstnummer ? ' · ' + sicher(d.dienstnummer) : ''}`;
+
+        // Ältere geteilte Dienste hatten noch kein "punkte"-Feld
+        const punkte = d.punkte || [];
+        if (!punkte.length) {
+            return `<div class="dienst-karte-chat"><div class="dk-kopf">${kopf}</div>
+                    <div class="dk-zeile">Keine Verlaufsdaten.</div></div>`;
+        }
+
+        const zeilen = punkte.map(pt => {
+            const zeit = pt.art === 'Pause'
+                ? `${pt.zeit || ''}–${pt.bis || ''}`
+                : `${pt.zeit || ''}${pt.folgetag ? '+' : ''}`;
+
+            const teile = [];
+            if (pt.linie) teile.push('Linie ' + pt.linie);
+            if (pt.umlauf) teile.push('Umlauf ' + pt.umlauf);
+            let unten = teile.join(' · ');
+            if (pt.nach) unten += (unten ? ' → ' : '→ ') + sicher(pt.nach);
+
+            return `<div class="dk-punkt">
+                <div class="dk-zeile"><b>${dienstSymbol(pt.art)} ${sicher(pt.art)} ${zeit}</b></div>
+                ${pt.ort ? `<div class="dk-ort">${sicher(pt.ort)}${pt.dienst ? ' (von ' + sicher(pt.dienst) + ')' : ''}</div>` : ''}
+                ${unten ? `<div class="dk-info">${unten}</div>` : ''}
+            </div>`;
+        }).join('');
 
         return `<div class="dienst-karte-chat">
-            <div class="dk-kopf">📋 ${sicher(d.datum ? d.datum.split('-').reverse().join('.') : '')}
-                ${d.dienstnummer ? ' · ' + sicher(d.dienstnummer) : ''}</div>
+            <div class="dk-kopf">${kopf}</div>
             ${zeilen}
         </div>`;
     }
@@ -2547,21 +2670,107 @@
     // ---------- Dienstverlauf teilen ----------
     function verlaufTeilenStarten() {
         if (!aktuelleDetails) { alert('Kein Dienstverlauf vorhanden.'); return; }
+        const d = aktuelleDetails;
         const datum = document.getElementById('datum').value;
         const nummer = document.getElementById('dienstnummer').value.trim();
 
-        // Nur Zeiten und Orte - keine Beträge, keine Arbeitszeit
-        const d = aktuelleDetails;
-        zuTeilenderDienst = {
-            datum: datum, dienstnummer: nummer,
-            beginn: d.beginn, beginn_ort: d.beginn_ort, beginn_ort_kuerzel: d.beginn_ort_kuerzel,
-            beginn_linie: d.beginn_linie, beginn_umlauf: d.beginn_umlauf,
-            ende: d.ende, ende_ort: d.ende_ort, ende_ort_kuerzel: d.ende_ort_kuerzel,
-            ende_linie: d.ende_linie, ende_umlauf: d.ende_umlauf,
-            pausen: (d.pausen || []).map(p => ({
-                von: p.von, bis: p.bis, ort: p.ort, ort_kuerzel: p.ort_kuerzel
-            }))
+        // Nur Zeiten, Orte, Linien und Richtungen - keine Betraege
+        const punkte = [];
+        const sortWert = (zeit) => {
+            if (!zeit) return 99999;
+            const [h, m] = String(zeit).split(':').map(Number);
+            if (isNaN(h)) return 99999;
+            let w = h * 60 + m;
+            if (d.beginn) {
+                const [bh, bm] = d.beginn.split(':').map(Number);
+                if (w < bh * 60 + bm) w += 24 * 60;   // Folgetag
+            }
+            return w;
         };
+
+        if (d.beginn) {
+            punkte.push({
+                art: 'Dienstbeginn', zeit: d.beginn, sort: -1,
+                ort: d.beginn_ort || d.beginn_ort_kuerzel || '',
+                linie: d.beginn_linie, umlauf: d.beginn_umlauf,
+                nach: d.beginn_nach || d.beginn_nach_kuerzel || ''
+            });
+        }
+
+        (d.wechsel || []).forEach(w => {
+            punkte.push({
+                art: w.art || 'Wechsel', zeit: w.zeit, sort: sortWert(w.zeit),
+                ort: w.ort || w.ort_kuerzel || '',
+                dienst: w.von_dienst || '',
+                linie: w.linie, umlauf: w.umlauf,
+                nach: w.nach || w.nach_kuerzel || ''
+            });
+        });
+
+        (d.pausen || []).forEach(p => {
+            if (p.davor_art) {
+                punkte.push({
+                    art: p.davor_art, zeit: p.davor_zeit, sort: sortWert(p.davor_zeit),
+                    ort: p.davor_ort || p.davor_ort_kuerzel || '',
+                    linie: p.davor_linie, umlauf: p.davor_umlauf, nach: ''
+                });
+            }
+            punkte.push({
+                art: 'Pause', zeit: p.von, bis: p.bis, sort: sortWert(p.von),
+                ort: p.ort || p.ort_kuerzel || ''
+            });
+            if (p.danach_linie || p.danach_art) {
+                punkte.push({
+                    art: p.danach_art || 'Weiter', zeit: p.danach_abfahrt || p.bis,
+                    sort: sortWert(p.danach_abfahrt || p.bis) + 0.5,
+                    ort: p.ort || p.ort_kuerzel || '',
+                    linie: p.danach_linie, umlauf: p.danach_umlauf,
+                    nach: p.danach_nach || p.danach_nach_kuerzel || ''
+                });
+            }
+        });
+
+        if (d.ende) {
+            punkte.push({
+                art: 'Dienstende', zeit: d.ende, sort: 999998,
+                ort: d.ende_ort || d.ende_ort_kuerzel || '',
+                linie: d.ende_linie, umlauf: d.ende_umlauf,
+                nach: d.ende_nach || d.ende_nach_kuerzel || '',
+                folgetag: d.ende_folgetag === true
+            });
+        }
+
+        // Doppelte Eintraege (gleiche Art zur gleichen Zeit) entfernen
+        const gesehen = new Set();
+        let liste = punkte.filter(pt => {
+            const schluessel = `${pt.art}|${pt.zeit}`;
+            if (gesehen.has(schluessel)) return false;
+            gesehen.add(schluessel);
+            return true;
+        });
+
+        liste.sort((a, b) => a.sort - b.sort);
+
+        // Faellt eine Uebernahme mit dem Dienstbeginn zusammen (gleiche Zeit
+        // und gleicher Ort), reicht die Beginn-Zeile - Dienstnummer uebernehmen.
+        const beginn = liste.find(pt => pt.art === 'Dienstbeginn');
+        const ende = liste.find(pt => pt.art === 'Dienstende');
+        liste = liste.filter(pt => {
+            const istUebernahme = /(ü|ue|u)bernahme/i.test(pt.art);
+            const istUebergabe  = /(ü|ue|u)bergabe/i.test(pt.art);
+
+            if (beginn && istUebernahme && pt.zeit === beginn.zeit && pt.ort === beginn.ort) {
+                if (pt.dienst) beginn.dienst = pt.dienst;
+                return false;
+            }
+            if (ende && istUebergabe && pt.zeit === ende.zeit && pt.ort === ende.ort) {
+                if (pt.dienst) ende.dienst = pt.dienst;
+                return false;
+            }
+            return true;
+        });
+
+        zuTeilenderDienst = { datum, dienstnummer: nummer, punkte: liste };
 
         wechselSeite('chat');
         setTimeout(() => {
@@ -3002,11 +3211,11 @@
 
         window.scrollTo(0, 0);
 
-        if (seite === 'start') startseiteAktualisieren();
+        if (seite === 'start') { startseiteAktualisieren(); hilfeAnzeigeAktualisieren(); }
         if (seite === 'kalender' || seite === 'statistik') renderCalendar();
         if (seite === 'admin') { adminDatenLaden(); scansLaden(); haltestellenRendern(); }
         if (seite === 'liste') listeRendern();
-        if (seite === 'einstellungen') einstellungenLaden();
+        if (seite === 'einstellungen') { einstellungenLaden(); hilfeAnzeigeAktualisieren(); }
         if (seite === 'chat') chatListeLaden();
         if (seite === 'kontakte' || seite === 'gruppe-neu') kontakteLaden();
         if (seite !== 'chatraum') kanalTrennen();
