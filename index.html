@@ -426,6 +426,8 @@
         .dk-punkt:last-child { margin-bottom: 0; }
         .dk-ort { font-size: .82rem; opacity: .92; }
         .dk-info { font-size: .78rem; opacity: .8; }
+        .teilen-reihe { display: flex; gap: 8px; margin-top: 14px; }
+        .teilen-reihe button { margin-top: 0; }
         .klickbar-karte { cursor: pointer; border-radius: 8px; padding: 8px; margin: -8px; }
         .klickbar-karte:hover { background: var(--bg); }
 
@@ -1098,9 +1100,10 @@
         </div>
         <div id="dienstDetails" style="display:none;">
             <div id="dienstDetailsInhalt"></div>
-            <button class="btn-secondary" style="margin-top:14px;" onclick="verlaufTeilenStarten()">
-                💬 Im Chat teilen
-            </button>
+            <div class="teilen-reihe">
+                <button class="btn-secondary" onclick="verlaufTeilenStarten()">💬 Im Chat</button>
+                <button class="btn-save" onclick="verlaufExternTeilen()">📤 WhatsApp &amp; Co.</button>
+            </div>
         </div>
     </div>
 </div>
@@ -2668,114 +2671,99 @@
     }
 
     // ---------- Dienstverlauf teilen ----------
-    function verlaufTeilenStarten() {
-        if (!aktuelleDetails) { alert('Kein Dienstverlauf vorhanden.'); return; }
+    // Stellt die zu teilenden Punkte zusammen: nur Beginn, Pausen, Ende
+    function teilPunkteBauen() {
         const d = aktuelleDetails;
-        const datum = document.getElementById('datum').value;
-        const nummer = document.getElementById('dienstnummer').value.trim();
+        if (!d) return null;
 
-        // Nur Zeiten, Orte, Linien und Richtungen - keine Betraege
         const punkte = [];
-        const sortWert = (zeit) => {
-            if (!zeit) return 99999;
-            const [h, m] = String(zeit).split(':').map(Number);
-            if (isNaN(h)) return 99999;
-            let w = h * 60 + m;
-            if (d.beginn) {
-                const [bh, bm] = d.beginn.split(':').map(Number);
-                if (w < bh * 60 + bm) w += 24 * 60;   // Folgetag
-            }
-            return w;
-        };
 
         if (d.beginn) {
             punkte.push({
-                art: 'Dienstbeginn', zeit: d.beginn, sort: -1,
+                art: 'Beginn', zeit: d.beginn,
                 ort: d.beginn_ort || d.beginn_ort_kuerzel || '',
                 linie: d.beginn_linie, umlauf: d.beginn_umlauf,
                 nach: d.beginn_nach || d.beginn_nach_kuerzel || ''
             });
         }
 
-        (d.wechsel || []).forEach(w => {
-            punkte.push({
-                art: w.art || 'Wechsel', zeit: w.zeit, sort: sortWert(w.zeit),
-                ort: w.ort || w.ort_kuerzel || '',
-                dienst: w.von_dienst || '',
-                linie: w.linie, umlauf: w.umlauf,
-                nach: w.nach || w.nach_kuerzel || ''
-            });
-        });
-
         (d.pausen || []).forEach(p => {
-            if (p.davor_art) {
-                punkte.push({
-                    art: p.davor_art, zeit: p.davor_zeit, sort: sortWert(p.davor_zeit),
-                    ort: p.davor_ort || p.davor_ort_kuerzel || '',
-                    linie: p.davor_linie, umlauf: p.davor_umlauf, nach: ''
-                });
-            }
             punkte.push({
-                art: 'Pause', zeit: p.von, bis: p.bis, sort: sortWert(p.von),
+                art: 'Pause', zeit: p.von, bis: p.bis,
                 ort: p.ort || p.ort_kuerzel || ''
             });
-            if (p.danach_linie || p.danach_art) {
-                punkte.push({
-                    art: p.danach_art || 'Weiter', zeit: p.danach_abfahrt || p.bis,
-                    sort: sortWert(p.danach_abfahrt || p.bis) + 0.5,
-                    ort: p.ort || p.ort_kuerzel || '',
-                    linie: p.danach_linie, umlauf: p.danach_umlauf,
-                    nach: p.danach_nach || p.danach_nach_kuerzel || ''
-                });
-            }
         });
 
         if (d.ende) {
             punkte.push({
-                art: 'Dienstende', zeit: d.ende, sort: 999998,
+                art: 'Ende', zeit: d.ende, folgetag: d.ende_folgetag === true,
                 ort: d.ende_ort || d.ende_ort_kuerzel || '',
                 linie: d.ende_linie, umlauf: d.ende_umlauf,
-                nach: d.ende_nach || d.ende_nach_kuerzel || '',
-                folgetag: d.ende_folgetag === true
+                nach: d.ende_nach || d.ende_nach_kuerzel || ''
             });
         }
 
-        // Doppelte Eintraege (gleiche Art zur gleichen Zeit) entfernen
-        const gesehen = new Set();
-        let liste = punkte.filter(pt => {
-            const schluessel = `${pt.art}|${pt.zeit}`;
-            if (gesehen.has(schluessel)) return false;
-            gesehen.add(schluessel);
-            return true;
+        return {
+            datum: document.getElementById('datum').value,
+            dienstnummer: document.getElementById('dienstnummer').value.trim(),
+            punkte: punkte
+        };
+    }
+
+    // Dieselben Daten als reiner Text, z. B. für WhatsApp
+    function teilTextBauen(d) {
+        const symbol = { 'Beginn': '▶️', 'Pause': '☕', 'Ende': '⏹️' };
+        let text = `Dienst${d.dienstnummer ? ' ' + d.dienstnummer : ''}`;
+        if (d.datum) text += ' · ' + d.datum.split('-').reverse().join('.');
+        text += '\n';
+
+        d.punkte.forEach(p => {
+            const zeit = p.art === 'Pause'
+                ? `${p.zeit || ''}–${p.bis || ''}`
+                : `${p.zeit || ''}${p.folgetag ? '+' : ''}`;
+            text += `\n${symbol[p.art] || '•'} ${p.art} ${zeit}\n`;
+            if (p.ort) text += `${p.ort}\n`;
+
+            const teile = [];
+            if (p.linie) teile.push('Linie ' + p.linie);
+            if (p.umlauf) teile.push('Umlauf ' + p.umlauf);
+            let zusatz = teile.join(' · ');
+            if (p.nach) zusatz += (zusatz ? ' → ' : '→ ') + p.nach;
+            if (zusatz) text += zusatz + '\n';
         });
 
-        liste.sort((a, b) => a.sort - b.sort);
+        return text.trim();
+    }
 
-        // Faellt eine Uebernahme mit dem Dienstbeginn zusammen (gleiche Zeit
-        // und gleicher Ort), reicht die Beginn-Zeile - Dienstnummer uebernehmen.
-        const beginn = liste.find(pt => pt.art === 'Dienstbeginn');
-        const ende = liste.find(pt => pt.art === 'Dienstende');
-        liste = liste.filter(pt => {
-            const istUebernahme = /(ü|ue|u)bernahme/i.test(pt.art);
-            const istUebergabe  = /(ü|ue|u)bergabe/i.test(pt.art);
-
-            if (beginn && istUebernahme && pt.zeit === beginn.zeit && pt.ort === beginn.ort) {
-                if (pt.dienst) beginn.dienst = pt.dienst;
-                return false;
-            }
-            if (ende && istUebergabe && pt.zeit === ende.zeit && pt.ort === ende.ort) {
-                if (pt.dienst) ende.dienst = pt.dienst;
-                return false;
-            }
-            return true;
-        });
-
-        zuTeilenderDienst = { datum, dienstnummer: nummer, punkte: liste };
+    // In den App-Chat teilen
+    function verlaufTeilenStarten() {
+        const d = teilPunkteBauen();
+        if (!d || !d.punkte.length) { alert('Kein Dienstverlauf vorhanden.'); return; }
+        zuTeilenderDienst = d;
 
         wechselSeite('chat');
         setTimeout(() => {
             alert('Wähle jetzt das Gespräch aus, in dem du den Dienstverlauf teilen möchtest.');
         }, 100);
+    }
+
+    // Über WhatsApp und andere Apps teilen
+    async function verlaufExternTeilen() {
+        const d = teilPunkteBauen();
+        if (!d || !d.punkte.length) { alert('Kein Dienstverlauf vorhanden.'); return; }
+        const text = teilTextBauen(d);
+
+        try {
+            if (navigator.share) {
+                await navigator.share({ title: 'Dienstverlauf', text: text });
+                return;
+            }
+            await navigator.clipboard.writeText(text);
+            alert('Dienstverlauf in die Zwischenablage kopiert – jetzt in WhatsApp einfügen.');
+        } catch (e) {
+            if (e && e.name === 'AbortError') return;   // Teilen abgebrochen
+            alert('Teilen nicht möglich. Text:\n\n' + text);
+        }
     }
 
     async function dienstTeilenIn(unterhaltungId) {
