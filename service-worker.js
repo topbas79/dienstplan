@@ -1,7 +1,9 @@
-const CACHE_NAME = 'dienstplan-cache-v28';
+const CACHE_NAME = 'dienstplan-cache-v29';
 const URLS_TO_CACHE = [
   './',
   './index.html',
+  './styles.css',
+  './app.js',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
