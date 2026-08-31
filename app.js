@@ -5,6 +5,11 @@
     let aktuellesDatumAnzeige = new Date();
     let gespeicherteSchichten = {};
 
+    // Persönliches Entfernungs-Buch: Ort -> km von der Wohnung (einfache Strecke),
+    // für die Fahrtkosten-Kilometerpauschale. Nur lokal auf diesem Gerät gespeichert.
+    let wegstrecken = {};
+    let wegstreckenFehlendCache = {};
+
     // ============================================================
     //  SUPABASE: Verbindung, Anmeldung, Nutzerverwaltung
     // ============================================================
@@ -644,6 +649,25 @@
         listeRendern();
     }
 
+    // Volle Dauer eines Dienstes von Anfang bis Ende in Minuten (inkl. Pausen,
+    // NICHT die bezahlte Arbeitszeit — nur für die Anzeige in der Dienstliste)
+    function schichtDauerMinuten(datumStr, startStr, endeStr) {
+        if (!datumStr || !startStr || !endeStr) return 0;
+        const [jahr, monat, tag] = datumStr.split('-').map(Number);
+        const [hStart, mStart] = startStr.split(':').map(Number);
+        const [hEnde, mEnde] = endeStr.split(':').map(Number);
+        const start = new Date(jahr, monat - 1, tag, hStart, mStart);
+        const ende = new Date(jahr, monat - 1, tag, hEnde, mEnde);
+        if (ende <= start) ende.setDate(ende.getDate() + 1);
+        return (ende - start) / 60000;
+    }
+
+    // Minuten als "8h 25m"
+    function stundenMinutenKurz(minuten) {
+        const m = Math.max(0, Math.round(minuten));
+        return `${Math.floor(m / 60)}h ${m % 60}m`;
+    }
+
     // Sammelt die Schichten eines Monats als Zeilen: Datum, Beginn, Ende
     function listeZeilen() {
         const pad = (n) => n < 10 ? '0' + n : n;
@@ -678,7 +702,7 @@
                     endeZeit: (s.endeStr || '') + (d.ende_folgetag ? '+' : ''),
                     endeOrt: ort(d.ende_ort, d.ende_ort_kuerzel),
                     endeLinie: linie(d.ende_linie, d.ende_umlauf),
-                    stunden: (s.nettoMinuten || 0) / 60,
+                    dauerMinuten: schichtDauerMinuten(k, s.startStr, s.endeIst || s.endeStr),
                     verdienst: s.zuschlagSumme || 0
                 };
             });
@@ -696,14 +720,14 @@
             return;
         }
 
-        const summeStd = zeilen.reduce((a, z) => a + z.stunden, 0);
+        const summeMinuten = zeilen.reduce((a, z) => a + z.dauerMinuten, 0);
         const summeEuro = zeilen.reduce((a, z) => a + z.verdienst, 0);
 
         el.innerHTML = zeilen.map(z => `
             <div class="dienst-karte">
                 <div class="dienst-kopf">
                     <b>${z.datumKurz}</b>${z.dienst ? ' · Dienst ' + z.dienst : ''}
-                    <span style="float:right; opacity:.8;">${z.stunden.toFixed(2)} Std.</span>
+                    <span style="float:right; opacity:.8;">${stundenMinutenKurz(z.dauerMinuten)}</span>
                 </div>
                 <div class="dienst-zeile">
                     <span class="dienst-marke gruen">Beginn</span>
@@ -716,7 +740,7 @@
             </div>`).join('') +
             `<div class="total-box" style="margin-top:14px;">
                 <span>${zeilen.length} Dienste</span>
-                <span>${summeStd.toFixed(2)} Std. → ${summeEuro.toFixed(2).replace('.', ',')} €</span>
+                <span>${stundenMinutenKurz(summeMinuten)} → ${summeEuro.toFixed(2).replace('.', ',')} €</span>
              </div>`;
     }
 
@@ -745,16 +769,15 @@
             doc.setTextColor(0);
         }
 
-        const kopf = [['Datum', 'Dienst', 'Beginn', 'Ort', 'Linie', 'Ende', 'Ort', 'Linie', 'Std.']];
+        const kopf = [['Datum', 'Dienst', 'Beginn', 'Ort', 'Linie', 'Ende', 'Ort', 'Linie', 'Dauer']];
         const koerper = zeilen.map(z => [
             z.datumKurz, z.dienst,
             z.beginnZeit, z.beginnOrt, z.beginnLinie,
             z.endeZeit, z.endeOrt, z.endeLinie,
-            z.stunden.toFixed(2)
+            stundenMinutenKurz(z.dauerMinuten)
         ]);
 
-        const summeStd = zeilen.reduce((a, z) => a + z.stunden, 0);
-        const summeEuro = zeilen.reduce((a, z) => a + z.verdienst, 0);
+        const summeMinuten = zeilen.reduce((a, z) => a + z.dauerMinuten, 0);
 
         doc.autoTable({
             head: kopf,
@@ -773,8 +796,7 @@
                 const y = daten.cursor.y + 8;
                 doc.setFontSize(10);
                 doc.text(
-                    `${zeilen.length} Dienste · ${summeStd.toFixed(2)} Stunden · ` +
-                    `${summeEuro.toFixed(2).replace('.', ',')} EUR (geschätzt, brutto)`,
+                    `${zeilen.length} Dienste · ${stundenMinutenKurz(summeMinuten)}`,
                     14, y
                 );
             }
@@ -782,6 +804,286 @@
 
         const pad = (n) => n < 10 ? '0' + n : n;
         doc.save(`Dienstuebersicht_${listeDatum.getFullYear()}-${pad(listeDatum.getMonth() + 1)}.pdf`);
+    }
+
+    // ============================================================
+    //  WEGSTRECKEN (Entfernung Wohnung -> Ort, für Fahrtkosten)
+    // ============================================================
+    function wegstreckenLaden() {
+        try {
+            const roh = localStorage.getItem('dienstplan_wegstrecken');
+            wegstrecken = roh ? JSON.parse(roh) : {};
+        } catch (e) { wegstrecken = {}; }
+    }
+
+    function wegstreckenSpeichernLocal() {
+        localStorage.setItem('dienstplan_wegstrecken', JSON.stringify(wegstrecken));
+    }
+
+    function normOrt(name) {
+        return (name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    }
+
+    // Liefert die gespeicherte Entfernung (km, einfache Strecke) zu einem Ort, oder null
+    function wegKmFuerOrt(name) {
+        const key = normOrt(name);
+        if (!key) return null;
+        const eintrag = wegstrecken[key];
+        return eintrag ? eintrag.km : null;
+    }
+
+    function wegstreckenOeffnen() {
+        wechselSeite('wegstrecken');
+    }
+
+    function wegstreckeSpeichern() {
+        const ortRoh = document.getElementById('wsOrt').value.trim();
+        const km = parseFloat(document.getElementById('wsKm').value);
+        if (!ortRoh || !(km >= 0)) {
+            zeigeMeldung('wsMeldung', 'Bitte Ort und Entfernung (km) eingeben.', 'fehler');
+            return;
+        }
+        wegstrecken[normOrt(ortRoh)] = { name: ortRoh, km };
+        wegstreckenSpeichernLocal();
+        document.getElementById('wsOrt').value = '';
+        document.getElementById('wsKm').value = '';
+        zeigeMeldung('wsMeldung', ortRoh + ' gespeichert.', 'ok');
+        wegstreckenRendern();
+    }
+
+    function wegstreckeBearbeiten(key) {
+        const e = wegstrecken[key];
+        if (!e) return;
+        document.getElementById('wsOrt').value = e.name;
+        document.getElementById('wsKm').value = e.km;
+        document.getElementById('wsOrt').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function wegstreckeLoeschen(key) {
+        const e = wegstrecken[key];
+        if (!e || !confirm(`Eintrag "${e.name}" löschen?`)) return;
+        delete wegstrecken[key];
+        wegstreckenSpeichernLocal();
+        wegstreckenRendern();
+    }
+
+    function wegstreckenVorausfuellen(key) {
+        const name = wegstreckenFehlendCache[key];
+        if (!name) return;
+        document.getElementById('wsOrt').value = name;
+        document.getElementById('wsKm').value = '';
+        document.getElementById('wsOrt').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        document.getElementById('wsKm').focus();
+    }
+
+    // Alle je als Beginn-/Endort gespeicherten Orte, für die noch keine km hinterlegt sind
+    function wegstreckenFehlendeOrte() {
+        const gefunden = {};
+        Object.values(gespeicherteSchichten).forEach(s => {
+            const d = (s && s.details) || {};
+            [d.beginn_ort, d.ende_ort].forEach(name => {
+                const n = (name || '').trim();
+                if (!n) return;
+                const key = normOrt(n);
+                if (!wegstrecken[key]) gefunden[key] = n;
+            });
+        });
+        return gefunden;
+    }
+
+    function wegstreckenRendern() {
+        const el = document.getElementById('wsListe');
+        if (!el) return;
+
+        const fehlend = wegstreckenFehlendeOrte();
+        wegstreckenFehlendCache = fehlend;
+        const fehlKeys = Object.keys(fehlend).sort((a, b) => fehlend[a].localeCompare(fehlend[b]));
+        const bekanntKeys = Object.keys(wegstrecken).sort((a, b) => wegstrecken[a].name.localeCompare(wegstrecken[b].name));
+
+        let html = '';
+        if (fehlKeys.length) {
+            html += `<p class="auth-hinweis" style="color:#b45309; font-weight:600;">⚠️ ${fehlKeys.length} Ort(e) ohne Entfernung:</p>` +
+                fehlKeys.map(k => `
+                <div class="result-item">
+                    <span class="label">${sicher(fehlend[k])}</span>
+                    <button class="btn-secondary" style="width:auto; margin:0; padding:6px 12px;" onclick="wegstreckenVorausfuellen('${k}')">+ km eintragen</button>
+                </div>`).join('');
+        }
+
+        if (!bekanntKeys.length) {
+            html += '<p class="auth-hinweis">Noch keine Entfernungen gespeichert.</p>';
+        } else {
+            html += `<p class="auth-hinweis" style="margin-top:${fehlKeys.length ? '16px' : '0'};">${bekanntKeys.length} gespeicherte Orte</p>` +
+                bekanntKeys.map(k => `
+                <div class="result-item">
+                    <span class="label"><b>${sicher(wegstrecken[k].name)}</b><br><small>${wegstrecken[k].km} km (einfache Strecke)</small></span>
+                    <span>
+                        <button class="btn-secondary" style="width:auto; margin:0 4px 0 0; padding:6px 10px;" onclick="wegstreckeBearbeiten('${k}')">✏️</button>
+                        <button class="btn-danger" style="width:auto; margin:0; padding:6px 10px;" onclick="wegstreckeLoeschen('${k}')">🗑️</button>
+                    </span>
+                </div>`).join('');
+        }
+        el.innerHTML = html;
+    }
+
+    // ============================================================
+    //  VERPFLEGUNG & FAHRTKOSTEN — PDF-Exporte für die Steuererklärung
+    // ============================================================
+    // Werte nach § 9 Abs. 4a EStG (Stand 2026) bzw. Reisekosten-Kilometersatz Pkw.
+    // Bitte vor dem Steuerjahr-Export einmal gegenprüfen, ob sich die Sätze geändert haben.
+    const VERPFLEGUNGSPAUSCHALE_EURO = 14;
+    const VERPFLEGUNGSPAUSCHALE_SCHWELLE_MIN = 8 * 60;
+    const KILOMETERPAUSCHALE_EURO_PRO_KM = 0.30;
+
+    function listeAlsPdfVerpflegung() {
+        const zeilen = listeZeilen().filter(z => z.dauerMinuten > VERPFLEGUNGSPAUSCHALE_SCHWELLE_MIN);
+        if (!zeilen.length) {
+            alert('Für diesen Monat gibt es keine Dienste über 8 Stunden.');
+            return;
+        }
+        if (!window.jspdf) {
+            alert('PDF-Bibliothek konnte nicht geladen werden. Bitte mit Internetverbindung erneut versuchen.');
+            return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const monat = `${MONATSNAMEN[listeDatum.getMonth()]} ${listeDatum.getFullYear()}`;
+        const name = (aktuellesProfil && (aktuellesProfil.anzeigename || aktuellesProfil.email)) || '';
+        const satzText = VERPFLEGUNGSPAUSCHALE_EURO.toFixed(2).replace('.', ',') + ' €';
+
+        doc.setFontSize(15);
+        doc.text(`Verpflegungsmehraufwand ${monat}`, 14, 16);
+        let y = 22;
+        if (name) {
+            doc.setFontSize(10);
+            doc.setTextColor(110);
+            doc.text(name, 14, y);
+            doc.setTextColor(0);
+            y += 6;
+        }
+        doc.setFontSize(9);
+        doc.setTextColor(110);
+        doc.text(`Abwesenheit jeweils mehr als 8 Stunden — Pauschale ${satzText} pro Tag`, 14, y);
+        doc.setTextColor(0);
+
+        const kopf = [['Datum', 'Dienst', 'Beginn', 'Ende', 'Dauer', 'Pauschale']];
+        const koerper = zeilen.map(z => [
+            z.datumKurz, z.dienst, z.beginnZeit, z.endeZeit,
+            stundenMinutenKurz(z.dauerMinuten), satzText
+        ]);
+
+        doc.autoTable({
+            head: kopf,
+            body: koerper,
+            startY: y + 6,
+            styles: { fontSize: 9, cellPadding: 2.5 },
+            headStyles: { fillColor: [37, 99, 235], textColor: 255 },
+            alternateRowStyles: { fillColor: [246, 248, 252] },
+            columnStyles: { 5: { halign: 'right' } },
+            didDrawPage: (daten) => {
+                const fussY = daten.cursor.y + 8;
+                doc.setFontSize(10);
+                doc.text(
+                    `${zeilen.length} Tage × ${satzText} = ` +
+                    `${(zeilen.length * VERPFLEGUNGSPAUSCHALE_EURO).toFixed(2).replace('.', ',')} €`,
+                    14, fussY
+                );
+            }
+        });
+
+        const pad = (n) => n < 10 ? '0' + n : n;
+        doc.save(`Verpflegungsmehraufwand_${listeDatum.getFullYear()}-${pad(listeDatum.getMonth() + 1)}.pdf`);
+    }
+
+    function wegZeilen() {
+        return listeZeilen().map(z => {
+            const kmBeginn = wegKmFuerOrt(z.beginnOrt);
+            const kmEnde = wegKmFuerOrt(z.endeOrt);
+            const bekannt = kmBeginn != null && kmEnde != null;
+            return { ...z, kmBeginn, kmEnde, kmGesamt: bekannt ? kmBeginn + kmEnde : null, bekannt };
+        });
+    }
+
+    function listeAlsPdfWeg() {
+        const zeilen = wegZeilen();
+        if (!zeilen.length) {
+            alert('Für diesen Monat sind keine Dienste gespeichert.');
+            return;
+        }
+        const fehlend = zeilen.filter(z => !z.bekannt);
+        if (fehlend.length) {
+            const namen = [...new Set(fehlend.flatMap(z => [
+                z.kmBeginn == null ? z.beginnOrt : null,
+                z.kmEnde == null ? z.endeOrt : null
+            ].filter(Boolean)))];
+            if (!confirm(
+                `Für ${fehlend.length} Dienst(e) fehlt noch die Entfernung zu: ${namen.join(', ')}.\n` +
+                `Diese Tage werden im PDF ohne Kilometerangabe aufgeführt. Trotzdem fortfahren?\n` +
+                `(Fehlende Orte trägst du unter Mehr → Wegstrecken nach.)`
+            )) return;
+        }
+        if (!window.jspdf) {
+            alert('PDF-Bibliothek konnte nicht geladen werden. Bitte mit Internetverbindung erneut versuchen.');
+            return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape' });
+        const monat = `${MONATSNAMEN[listeDatum.getMonth()]} ${listeDatum.getFullYear()}`;
+        const name = (aktuellesProfil && (aktuellesProfil.anzeigename || aktuellesProfil.email)) || '';
+
+        doc.setFontSize(15);
+        doc.text(`Fahrtkosten ${monat}`, 14, 16);
+        let y = 22;
+        if (name) {
+            doc.setFontSize(10);
+            doc.setTextColor(110);
+            doc.text(name, 14, y);
+            doc.setTextColor(0);
+            y += 6;
+        }
+        doc.setFontSize(9);
+        doc.setTextColor(110);
+        doc.text(
+            `Reisekosten-Kilometerpauschale (Pkw) ${KILOMETERPAUSCHALE_EURO_PRO_KM.toFixed(2).replace('.', ',')} € je gefahrenem km, ` +
+            `Hin- und Rückweg zu wechselnden Einsatzorten (kein fester Sammelpunkt)`,
+            14, y
+        );
+        doc.setTextColor(0);
+
+        const kopf = [['Datum', 'Beginnort', 'km', 'Endort', 'km', 'Gesamt km', 'Betrag']];
+        const koerper = zeilen.map(z => [
+            z.datumKurz,
+            z.beginnOrt || '–', z.kmBeginn != null ? z.kmBeginn.toFixed(1) : '?',
+            z.endeOrt || '–', z.kmEnde != null ? z.kmEnde.toFixed(1) : '?',
+            z.kmGesamt != null ? z.kmGesamt.toFixed(1) : '–',
+            z.kmGesamt != null ? (z.kmGesamt * KILOMETERPAUSCHALE_EURO_PRO_KM).toFixed(2).replace('.', ',') + ' €' : '–'
+        ]);
+
+        const gesamtKm = zeilen.reduce((a, z) => a + (z.kmGesamt || 0), 0);
+        const gesamtEuro = gesamtKm * KILOMETERPAUSCHALE_EURO_PRO_KM;
+
+        doc.autoTable({
+            head: kopf,
+            body: koerper,
+            startY: y + 6,
+            styles: { fontSize: 8, cellPadding: 2 },
+            headStyles: { fillColor: [37, 99, 235], textColor: 255 },
+            alternateRowStyles: { fillColor: [246, 248, 252] },
+            columnStyles: { 2: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' } },
+            didDrawPage: (daten) => {
+                const fussY = daten.cursor.y + 8;
+                doc.setFontSize(10);
+                doc.text(
+                    `${zeilen.length} Dienste · ${gesamtKm.toFixed(1)} km gesamt · ${gesamtEuro.toFixed(2).replace('.', ',')} €`,
+                    14, fussY
+                );
+            }
+        });
+
+        const pad = (n) => n < 10 ? '0' + n : n;
+        doc.save(`Fahrtkosten_${listeDatum.getFullYear()}-${pad(listeDatum.getMonth() + 1)}.pdf`);
     }
 
 
@@ -2212,7 +2514,7 @@
     // ---------- Tabs ----------
     // Unterseiten ohne eigenen Tab: welcher Tab bleibt markiert?
     const TAB_ZUORDNUNG = {
-        verlauf: 'mehr', liste: 'mehr', einstellungen: 'mehr', admin: 'mehr'
+        verlauf: 'mehr', liste: 'mehr', einstellungen: 'mehr', admin: 'mehr', wegstrecken: 'mehr'
     };
 
     function wechselSeite(seite) {
@@ -2229,6 +2531,7 @@
         if (seite === 'kalender' || seite === 'statistik') renderCalendar();
         if (seite === 'admin') { adminDatenLaden(); scansLaden(); haltestellenRendern(); }
         if (seite === 'liste') listeRendern();
+        if (seite === 'wegstrecken') wegstreckenRendern();
         if (seite === 'einstellungen') { einstellungenLaden(); hilfeAnzeigeAktualisieren(); }
         if (seite === 'chat') chatListeLaden();
         if (seite === 'kontakte' || seite === 'gruppe-neu') kontakteLaden();
@@ -3526,6 +3829,7 @@
 
     // Einstellungen laden, dann App starten
     einstellungenLaden();
+    wegstreckenLaden();
     pausenregelGeaendert();
     starteApp();
 

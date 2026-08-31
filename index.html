@@ -518,7 +518,32 @@
         </div>
         <div id="listeInhalt"></div>
         <button class="btn-gcal" onclick="listeAlsPdf()">📄 Diesen Monat als PDF herunterladen</button>
+        <button class="btn-save" onclick="listeAlsPdfVerpflegung()">🍽️ Verpflegungsmehraufwand als PDF</button>
+        <button class="btn-save" onclick="listeAlsPdfWeg()">🛣️ Fahrtkosten (Weg) als PDF</button>
+        <button class="btn-secondary" onclick="wegstreckenOeffnen()">📍 Wegstrecken pflegen</button>
         <button class="btn-secondary" onclick="wechselSeite('statistik')">↩️ Zurück zur Statistik</button>
+    </div>
+</div>
+
+<!-- SEITE: Wegstrecken (Entfernung Wohnung -> Ort, für Fahrtkosten-Kilometerpauschale) -->
+<div class="page" id="page-wegstrecken">
+    <div class="container">
+        <h2>Wegstrecken</h2>
+        <p class="auth-hinweis">Trage einmalig die Entfernung von deiner Wohnung zu jedem Beginn-/Endort ein — die einfache Strecke, kürzeste sinnvolle Straßenverbindung (z. B. laut Routenplaner). Wird danach automatisch für den Fahrtkosten-PDF-Export verwendet.</p>
+        <div class="row">
+            <div class="form-group">
+                <label for="wsOrt">Ort</label>
+                <input type="text" id="wsOrt" placeholder="z. B. Rathaus Spandau">
+            </div>
+            <div class="form-group">
+                <label for="wsKm">Entfernung (km, einfache Strecke)</label>
+                <input type="number" id="wsKm" step="0.1" min="0" placeholder="14">
+            </div>
+        </div>
+        <button onclick="wegstreckeSpeichern()">Speichern</button>
+        <div class="meldung" id="wsMeldung"></div>
+        <div id="wsListe" style="margin-top:14px;">Lade...</div>
+        <button class="btn-secondary" onclick="wechselSeite('mehr')">↩️ Zurück</button>
     </div>
 </div>
 
@@ -595,6 +620,9 @@
             </button>
             <button class="menue-punkt" onclick="listeOeffnen()">
                 <span>📄</span><span>Dienstliste &amp; PDF-Export</span><span class="pfeil">›</span>
+            </button>
+            <button class="menue-punkt" onclick="wegstreckenOeffnen()">
+                <span>📍</span><span>Wegstrecken (für Fahrtkosten)</span><span class="pfeil">›</span>
             </button>
             <button class="menue-punkt" onclick="exportMonatIcs()">
                 <span>📅</span><span>Monat als Kalender-Datei (.ics)</span><span class="pfeil">›</span>
