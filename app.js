@@ -668,6 +668,18 @@
         return `${Math.floor(m / 60)}h ${m % 60}m`;
     }
 
+    // Anzeigename fuer einen Ort: Klartext-Name, sonst Kuerzel als Rueckfall
+    // (Variante-B-Dienstzettel liefern nur ein Kuerzel, siehe dienstplan-lesen).
+    // Zentral definiert, damit Dienstliste und Wegstrecken-Buch denselben
+    // Ort immer gleich benennen - sonst findet das Wegstrecken-Buch einen
+    // per Kuerzel angezeigten Ort nicht wieder.
+    function ortAnzeige(name, kuerzel) {
+        const n = (name || '').trim(), kz = (kuerzel || '').trim();
+        if (!n && !kz) return '';
+        if (!n) return kz;
+        return n;
+    }
+
     // Sammelt die Schichten eines Monats als Zeilen: Datum, Beginn, Ende
     function listeZeilen() {
         const pad = (n) => n < 10 ? '0' + n : n;
@@ -679,13 +691,6 @@
             .map(k => {
                 const s = gespeicherteSchichten[k];
                 const d = s.details || {};
-                const ort = (name, kuerzel) => {
-                    const n = (name || '').trim(), kz = (kuerzel || '').trim();
-                    if (!n && !kz) return '';
-                    if (!n) return kz;
-                    if (!kz || n === kz) return n;
-                    return n;
-                };
                 const linie = (l, u) => {
                     const teile = [];
                     if (l) teile.push(String(l));
@@ -697,10 +702,10 @@
                     datumKurz: k.split('-').reverse().join('.'),
                     dienst: s.dienstnummer || '',
                     beginnZeit: s.startStr || '',
-                    beginnOrt: ort(d.beginn_ort, d.beginn_ort_kuerzel),
+                    beginnOrt: ortAnzeige(d.beginn_ort, d.beginn_ort_kuerzel),
                     beginnLinie: linie(d.beginn_linie, d.beginn_umlauf),
                     endeZeit: (s.endeStr || '') + (d.ende_folgetag ? '+' : ''),
-                    endeOrt: ort(d.ende_ort, d.ende_ort_kuerzel),
+                    endeOrt: ortAnzeige(d.ende_ort, d.ende_ort_kuerzel),
                     endeLinie: linie(d.ende_linie, d.ende_umlauf),
                     dauerMinuten: schichtDauerMinuten(k, s.startStr, s.endeIst || s.endeStr),
                     verdienst: s.zuschlagSumme || 0
@@ -881,7 +886,10 @@
         const gefunden = {};
         Object.values(gespeicherteSchichten).forEach(s => {
             const d = (s && s.details) || {};
-            [d.beginn_ort, d.ende_ort].forEach(name => {
+            [
+                ortAnzeige(d.beginn_ort, d.beginn_ort_kuerzel),
+                ortAnzeige(d.ende_ort, d.ende_ort_kuerzel)
+            ].forEach(name => {
                 const n = (name || '').trim();
                 if (!n) return;
                 const key = normOrt(n);
@@ -1236,8 +1244,8 @@
 
             return `
             <div class="pause-karte ${gearbeitet > 0 ? 'ausgefallen' : ''}">
+                <span class="dienst-marke ${istBezahlt ? 'gruen' : 'rot'}" style="display:inline-block; margin-bottom:6px;">${istBezahlt ? 'Bezahlt' : 'Unbezahlt'}</span>
                 <div class="pause-zeilen">
-                    <span class="dienst-marke ${istBezahlt ? 'gruen' : 'rot'}">${istBezahlt ? 'Bezahlt' : 'Unbezahlt'}</span>
                     <input type="time" value="${p.von}" onchange="pauseGeaendert(${i},'von',this.value); pausenRendern();">
                     <span>bis</span>
                     <input type="time" value="${p.bis}" onchange="pauseGeaendert(${i},'bis',this.value); pausenRendern();">
