@@ -1170,12 +1170,22 @@
         const regel = document.getElementById('pausenregel').value;
         document.getElementById('pausenBereich').style.display =
             regel === 'reserve' ? 'none' : 'block';
-        if (regel === 'B30' && pausenEintraege.length > 1) pausenEintraege = [pausenEintraege[0]];
+        if (regel === 'B30') {
+            // B30 kennt nur EINE unbezahlte Pause - aber bezahlte Pausen (BEZPAU)
+            // koennen trotzdem mehrfach vorkommen und bleiben unangetastet.
+            let ersteUnbezahlteGesehen = false;
+            pausenEintraege = pausenEintraege.filter(p => {
+                if (p.art === 'BEZPAU') return true;
+                if (ersteUnbezahlteGesehen) return false;
+                ersteUnbezahlteGesehen = true;
+                return true;
+            });
+        }
         pausenRendern();
     }
 
     function pauseHinzufuegen() {
-        pausenEintraege.push({ von: '', bis: '', unbezahlt: 30, gearbeitet: 0 });
+        pausenEintraege.push({ von: '', bis: '', unbezahlt: 30, gearbeitet: 0, art: 'UNBPAU' });
         pausenRendern();
     }
 
@@ -1222,10 +1232,12 @@
             const gearbeitet = Number(p.gearbeitet) || 0;
             const unbezahlt = Number(p.unbezahlt) || 0;
             const wirklichUnbezahlt = Math.max(0, unbezahlt - gearbeitet);
+            const istBezahlt = p.art === 'BEZPAU';
 
             return `
             <div class="pause-karte ${gearbeitet > 0 ? 'ausgefallen' : ''}">
                 <div class="pause-zeilen">
+                    <span class="dienst-marke ${istBezahlt ? 'gruen' : 'rot'}">${istBezahlt ? 'Bezahlt' : 'Unbezahlt'}</span>
                     <input type="time" value="${p.von}" onchange="pauseGeaendert(${i},'von',this.value); pausenRendern();">
                     <span>bis</span>
                     <input type="time" value="${p.bis}" onchange="pauseGeaendert(${i},'bis',this.value); pausenRendern();">
@@ -3046,13 +3058,14 @@
             gefunden.push('Pausenregel');
         }
 
-        // Pausen aus dem Dienstzettel in die Liste uebernehmen
+        // Pausen aus dem Dienstzettel in die Liste uebernehmen (bezahlt UND unbezahlt)
         pausenEintraege = (ergebnis.pausen || [])
             .filter(p => p.von && p.bis)
             .map(p => ({
                 von: p.von, bis: p.bis,
                 unbezahlt: Number(p.unbezahlt_minuten) || 0,
-                gearbeitet: 0
+                gearbeitet: 0,
+                art: String(p.art || '').toUpperCase() === 'BEZPAU' ? 'BEZPAU' : 'UNBPAU'
             }));
 
         if (!pausenEintraege.length && Number(ergebnis.pause_minuten) > 0) {
@@ -3796,7 +3809,9 @@
                 // Aeltere Eintraege kannten nur "ausgefallen" (alles gearbeitet)
                 gearbeitet: p.gearbeitet !== undefined
                     ? (Number(p.gearbeitet) || 0)
-                    : (p.ausgefallen ? (Number(p.unbezahlt) || 0) : 0)
+                    : (p.ausgefallen ? (Number(p.unbezahlt) || 0) : 0),
+                // Aeltere gespeicherte Dienste kannten nur unbezahlte Pausen
+                art: p.art === 'BEZPAU' ? 'BEZPAU' : 'UNBPAU'
             }));
             pausenregelGeaendert();
             detailsAnzeigen(sch.details || null);
