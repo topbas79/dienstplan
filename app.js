@@ -1,3 +1,28 @@
+    // ============================================================
+    //  ICON-BIBLIOTHEK — Strichzeichnungen statt Emoji, dynamisch erzeugtes Markup
+    // ============================================================
+    const ICONS = {
+        home: '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"></path><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"></path></svg>',
+        camera: '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5a2 2 0 0 1 2-2h1.2l1-1.5h7.6l1 1.5H19a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8.5Z"></path><circle cx="12" cy="13" r="3.1"></circle></svg>',
+        calendar: '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5.5" width="17" height="15" rx="2.5"></rect><path d="M3.5 9.5h17"></path><path d="M8 3.5v4M16 3.5v4"></path></svg>',
+        chat: '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5h16a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5H9l-4 3.5V17.5H4A1.5 1.5 0 0 1 2.5 16V7A1.5 1.5 0 0 1 4 5.5Z"></path></svg>',
+        more: '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="1.5"></circle><circle cx="12" cy="12" r="1.5"></circle><circle cx="18" cy="12" r="1.5"></circle></svg>',
+        gear: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"></path><path d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V19.5a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H4.5a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.56-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H10.6a1.7 1.7 0 0 0 1-1.55V4.5a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V10.6a1.7 1.7 0 0 0 1 .9h.19a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1Z"></path></svg>',
+        chart: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="12" width="3.4" height="8" rx="1"></rect><rect x="10.3" y="7" width="3.4" height="13" rx="1"></rect><rect x="16.6" y="3.5" width="3.4" height="16.5" rx="1"></rect></svg>',
+        history: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3.2 2"></path></svg>',
+        fileText: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h7l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 19V5A1.5 1.5 0 0 1 7 3.5Z"></path><path d="M14 3.5V8h4"></path><path d="M8.5 12.5h7M8.5 15.5h7M8.5 9.5h2"></path></svg>',
+        mapPin: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11.7A7 7 0 0 0 5 9.3C5 14.8 12 21 12 21Z"></path><circle cx="12" cy="9.3" r="2.4"></circle></svg>',
+        calendarDownload: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5.5" width="17" height="15" rx="2.5"></rect><path d="M3.5 9.5h17"></path><path d="M12 12v5.5M9.7 15.3 12 17.6l2.3-2.3"></path></svg>',
+        download: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v11.5M8 11l4 4 4-4"></path><path d="M4.5 17.5v2A1.5 1.5 0 0 0 6 21h12a1.5 1.5 0 0 0 1.5-1.5v-2"></path></svg>',
+        upload: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5V9M8 13l4-4 4 4"></path><path d="M4.5 17.5v2A1.5 1.5 0 0 0 6 21h12a1.5 1.5 0 0 0 1.5-1.5v-2"></path></svg>',
+        users: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.5" cy="8" r="3"></circle><path d="M2.8 19.5a5.7 5.7 0 0 1 11.4 0"></path><circle cx="17" cy="9" r="2.4"></circle><path d="M15 12.2c2.6.2 4.6 1.9 5.2 4.3"></path></svg>',
+        chevronRight: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5 15.5 12 9 18.5"></path></svg>',
+        chevronLeft: '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5.5 8.5 12 15 18.5"></path></svg>',
+        euro: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"></circle><path d="M14.6 9.3a3 3 0 0 0-2.4-1.1c-1.9 0-3.4 1.7-3.4 3.8s1.5 3.8 3.4 3.8a3 3 0 0 0 2.4-1.1M8 11h5.2M8 13.3h5.2"></path></svg>',
+        trendUp: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 16.5 10 10l4 4 6.5-6.5"></path><path d="M15.5 7.5H20.5V12.5"></path></svg>',
+        star: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5.5" width="17" height="15" rx="2.5"></rect><path d="M3.5 9.5h17"></path><path d="M12 12.3l1 2 2.2.2-1.7 1.5.5 2.1-2-1.2-2 1.2.5-2.1-1.7-1.5 2.2-.2Z"></path></svg>'
+    };
+
     document.getElementById('datum').valueAsDate = new Date();
     let cropper = null;
     let aktuellesBerechnetesErgebnis = null;
@@ -181,7 +206,8 @@
         const istAdmin = profil.rolle === 'admin';
         document.getElementById('topbarUser').innerHTML =
             (profil.anzeigename || profil.email) + (istAdmin ? '<span class="badge admin">Admin</span>' : '');
-        document.getElementById('menueAdmin').style.display = istAdmin ? 'flex' : 'none';
+        const verwaltungGruppe = document.getElementById('mehrVerwaltungGruppe');
+        if (verwaltungGruppe) verwaltungGruppe.style.display = istAdmin ? 'block' : 'none';
 
         if (!profil.aktiv) {
             setzeAppSichtbarkeit('freischalten');
@@ -2593,16 +2619,24 @@
     }
 
     // ---------- Dark Mode ----------
+    function darkModeIconAktualisieren(istDark) {
+        const btn = document.getElementById('darkModeBtn');
+        if (!btn) return;
+        const mond = btn.querySelector('.icon-mond');
+        const sonne = btn.querySelector('.icon-sonne');
+        if (mond) mond.style.display = istDark ? 'none' : '';
+        if (sonne) sonne.style.display = istDark ? '' : 'none';
+    }
     function toggleDarkMode() {
         document.body.classList.toggle('dark');
         const istDark = document.body.classList.contains('dark');
         localStorage.setItem('dienstplan_darkmode', istDark ? '1' : '0');
-        document.getElementById('darkModeBtn').innerText = istDark ? '☀️' : '🌙';
+        darkModeIconAktualisieren(istDark);
     }
     if (localStorage.getItem('dienstplan_darkmode') === '1') {
         document.body.classList.add('dark');
-        document.getElementById('darkModeBtn').innerText = '☀️';
     }
+    darkModeIconAktualisieren(document.body.classList.contains('dark'));
 
     let letztesHochgeladenesBild = null; // merkt sich die Bild-DataURL für die manuelle Korrektur
 

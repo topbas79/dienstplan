@@ -33,14 +33,26 @@
 <body>
 
 <div class="topbar">
-    <div>
-        <h1>📋 Dienstplan</h1>
-        <div class="topbar-user" id="topbarUser"></div>
+    <div style="display:flex; align-items:center; gap:10px;">
+        <div style="width:34px; height:34px; border-radius:10px; background:var(--primary); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="5"></rect><path d="M8 12.5 11 15.5 16.5 8.5"></path></svg>
+        </div>
+        <div>
+            <h1 style="color:var(--text);">Dienstplan</h1>
+            <div class="topbar-user" id="topbarUser"></div>
+        </div>
     </div>
     <div style="display:flex; gap:6px;">
-        <button class="icon-btn" onclick="wechselSeite('einstellungen')" id="settingsBtn" style="display:none;">⚙️</button>
-        <button class="icon-btn" onclick="toggleDarkMode()" id="darkModeBtn">🌙</button>
-        <button class="icon-btn" onclick="abmelden()" id="logoutBtn" style="display:none;">🚪</button>
+        <button class="icon-btn" onclick="wechselSeite('einstellungen')" id="settingsBtn" style="display:none;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"></path><path d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V19.5a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H4.5a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.56-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H10.6a1.7 1.7 0 0 0 1-1.55V4.5a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V10.6a1.7 1.7 0 0 0 1 .9h.19a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1Z"></path></svg>
+        </button>
+        <button class="icon-btn" onclick="toggleDarkMode()" id="darkModeBtn">
+            <svg class="icon-mond" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.2A8.5 8.5 0 1 1 9.8 4a7 7 0 0 0 10.2 10.2Z"></path></svg>
+            <svg class="icon-sonne" style="display:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"></circle><path d="M12 3.5v2M12 18.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M3.5 12h2M18.5 12h2M4.6 19.4l1.4-1.4M18 6l1.4-1.4"></path></svg>
+        </button>
+        <button class="icon-btn" onclick="abmelden()" id="logoutBtn" style="display:none;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20.5H6a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2h3"></path><path d="M15.5 16.5 20.5 12l-5-4.5"></path><path d="M20 12H9.5"></path></svg>
+        </button>
     </div>
 </div>
 
@@ -109,10 +121,16 @@
         <div class="start-zeile"><span id="startSchichten">0 Dienste</span><span id="startStunden">–</span></div>
     </div>
 
-    <button class="btn-scan" onclick="wechselSeite('erfassen')">📷 Dienst erfassen</button>
+    <button class="btn-scan" onclick="wechselSeite('erfassen')" style="display:flex; align-items:center; justify-content:center; gap:10px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5a2 2 0 0 1 2-2h1.2l1-1.5h7.6l1 1.5H19a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8.5Z"></path><circle cx="12" cy="13" r="3.3"></circle></svg>
+        Dienst erfassen
+    </button>
 
     <div class="container" id="hilfeAktivBox" style="display:none; border-left:4px solid #f59e0b;">
-        <h3 style="margin-bottom:6px;">🔓 Hilfe-Zugriff aktiv</h3>
+        <h3 style="margin-bottom:6px; display:flex; align-items:center; gap:8px;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2.2"></rect><path d="M8 10.5V7.8A4 3.6 0 0 1 15.5 6.4"></path></svg>
+            Hilfe-Zugriff aktiv
+        </h3>
         <p class="auth-hinweis" style="margin-top:0;" id="hilfeAktivText"></p>
         <button class="btn-danger" onclick="hilfeBeenden()">Zugriff jetzt beenden</button>
     </div>
@@ -130,10 +148,28 @@
     </div>
 
     <div class="container">
-        <h3 style="margin-bottom:10px;">Auf einen Blick</h3>
-        <div class="result-item"><span class="label">💶 Zuschläge diesen Monat</span><span id="startZuschlaege" class="highlight">–</span></div>
-        <div class="result-item"><span class="label">➕ Zeitkonto dieses Jahr</span><span id="startZeitkonto">–</span></div>
-        <div class="result-item"><span class="label">📅 Nächster Feiertag</span><span id="startFeiertag">–</span></div>
+        <h3 style="margin-bottom:4px;">Auf einen Blick</h3>
+        <div style="display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--border);">
+            <div style="width:34px; height:34px; border-radius:10px; background:var(--tint-blue); display:flex; align-items:center; justify-content:center; flex-shrink:0; color:var(--primary);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"></circle><path d="M14.6 9.3a3 3 0 0 0-2.4-1.1c-1.9 0-3.4 1.7-3.4 3.8s1.5 3.8 3.4 3.8a3 3 0 0 0 2.4-1.1M8 11h5.2M8 13.3h5.2"></path></svg>
+            </div>
+            <span style="flex:1; font-size:.92rem; font-weight:500;">Zuschläge diesen Monat</span>
+            <span id="startZuschlaege" style="font-weight:700;">–</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--border);">
+            <div style="width:34px; height:34px; border-radius:10px; background:var(--tint-green); display:flex; align-items:center; justify-content:center; flex-shrink:0; color:var(--success);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 16.5 10 10l4 4 6.5-6.5"></path><path d="M15.5 7.5H20.5V12.5"></path></svg>
+            </div>
+            <span style="flex:1; font-size:.92rem; font-weight:500;">Zeitkonto dieses Jahr</span>
+            <span id="startZeitkonto" style="font-weight:700;">–</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px; padding:12px 0;">
+            <div style="width:34px; height:34px; border-radius:10px; background:var(--tint-amber); display:flex; align-items:center; justify-content:center; flex-shrink:0; color:#b45309;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5.5" width="17" height="15" rx="2.5"></rect><path d="M3.5 9.5h17"></path><path d="M12 12.3l1 2 2.2.2-1.7 1.5.5 2.1-2-1.2-2 1.2.5-2.1-1.7-1.5 2.2-.2Z"></path></svg>
+            </div>
+            <span style="flex:1; font-size:.92rem; font-weight:500;">Nächster Feiertag</span>
+            <span id="startFeiertag" style="font-weight:700;">–</span>
+        </div>
     </div>
 </div>
 
@@ -276,37 +312,40 @@
 
 <!-- SEITE 3: Statistik -->
 <div class="page" id="page-statistik">
-    <div class="container">
-        <h2>Monats-Gesamtsummen</h2>
-        <div class="stat-card" id="monatStatistik">
-            <div class="result-item"><span class="label">📆 Anzahl Schichten:</span><span id="mSchichten" class="highlight klickbar" onclick="listeOeffnen()" title="Dienste dieses Monats anzeigen">0</span></div>
-            <div class="result-item"><span class="label">⏱️ Bezahlte Arbeitszeit:</span><span id="mNetto">–</span></div>
-            <div class="result-item"><span class="label">🌙 Nachtzuschlag:</span><span id="mNacht">–</span></div>
-            <div class="result-item"><span class="label">📅 Samstagszuschlag:</span><span id="mSamstag">–</span></div>
-            <div class="result-item"><span class="label">📅 Sonntagszuschlag:</span><span id="mSonntag">–</span></div>
-            <div class="result-item"><span class="label">🎉 Feiertagszuschlag:</span><span id="mFeiertag">–</span></div>
-            <div class="result-item"><span class="label">✨ Sonderzuschlag:</span><span id="mSonder">–</span></div>
-            <div class="result-item"><span class="label">➕ Mehrarbeit (Zeitkonto):</span><span id="mMehrarbeit">–</span></div>
-            <div class="result-item"><span class="label">💶 Zuschläge gesamt:</span><span id="mZuschlaege" class="highlight">–</span></div>
-            <div class="result-item"><span class="label">📄 Feste Bezüge:</span><span id="mFest">–</span></div>
-            <div class="total-box">
-                <span>Geschätztes Monats-Brutto:</span>
-                <span id="mGesamt">–</span>
+    <div style="max-width:650px; margin:0 auto 20px auto;">
+        <div style="background:linear-gradient(160deg,#12141c,#1f2333); border-radius:20px; padding:22px 22px 20px 22px; color:#ffffff;">
+            <div style="font-size:.72rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; opacity:.6;">Geschätztes Monats-Brutto</div>
+            <div style="font-size:2rem; font-weight:800; letter-spacing:-0.02em; color:#FFD100; margin:4px 0 14px 0;" id="mGesamt">–</div>
+            <div style="display:flex; justify-content:space-between; padding-top:14px; border-top:1px solid rgba(255,255,255,.14); font-size:.85rem; font-weight:500; opacity:.85;">
+                <span><span id="mNetto">–</span> bezahlt</span>
+                <span><span id="mZuschlaege">–</span> Zuschläge</span>
             </div>
+        </div>
+
+        <div style="font-size:.76rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-faint); margin:18px 4px 8px 4px;">Monats-Gesamtsummen</div>
+        <div id="monatStatistik" style="background:var(--card); border:1px solid var(--border); border-radius:20px; padding:2px 18px;">
+            <div class="zeilen-liste-zeile"><span>Anzahl Schichten</span><span id="mSchichten" class="highlight klickbar" onclick="listeOeffnen()" title="Dienste dieses Monats anzeigen">0</span></div>
+            <div class="zeilen-liste-zeile"><span>Nachtzuschlag</span><span id="mNacht" class="zeile-wert">–</span></div>
+            <div class="zeilen-liste-zeile"><span>Samstagszuschlag</span><span id="mSamstag" class="zeile-wert">–</span></div>
+            <div class="zeilen-liste-zeile"><span>Sonntagszuschlag</span><span id="mSonntag" class="zeile-wert">–</span></div>
+            <div class="zeilen-liste-zeile"><span>Feiertagszuschlag</span><span id="mFeiertag" class="zeile-wert">–</span></div>
+            <div class="zeilen-liste-zeile"><span>Sonderzuschlag</span><span id="mSonder" class="zeile-wert">–</span></div>
+            <div class="zeilen-liste-zeile"><span>Mehrarbeit (Zeitkonto)</span><span id="mMehrarbeit" class="zeile-wert">–</span></div>
+            <div class="zeilen-liste-zeile" style="border-bottom:none;"><span>Feste Bezüge</span><span id="mFest" class="zeile-wert">–</span></div>
         </div>
     </div>
 
-    <div class="container">
-        <h2>Jahresübersicht <span id="jahrLabel" style="color:var(--text-soft); font-size:0.9rem; font-weight:normal;"></span></h2>
-        <div class="stat-card">
-            <div class="result-item"><span class="label">📆 Anzahl Schichten:</span><span id="jSchichten" class="highlight klickbar" onclick="listeOeffnen(aktuellesDatumAnzeige.getFullYear())" title="Alle Dienste anzeigen">0</span></div>
-            <div class="result-item"><span class="label">➕ Zeitkonto (Mehrarbeit):</span><span id="jZeitkonto">–</span></div>
-            <div class="total-box">
-                <span>Geschätztes Jahres-Brutto:</span>
-                <span id="jGesamt">–</span>
-            </div>
-            <p class="auth-hinweis" style="margin:10px 0 0 0;">Tippe auf die Anzahl der Schichten, um alle Dienste aufzulisten und als PDF zu speichern.</p>
+    <div style="max-width:650px; margin:0 auto 20px auto;">
+        <div style="display:flex; align-items:baseline; justify-content:space-between; margin:0 4px 8px 4px;">
+            <span style="font-size:.76rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-faint);">Jahresübersicht</span>
+            <span id="jahrLabel" style="font-size:.76rem; font-weight:600; color:var(--text-faint);"></span>
         </div>
+        <div style="background:var(--card); border:1px solid var(--border); border-radius:20px; padding:2px 18px;">
+            <div class="zeilen-liste-zeile"><span>Anzahl Schichten</span><span id="jSchichten" class="highlight klickbar" onclick="listeOeffnen(aktuellesDatumAnzeige.getFullYear())" title="Alle Dienste anzeigen">0</span></div>
+            <div class="zeilen-liste-zeile"><span>Zeitkonto (Mehrarbeit)</span><span id="jZeitkonto" class="zeile-wert">–</span></div>
+            <div class="zeilen-liste-zeile" style="border-bottom:none; padding:13px 0; font-size:.98rem;"><span style="font-weight:700; color:var(--text);">Jahres-Brutto</span><span id="jGesamt" style="font-weight:800;">–</span></div>
+        </div>
+        <p class="auth-hinweis" style="margin:10px 4px 0 4px;">Tippe auf die Anzahl der Schichten, um alle Dienste aufzulisten und als PDF zu speichern.</p>
     </div>
 
     <div class="container">
@@ -624,36 +663,70 @@
 
 <!-- SEITE: Mehr -->
 <div class="page" id="page-mehr">
-    <div class="container">
-        <h2>Mehr</h2>
-        <div class="menue-liste">
-            <button class="menue-punkt" onclick="wechselSeite('einstellungen')">
-                <span>⚙️</span><span>Verdienst-Einstellungen</span><span class="pfeil">›</span>
+    <div class="container" style="max-width:650px; margin:0 auto 20px auto; background:transparent; border:none; box-shadow:none; padding:0;">
+        <h2 style="padding:0 4px;">Mehr</h2>
+
+        <div style="font-size:.76rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-faint); margin:18px 4px 8px 4px;">Auswertung</div>
+        <div style="background:var(--card); border:1px solid var(--border); border-radius:20px; overflow:hidden;">
+            <button class="menue-punkt-neu" onclick="wechselSeite('statistik')">
+                <span class="menue-icon" style="background:var(--tint-blue); color:var(--primary);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="12" width="3.4" height="8" rx="1"></rect><rect x="10.3" y="7" width="3.4" height="13" rx="1"></rect><rect x="16.6" y="3.5" width="3.4" height="16.5" rx="1"></rect></svg></span>
+                <span class="menue-text"><b>Auswertung &amp; Statistik</b><small>Monats- und Jahresübersicht</small></span>
+                <span class="menue-pfeil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5 15.5 12 9 18.5"></path></svg></span>
             </button>
-            <button class="menue-punkt" onclick="wechselSeite('statistik')">
-                <span>📊</span><span>Auswertung &amp; Statistik</span><span class="pfeil">›</span>
+            <button class="menue-punkt-neu" onclick="wechselSeite('verlauf')">
+                <span class="menue-icon" style="background:var(--tint-blue); color:var(--primary);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3.2 2"></path></svg></span>
+                <span class="menue-text"><b>Dienstverlauf</b><small>Alle erfassten Dienste im Detail</small></span>
+                <span class="menue-pfeil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5 15.5 12 9 18.5"></path></svg></span>
             </button>
-            <button class="menue-punkt" onclick="wechselSeite('verlauf')">
-                <span>🗺️</span><span>Dienstverlauf</span><span class="pfeil">›</span>
+            <button class="menue-punkt-neu" onclick="listeOeffnen()" style="border-bottom:none;">
+                <span class="menue-icon" style="background:var(--tint-blue); color:var(--primary);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h7l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 19V5A1.5 1.5 0 0 1 7 3.5Z"></path><path d="M14 3.5V8h4"></path><path d="M8.5 12.5h7M8.5 15.5h7M8.5 9.5h2"></path></svg></span>
+                <span class="menue-text"><b>Dienstliste &amp; PDF-Export</b><small>Für Steuererklärung &amp; Unterlagen</small></span>
+                <span class="menue-pfeil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5 15.5 12 9 18.5"></path></svg></span>
             </button>
-            <button class="menue-punkt" onclick="listeOeffnen()">
-                <span>📄</span><span>Dienstliste &amp; PDF-Export</span><span class="pfeil">›</span>
+        </div>
+
+        <div style="font-size:.76rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-faint); margin:22px 4px 8px 4px;">Fahrt &amp; Wegstrecken</div>
+        <div style="background:var(--card); border:1px solid var(--border); border-radius:20px; overflow:hidden;">
+            <button class="menue-punkt-neu" onclick="wegstreckenOeffnen()">
+                <span class="menue-icon" style="background:var(--tint-green); color:var(--success);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11.7A7 7 0 0 0 5 9.3C5 14.8 12 21 12 21Z"></path><circle cx="12" cy="9.3" r="2.4"></circle></svg></span>
+                <span class="menue-text"><b>Wegstrecken</b><small>Entfernungen für die Fahrtkostenpauschale</small></span>
+                <span class="menue-pfeil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5 15.5 12 9 18.5"></path></svg></span>
             </button>
-            <button class="menue-punkt" onclick="wegstreckenOeffnen()">
-                <span>📍</span><span>Wegstrecken (für Fahrtkosten)</span><span class="pfeil">›</span>
+            <button class="menue-punkt-neu" onclick="exportMonatIcs()" style="border-bottom:none;">
+                <span class="menue-icon" style="background:var(--tint-green); color:var(--success);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5.5" width="17" height="15" rx="2.5"></rect><path d="M3.5 9.5h17"></path><path d="M12 12v5.5M9.7 15.3 12 17.6l2.3-2.3"></path></svg></span>
+                <span class="menue-text"><b>Monat als Kalenderdatei</b><small>.ics-Export für den Kalender</small></span>
+                <span class="menue-pfeil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5 15.5 12 9 18.5"></path></svg></span>
             </button>
-            <button class="menue-punkt" onclick="exportMonatIcs()">
-                <span>📅</span><span>Monat als Kalender-Datei (.ics)</span><span class="pfeil">›</span>
+        </div>
+
+        <div style="font-size:.76rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-faint); margin:22px 4px 8px 4px;">Konto &amp; Daten</div>
+        <div style="background:var(--card); border:1px solid var(--border); border-radius:20px; overflow:hidden;">
+            <button class="menue-punkt-neu" onclick="wechselSeite('einstellungen')">
+                <span class="menue-icon" style="background:var(--tint-grey); color:var(--text-soft);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"></path><path d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V19.5a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H4.5a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.56-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H10.6a1.7 1.7 0 0 0 1-1.55V4.5a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V10.6a1.7 1.7 0 0 0 1 .9h.19a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1Z"></path></svg></span>
+                <span class="menue-text"><b>Verdienst-Einstellungen</b><small>Tarif, Zuschläge, Zeitfenster</small></span>
+                <span class="menue-pfeil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5 15.5 12 9 18.5"></path></svg></span>
             </button>
-            <button class="menue-punkt" onclick="backupExportieren()">
-                <span>⬇️</span><span>Backup exportieren</span><span class="pfeil">›</span>
+            <button class="menue-punkt-neu" onclick="backupExportieren()">
+                <span class="menue-icon" style="background:var(--tint-grey); color:var(--text-soft);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v11.5M8 11l4 4 4-4"></path><path d="M4.5 17.5v2A1.5 1.5 0 0 0 6 21h12a1.5 1.5 0 0 0 1.5-1.5v-2"></path></svg></span>
+                <span class="menue-text"><b>Backup exportieren</b><small>Alle Daten als Datei sichern</small></span>
+                <span class="menue-pfeil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5 15.5 12 9 18.5"></path></svg></span>
             </button>
-            <button class="menue-punkt" onclick="document.getElementById('importFileInput').click()">
-                <span>⬆️</span><span>Backup importieren</span><span class="pfeil">›</span>
+            <button class="menue-punkt-neu" onclick="document.getElementById('importFileInput').click()" style="border-bottom:none;">
+                <span class="menue-icon" style="background:var(--tint-grey); color:var(--text-soft);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5V9M8 13l4-4 4 4"></path><path d="M4.5 17.5v2A1.5 1.5 0 0 0 6 21h12a1.5 1.5 0 0 0 1.5-1.5v-2"></path></svg></span>
+                <span class="menue-text"><b>Backup importieren</b><small>Aus einer Datei wiederherstellen</small></span>
+                <span class="menue-pfeil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5 15.5 12 9 18.5"></path></svg></span>
             </button>
-            <button class="menue-punkt" id="menueAdmin" style="display:none;" onclick="wechselSeite('admin')">
-                <span>👥</span><span>Nutzer &amp; Einladungen</span><span class="pfeil">›</span>
-            </button>
+        </div>
+
+        <div id="mehrVerwaltungGruppe" style="display:none;">
+            <div style="font-size:.76rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-faint); margin:22px 4px 8px 4px;">Verwaltung</div>
+            <div style="background:var(--card); border:1px solid var(--border); border-radius:20px; overflow:hidden;">
+                <button class="menue-punkt-neu" id="menueAdmin" style="border-bottom:none;" onclick="wechselSeite('admin')">
+                    <span class="menue-icon" style="background:var(--tint-amber); color:#b45309;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.5" cy="8" r="3"></circle><path d="M2.8 19.5a5.7 5.7 0 0 1 11.4 0"></path><circle cx="17" cy="9" r="2.4"></circle><path d="M15 12.2c2.6.2 4.6 1.9 5.2 4.3"></path></svg></span>
+                    <span class="menue-text"><b>Nutzer &amp; Einladungen</b><small>Codes, Haltestellen, KI-Nutzung</small></span>
+                    <span class="menue-pfeil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5 15.5 12 9 18.5"></path></svg></span>
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -733,19 +806,19 @@
 
 <div class="tabbar">
     <button class="tab-btn active" id="tab-start" onclick="wechselSeite('start')">
-        <span class="tab-icon">🏠</span>Start
+        <span class="tab-icon"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"></path><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"></path></svg></span>Start
     </button>
     <button class="tab-btn" id="tab-erfassen" onclick="wechselSeite('erfassen')">
-        <span class="tab-icon">✏️</span>Erfassen
+        <span class="tab-icon"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5a2 2 0 0 1 2-2h1.2l1-1.5h7.6l1 1.5H19a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8.5Z"></path><circle cx="12" cy="13" r="3.1"></circle></svg></span>Erfassen
     </button>
     <button class="tab-btn" id="tab-kalender" onclick="wechselSeite('kalender')">
-        <span class="tab-icon">📅</span>Kalender
+        <span class="tab-icon"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5.5" width="17" height="15" rx="2.5"></rect><path d="M3.5 9.5h17"></path><path d="M8 3.5v4M16 3.5v4"></path></svg></span>Kalender
     </button>
     <button class="tab-btn" id="tab-chat" onclick="wechselSeite('chat')">
-        <span class="tab-icon">💬</span>Chat<span class="tab-punkt" id="chatPunkt" style="display:none;"></span>
+        <span class="tab-icon"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5h16a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5H9l-4 3.5V17.5H4A1.5 1.5 0 0 1 2.5 16V7A1.5 1.5 0 0 1 4 5.5Z"></path></svg></span>Chat<span class="tab-punkt" id="chatPunkt" style="display:none;"></span>
     </button>
     <button class="tab-btn" id="tab-mehr" onclick="wechselSeite('mehr')">
-        <span class="tab-icon">⋯</span>Mehr
+        <span class="tab-icon"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="1.5"></circle><circle cx="12" cy="12" r="1.5"></circle><circle cx="18" cy="12" r="1.5"></circle></svg></span>Mehr
     </button>
 </div>
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dienstplan-cache-v32';
+const CACHE_NAME = 'dienstplan-cache-v33';
 const URLS_TO_CACHE = [
   './',
   './index.html',
