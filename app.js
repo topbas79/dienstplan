@@ -223,6 +223,7 @@
             return;
         }
         aktuellesProfil = profil;
+        wegstreckenEinstellungenAusProfilUebernehmen(profil);
 
         const istAdmin = profil.rolle === 'admin';
         document.getElementById('topbarUser').innerHTML =
@@ -881,6 +882,34 @@
 
     function wegstreckenSpeichernLocal() {
         localStorage.setItem('dienstplan_wegstrecken', JSON.stringify(wegstrecken));
+        profilFeldSpeichern('wegstrecken', wegstrecken);
+    }
+
+    // Sichert ein Feld (wegstrecken/einstellungen) zusaetzlich in der Cloud (profile-Tabelle),
+    // damit es ein lokales "Website-Daten löschen" im Browser übersteht.
+    async function profilFeldSpeichern(feld, wert) {
+        if (!aktuellerNutzer) return;
+        try {
+            await sb.from('profile').update({ [feld]: wert }).eq('id', aktuellerNutzer.id);
+        } catch (e) { console.log('Cloud-Sync fehlgeschlagen (' + feld + '):', e); }
+    }
+
+    // Beim Login: Cloud-Stand von Wegstrecken/Einstellungen übernehmen (falls vorhanden),
+    // sonst - falls hier bereits lokale Daten liegen - einmalig in die Cloud hochladen.
+    function wegstreckenEinstellungenAusProfilUebernehmen(profil) {
+        if (profil.wegstrecken && typeof profil.wegstrecken === 'object' && Object.keys(profil.wegstrecken).length) {
+            localStorage.setItem('dienstplan_wegstrecken', JSON.stringify(profil.wegstrecken));
+            wegstreckenLaden();
+        } else if (Object.keys(wegstrecken || {}).length) {
+            profilFeldSpeichern('wegstrecken', wegstrecken);
+        }
+
+        if (profil.einstellungen && typeof profil.einstellungen === 'object' && Object.keys(profil.einstellungen).length) {
+            localStorage.setItem('dienstplan_einstellungen', JSON.stringify(profil.einstellungen));
+            einstellungenLaden();
+        } else if (ein && ein.eingerichtetAm) {
+            profilFeldSpeichern('einstellungen', ein);
+        }
     }
 
     function normOrt(name) {
@@ -1245,9 +1274,14 @@
             tarifStand: ein.tarifStand || '',
             eingerichtetAm: ein.eingerichtetAm || new Date().toISOString()
         };
-        localStorage.setItem('dienstplan_einstellungen', JSON.stringify(ein));
+        einstellungenSpeichernLocal();
         zeigeMeldung('einMeldung', 'Gespeichert.', 'ok');
         renderCalendar();
+    }
+
+    function einstellungenSpeichernLocal() {
+        localStorage.setItem('dienstplan_einstellungen', JSON.stringify(ein));
+        profilFeldSpeichern('einstellungen', ein);
     }
 
     // ============================================================
@@ -2476,7 +2510,7 @@
         ein.stufe = stufe;
         ein.tarifStand = TARIF_GUELTIG;
         ein.eingerichtetAm = new Date().toISOString();
-        localStorage.setItem('dienstplan_einstellungen', JSON.stringify(ein));
+        einstellungenSpeichernLocal();
 
         einstellungenLaden();
         wechselSeite('einstellungen');
@@ -2486,7 +2520,7 @@
 
     function einrichtungUeberspringen() {
         ein.eingerichtetAm = new Date().toISOString();
-        localStorage.setItem('dienstplan_einstellungen', JSON.stringify(ein));
+        einstellungenSpeichernLocal();
         wechselSeite('start');
     }
 
@@ -2515,7 +2549,7 @@
 
     function tarifErinnerungErledigt() {
         ein.eingerichtetAm = new Date().toISOString();
-        localStorage.setItem('dienstplan_einstellungen', JSON.stringify(ein));
+        einstellungenSpeichernLocal();
         document.getElementById('tarifErinnerung').style.display = 'none';
         wechselSeite('einstellungen');
     }
@@ -2630,6 +2664,14 @@
     }
 
     const AKTUELLEFAHRT_STANDTYPEN = ['wenden', 'ruest', 'rüst', 'nb', 'uewegz', 'üwegz'];
+
+    // Zeigt den Punkt-Typ als kurzes, lesbares Label auf der Karte
+    // (die KI schreibt manche Typen nur als ASCII, z. B. "Ruest").
+    const AKTUELLEFAHRT_LABEL_ANZEIGE = { ruest: 'Rüst', uewegz: 'ÜWegZ', weiter: 'Weiter' };
+    function aktuelleFahrtLabelText(label) {
+        const key = (label || '').toLowerCase();
+        return AKTUELLEFAHRT_LABEL_ANZEIGE[key] || label || '';
+    }
 
     // Manche Dienstzettel listen Wenden als eigene Tabellenzeile (Typ
     // "Wenden"/"NB"/...), andere reihen die Linienfahrten einfach direkt
@@ -2962,10 +3004,12 @@
         // steht sie auch auf dem Fahrtbericht.
         const eigeneDienstnummer = aktuelleFahrtDetails && aktuelleFahrtDetails.dienstnummer;
         const zeigeDienstnummer = index < 2 && eigeneDienstnummer;
+        const kopfzeile = aktuelleFahrtLabelText(p.label) +
+            (zeigeDienstnummer ? ' · Dienst ' + eigeneDienstnummer : '');
 
         box.innerHTML = `
             <div class="af-gross">
-                ${zeigeDienstnummer ? `<div class="af-von-dienst">Dienst ${sicher(eigeneDienstnummer)}</div>` : ''}
+                ${kopfzeile ? `<div class="af-label">${sicher(kopfzeile)}</div>` : ''}
                 <div class="af-ort">${sicher(p.ort || '–')}</div>
                 ${(p.ankunft && p.ankunft === p.abfahrt) ? `<div class="af-zeit">Abfahrt <b>${sicher(p.abfahrt)}</b></div>` : `
                 ${p.ankunft ? `<div class="af-zeit">Ankunft <b>${sicher(p.ankunft)}</b></div>` : ''}
