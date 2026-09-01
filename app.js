@@ -20,7 +20,28 @@
         chevronLeft: '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5.5 8.5 12 15 18.5"></path></svg>',
         euro: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"></circle><path d="M14.6 9.3a3 3 0 0 0-2.4-1.1c-1.9 0-3.4 1.7-3.4 3.8s1.5 3.8 3.4 3.8a3 3 0 0 0 2.4-1.1M8 11h5.2M8 13.3h5.2"></path></svg>',
         trendUp: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 16.5 10 10l4 4 6.5-6.5"></path><path d="M15.5 7.5H20.5V12.5"></path></svg>',
-        star: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5.5" width="17" height="15" rx="2.5"></rect><path d="M3.5 9.5h17"></path><path d="M12 12.3l1 2 2.2.2-1.7 1.5.5 2.1-2-1.2-2 1.2.5-2.1-1.7-1.5 2.2-.2Z"></path></svg>'
+        star: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5.5" width="17" height="15" rx="2.5"></rect><path d="M3.5 9.5h17"></path><path d="M12 12.3l1 2 2.2.2-1.7 1.5.5 2.1-2-1.2-2 1.2.5-2.1-1.7-1.5 2.2-.2Z"></path></svg>',
+        trash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"></path><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"></path><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"></path><path d="M10 11v6M14 11v6"></path></svg>',
+        pencil: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20.5 4.6 17.2 15.8 6l3 3L7.6 20.2 4 20.5Z"></path><path d="M13.8 7.2l3 3"></path></svg>',
+        lock: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2.2"></rect><path d="M8 10.5V7.8a4 3.9 0 0 1 8 0v2.7"></path></svg>',
+        unlock: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2.2"></rect><path d="M8 10.5V7.8A4 3.6 0 0 1 15.5 6.4"></path></svg>',
+        check: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 9.5 17 19 6.5"></path></svg>',
+        x: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12"></path><path d="M18 6 6 18"></path></svg>',
+        hourglass: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5h11M6.5 20.5h11"></path><path d="M7.5 3.5v3.2c0 1.9 1.7 3.5 4.5 5.3 2.8-1.8 4.5-3.4 4.5-5.3V3.5"></path><path d="M7.5 20.5v-3.2c0-1.9 1.7-3.5 4.5-5.3 2.8 1.8 4.5 3.4 4.5 5.3v3.2"></path></svg>',
+        robot: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="8.5" width="15" height="11" rx="2.5"></rect><path d="M12 8.5V5"></path><circle cx="12" cy="3.7" r="1.1"></circle><circle cx="9" cy="14" r="1.3"></circle><circle cx="15" cy="14" r="1.3"></circle><path d="M2.5 12v4M21.5 12v4"></path></svg>',
+        coffee: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 9.5h12v6a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4v-6Z"></path><path d="M16.5 11h1.7a2.3 2.3 0 0 1 0 4.6h-1.7"></path><path d="M8 6.5c0-1 1-1 1-2s-1-1-1-2M12 6.5c0-1 1-1 1-2s-1-1-1-2"></path></svg>',
+        bus: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="12" rx="2.5"></rect><path d="M3.5 11h17"></path><path d="M7 19.5v1.5M17 19.5v1.5"></path><circle cx="7.5" cy="16.5" r="0.1"></circle><circle cx="16.5" cy="16.5" r="0.1"></circle></svg>',
+        share: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12 20 4l-6 16-3-7-7-3Z"></path></svg>',
+        play: '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M6 4.5v15l14-7.5Z"></path></svg>',
+        stop: '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="5.5" y="5.5" width="13" height="13" rx="2"></rect></svg>',
+        handoverOut: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12h13M12.5 7l4.5 5-4.5 5"></path></svg>',
+        handoverIn: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 12h-13M11.5 7l-4.5 5 4.5 5"></path></svg>',
+        busStop: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"></path><path d="M12 4.5h6v6h-6"></path><path d="M8 21c0-2 1.8-3 4-3s4 1 4 3"></path></svg>',
+        warning: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 21.5 20H2.5Z"></path><path d="M12 10v4.3"></path><path d="M12 17.2h.01"></path></svg>',
+        person: '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.3" r="3.6"></circle><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"></path></svg>',
+        arrowDown: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v15.5M6.5 14l5.5 5.5 5.5-5.5"></path></svg>',
+        arrowUp: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V4.5M6.5 10l5.5-5.5L17.5 10"></path></svg>',
+        swap: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8h13.5M13.5 4.5 17 8l-3.5 3.5"></path><path d="M20.5 16h-13.5M10.5 12.5 7 16l3.5 3.5"></path></svg>'
     };
 
     document.getElementById('datum').valueAsDate = new Date();
@@ -336,8 +357,8 @@
                         </div>
                         <div style="display:flex; flex-direction:column; gap:6px;">
                             ${c.verwendet_von ? '' :
-                              `<button class="btn-gcal stapel-btn" onclick="einladungTeilen('${c.code}')">📤 Teilen</button>`}
-                            <button class="btn-danger stapel-btn" onclick="codeLoeschen('${c.code}')">🗑️</button>
+                              `<button class="btn-gcal stapel-btn" onclick="einladungTeilen('${c.code}')">${ICONS.share} Teilen</button>`}
+                            <button class="btn-danger stapel-btn" onclick="codeLoeschen('${c.code}')">${ICONS.trash}</button>
                         </div>
                     </div>`).join('');
             }
@@ -375,12 +396,12 @@
                     if (entfernt) {
                         knoepfe = `
                             <button class="btn-save stapel-btn" onclick="nutzerWiederherstellen('${n.id}','${name}')">↩️ Zurück</button>
-                            <button class="btn-danger stapel-btn" onclick="nutzerSofortLoeschen('${n.id}','${name}')">🗑️ Sofort</button>`;
+                            <button class="btn-danger stapel-btn" onclick="nutzerSofortLoeschen('${n.id}','${name}')">${ICONS.trash} Sofort</button>`;
                     } else {
                         const freigabe = n.hilfe_bis && new Date(n.hilfe_bis) > new Date();
                         knoepfe = `
                             ${freigabe
-                              ? `<button class="btn-save stapel-btn" onclick="fremdeDatenAnzeigen('${n.id}','${name}')">🔓 Daten</button>`
+                              ? `<button class="btn-save stapel-btn" onclick="fremdeDatenAnzeigen('${n.id}','${name}')">${ICONS.unlock} Daten</button>`
                               : `<button class="btn-secondary stapel-btn" onclick="hilfeAnfragen('${n.id}','${name}')">Hilfe anfragen</button>`}
                             <button class="btn-danger stapel-btn" onclick="nutzerEntfernen('${n.id}','${name}')">Entfernen</button>`;
                     }
@@ -640,7 +661,7 @@
         if (treffer) {
             auswahlEl.value = treffer.art;
             const zuschlag = treffer.art === 'feiertag' ? '+135%' : '+40%';
-            hinweisEl.innerHTML = `🎉 <b>${treffer.name}</b> – automatisch als ${zuschlag} gesetzt. Du kannst es oben überschreiben.`;
+            hinweisEl.innerHTML = `<span style="display:flex; align-items:center; gap:6px;">${ICONS.star} <span><b>${treffer.name}</b> – automatisch als ${zuschlag} gesetzt. Du kannst es oben überschreiben.</span></span>`;
         } else {
             // nur zurücksetzen, wenn vorher automatisch gesetzt war
             if (auswahlEl.dataset.autoGesetzt === 'ja') auswahlEl.value = 'normal';
@@ -961,7 +982,7 @@
 
         let html = '';
         if (fehlKeys.length) {
-            html += `<p class="auth-hinweis" style="color:#b45309; font-weight:600;">⚠️ ${fehlKeys.length} Ort(e) ohne Entfernung:</p>` +
+            html += `<p class="auth-hinweis" style="color:#b45309; font-weight:600; display:flex; align-items:center; gap:6px;">${ICONS.warning} ${fehlKeys.length} Ort(e) ohne Entfernung:</p>` +
                 fehlKeys.map(k => `
                 <div class="result-item">
                     <span class="label">${sicher(fehlend[k])}</span>
@@ -977,8 +998,8 @@
                 <div class="result-item">
                     <span class="label"><b>${sicher(wegstrecken[k].name)}</b><br><small>${wegstrecken[k].km} km (einfache Strecke)${wegstrecken[k].fahrzeitMin != null ? ' · ' + wegstrecken[k].fahrzeitMin + ' Min. Fahrzeit je Richtung' : ''}</small></span>
                     <span>
-                        <button class="btn-secondary" style="width:auto; margin:0 4px 0 0; padding:6px 10px;" onclick="wegstreckeBearbeiten('${k}')">✏️</button>
-                        <button class="btn-danger" style="width:auto; margin:0; padding:6px 10px;" onclick="wegstreckeLoeschen('${k}')">🗑️</button>
+                        <button class="btn-secondary" style="width:auto; margin:0 4px 0 0; padding:6px 10px;" onclick="wegstreckeBearbeiten('${k}')">${ICONS.pencil}</button>
+                        <button class="btn-danger" style="width:auto; margin:0; padding:6px 10px;" onclick="wegstreckeLoeschen('${k}')">${ICONS.trash}</button>
                     </span>
                 </div>`).join('');
         }
@@ -1309,7 +1330,7 @@
                     <input type="time" value="${p.von}" onchange="pauseGeaendert(${i},'von',this.value); pausenRendern();">
                     <span>bis</span>
                     <input type="time" value="${p.bis}" onchange="pauseGeaendert(${i},'bis',this.value); pausenRendern();">
-                    <button class="btn-danger pause-weg" onclick="pauseEntfernen(${i})">✕</button>
+                    <button class="btn-danger pause-weg" onclick="pauseEntfernen(${i})">${ICONS.x}</button>
                 </div>
                 <div class="pause-zeilen" style="margin-top:6px;">
                     <span style="font-size:.8rem; white-space:nowrap;">davon unbezahlt</span>
@@ -1688,11 +1709,11 @@
             const minuten = Math.floor((rest % 3600000) / 60000);
             const text = `Der Admin kann deine Dienste noch ${stunden} Std. ${minuten} Min. lang sehen und Einstellungen für dich anpassen.`;
             if (box) { box.style.display = 'block'; document.getElementById('hilfeAktivText').innerText = text; }
-            if (status) status.innerText = '🔓 ' + text;
+            if (status) status.innerHTML = `<span style="display:flex; align-items:center; gap:6px;">${ICONS.unlock} ${text}</span>`;
             if (knopf) { knopf.innerText = 'Zugriff jetzt beenden'; knopf.className = 'btn-danger'; }
         } else {
             if (box) box.style.display = 'none';
-            if (status) status.innerText = '🔒 Zurzeit kann niemand deine Daten sehen.';
+            if (status) status.innerHTML = `<span style="display:flex; align-items:center; gap:6px;">${ICONS.lock} Zurzeit kann niemand deine Daten sehen.</span>`;
             if (knopf) { knopf.innerText = 'Zugriff für 24 Std. freigeben'; knopf.className = 'btn-secondary'; }
         }
     }
@@ -1787,11 +1808,11 @@
             unterhaltungen = data || [];
 
             if (!unterhaltungen.length) {
-                el.innerHTML = '<p class="auth-hinweis">Noch keine Gespräche. Tippe oben auf ✏️, um jemandem zu schreiben.</p>';
+                el.innerHTML = `<p class="auth-hinweis">Noch keine Gespräche. Tippe oben auf ${ICONS.pencil}, um jemandem zu schreiben.</p>`;
             } else {
                 el.innerHTML = unterhaltungen.map(u => {
                     const titel = u.art === 'gruppe' ? u.name : (u.partner_name || 'Unbekannt');
-                    const symbol = u.art === 'gruppe' ? '👥' : '👤';
+                    const symbol = u.art === 'gruppe' ? ICONS.users : ICONS.person;
                     const unter = u.art === 'gruppe' ? 'Gruppe'
                                 : (u.partner_hof || '');
                     return `
@@ -1850,7 +1871,7 @@
 
         el.innerHTML = treffer.map(k => `
             <div class="chat-eintrag" onclick="einzelchatStarten('${k.id}')">
-                <div class="chat-avatar">👤</div>
+                <div class="chat-avatar">${ICONS.person}</div>
                 <div style="flex:1;">
                     <div class="chat-name">${sicher(k.anzeigename)}</div>
                     <div class="chat-vorschau">${sicher(k.betriebshof || '')}</div>
@@ -1971,7 +1992,7 @@
                 ${inhalt}
                 <div class="chat-blase-zeit">${zeitKurz(n.erstellt_am)}
                     ${(eigen || (aktuellesProfil && aktuellesProfil.rolle === 'admin'))
-                      ? `<span class="chat-weg" onclick="nachrichtLoeschen(${n.id})">✕</span>` : ''}
+                      ? `<span class="chat-weg" onclick="nachrichtLoeschen(${n.id})">${ICONS.x}</span>` : ''}
                 </div>
             </div>
         </div>`;
@@ -1980,18 +2001,18 @@
     // Geteilter Dienstverlauf: nur wann und wo, keine Beträge
     function dienstSymbol(art) {
         const a = (art || '').toLowerCase();
-        if (a.startsWith('dienstbeginn')) return '▶️';
-        if (a.startsWith('dienstende')) return '⏹️';
-        if (a.startsWith('pause')) return '☕';
-        if (/(ü|ue|u)bergabe/.test(a)) return '📤';
-        if (/(ü|ue|u)bernahme/.test(a)) return '📥';
-        if (a.startsWith('aussetz')) return '🅿️';
-        if (a.startsWith('einsetz')) return '🚏';
+        if (a.startsWith('dienstbeginn')) return ICONS.play;
+        if (a.startsWith('dienstende')) return ICONS.stop;
+        if (a.startsWith('pause')) return ICONS.coffee;
+        if (/(ü|ue|u)bergabe/.test(a)) return ICONS.handoverOut;
+        if (/(ü|ue|u)bernahme/.test(a)) return ICONS.handoverIn;
+        if (a.startsWith('aussetz')) return ICONS.stop;
+        if (a.startsWith('einsetz')) return ICONS.busStop;
         return '•';
     }
 
     function dienstKarteHtml(d) {
-        const kopf = `📋 ${sicher(d.datum ? d.datum.split('-').reverse().join('.') : '')}` +
+        const kopf = `${ICONS.fileText} ${sicher(d.datum ? d.datum.split('-').reverse().join('.') : '')}` +
                      `${d.dienstnummer ? ' · ' + sicher(d.dienstnummer) : ''}`;
 
         // Ältere geteilte Dienste hatten noch kein "punkte"-Feld
@@ -2378,8 +2399,8 @@
             <div class="result-item">
                 <span class="label"><b>${k}</b><br><small>${haltestellen[k]}</small></span>
                 <span style="display:flex; gap:6px;">
-                    <button class="btn-secondary stapel-btn" onclick="haltestelleBearbeiten('${k}')">✏️</button>
-                    <button class="btn-danger stapel-btn" onclick="haltestelleLoeschen('${k}')">🗑️</button>
+                    <button class="btn-secondary stapel-btn" onclick="haltestelleBearbeiten('${k}')">${ICONS.pencil}</button>
+                    <button class="btn-danger stapel-btn" onclick="haltestelleLoeschen('${k}')">${ICONS.trash}</button>
                 </span>
             </div>`).join('');
     }
@@ -2819,7 +2840,7 @@
     function stapelRendern() {
         const el = document.getElementById('stapelListe');
         el.innerHTML = stapel.map((s, i) => {
-            const symbol = { wartet: '⏳', liest: '🤖', fertig: '✅', fehler: '⚠️' }[s.status];
+            const symbol = { wartet: ICONS.hourglass, liest: ICONS.robot, fertig: ICONS.check, fehler: ICONS.warning }[s.status];
             let text = s.name;
             if (s.status === 'liest') text = 'wird gelesen...';
             else if (s.status === 'fertig') {
@@ -2854,7 +2875,7 @@
 
         const knopf = document.getElementById('stapelSpeichern');
         knopf.disabled = true;
-        knopf.innerText = 'Speichere...';
+        knopf.innerHTML = 'Speichere...';
 
         let gespeichert = 0, fehlgeschlagen = 0;
         for (const eintrag of fertige) {
@@ -2873,7 +2894,7 @@
         }
 
         knopf.disabled = false;
-        knopf.innerText = '💾 Alle speichern';
+        knopf.innerHTML = `${ICONS.download} Alle speichern`;
         await schichtenLaden();
         alert(`✅ ${gespeichert} Dienste gespeichert.` +
               (fehlgeschlagen ? ` ${fehlgeschlagen} fehlgeschlagen.` : ''));
@@ -2931,13 +2952,13 @@
     // Symbol je Wechsel-Art
     function wechselSymbol(art) {
         const a = (art || '').toLowerCase();
-        if (a.startsWith('überg') || a.startsWith('uberg') || a.startsWith('übg')) return '📤';
-        if (a.startsWith('übern') || a.startsWith('ubern')) return '📥';
-        if (a.startsWith('aussetz')) return '🅿️';
-        if (a.startsWith('einsetz')) return '🚏';
-        if (a.startsWith('ankunft')) return '🔽';
-        if (a.startsWith('abfahrt')) return '🔼';
-        return '↔️';
+        if (a.startsWith('überg') || a.startsWith('uberg') || a.startsWith('übg')) return ICONS.handoverOut;
+        if (a.startsWith('übern') || a.startsWith('ubern')) return ICONS.handoverIn;
+        if (a.startsWith('aussetz')) return ICONS.stop;
+        if (a.startsWith('einsetz')) return ICONS.busStop;
+        if (a.startsWith('ankunft')) return ICONS.arrowDown;
+        if (a.startsWith('abfahrt')) return ICONS.arrowUp;
+        return ICONS.swap;
     }
 
     function detailsAnzeigen(d) {
@@ -2986,7 +3007,7 @@
         if (d.beginn) {
             punkte.push({
                 zeit: d.beginn, sort: sortWert(d.beginn) - 1,   // immer ganz vorn
-                symbol: '▶️', titel: 'Dienstbeginn',
+                symbol: ICONS.play, titel: 'Dienstbeginn',
                 haupt: `${d.beginn} · ${ortText(d.beginn_ort, d.beginn_ort_kuerzel)}`,
                 unten: fahrtInfo(d.beginn_linie, d.beginn_umlauf, d.beginn_nach, d.beginn_nach_kuerzel, d.beginn_abfahrt),
                 klasse: ''
@@ -3019,7 +3040,7 @@
 
             punkte.push({
                 zeit: p.von, sort: sortWert(p.von),
-                symbol: '☕', titel: 'Pause',
+                symbol: ICONS.coffee, titel: 'Pause',
                 haupt: `${p.von || ''}–${p.bis || ''} · ${ortText(p.ort, p.ort_kuerzel)}`,
                 unten: '', klasse: 'verlauf-pause'
             });
@@ -3042,7 +3063,7 @@
             const folgetag = d.ende_folgetag ? ' <small style="opacity:.7;">(Folgetag)</small>' : '';
             punkte.push({
                 zeit: d.ende, sort: 999998,                       // immer ganz hinten
-                symbol: '⏹️', titel: 'Dienstende',
+                symbol: ICONS.stop, titel: 'Dienstende',
                 haupt: `${d.ende}${folgetag} · ${ortText(d.ende_ort, d.ende_ort_kuerzel)}`,
                 unten: fahrtInfo(d.ende_linie, d.ende_umlauf, d.ende_nach, d.ende_nach_kuerzel, null),
                 klasse: ''
@@ -3083,8 +3104,8 @@
                     <span style="text-align:right;">${fahrtInfo(f.linie, f.umlauf, f.nach, f.nach_kuerzel, null)}</span>
                  </div>`).join('');
             html += `<details style="margin-top:14px;">
-                        <summary style="cursor:pointer; font-weight:600; font-size:.85rem;">
-                            🚌 Alle Fahrten (${d.fahrten.length})
+                        <summary style="cursor:pointer; font-weight:600; font-size:.85rem; display:flex; align-items:center; gap:6px;">
+                            ${ICONS.bus} Alle Fahrten (${d.fahrten.length})
                         </summary>${reihen}</details>`;
         }
 
@@ -3495,10 +3516,10 @@
         box.style.display = 'block';
         if (!abweichungen.length) {
             box.className = 'kontrolle-box ok';
-            box.innerHTML = '✓ Stimmt mit den Werten auf dem Dienstzettel überein.';
+            box.innerHTML = `<span style="display:flex; align-items:flex-start; gap:6px;">${ICONS.check} Stimmt mit den Werten auf dem Dienstzettel überein.</span>`;
         } else {
             box.className = 'kontrolle-box abweichung';
-            box.innerHTML = '⚠️ Abweichung zum Dienstzettel:<br>• ' + abweichungen.join('<br>• ');
+            box.innerHTML = `<span style="display:flex; align-items:flex-start; gap:6px;">${ICONS.warning}<span>Abweichung zum Dienstzettel:<br>• ` + abweichungen.join('<br>• ') + '</span></span>';
         }
     }
 

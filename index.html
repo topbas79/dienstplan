@@ -179,25 +179,25 @@
         <h2>Schicht erfassen (OCR & Lohn)</h2>
 
         <div class="upload-box">
-            <label class="upload-label" for="dienstplanBild">📷 Dienstzettel fotografieren oder auswählen</label>
+            <label class="upload-label" for="dienstplanBild"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M4 8.5a2 2 0 0 1 2-2h1.2l1-1.5h7.6l1 1.5H19a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8.5Z"></path><circle cx="12" cy="13" r="3.1"></circle></svg>Dienstzettel fotografieren oder auswählen</label>
             <input type="file" id="dienstplanBild" accept="image/*" multiple onchange="dateienVerarbeiten(this)">
             <div id="statusText">Ein oder mehrere Fotos auswählen – die KI liest alles automatisch aus.</div>
-            <button class="hilfe-knopf" onclick="hilfeOeffnen('upload')">ℹ️ Wie funktioniert das?</button>
-            <button class="btn-secondary" id="btnManuellKorrigieren" style="display:none;" onclick="oeffneCropperManuell()">✂️ Erkennung manuell korrigieren</button>
+            <button class="hilfe-knopf" onclick="hilfeOeffnen('upload')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:3px;"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6"></path><path d="M12 7.5h.01"></path></svg>Wie funktioniert das?</button>
+            <button class="btn-secondary" id="btnManuellKorrigieren" style="display:none;" onclick="oeffneCropperManuell()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M6 2v14a2 2 0 0 0 2 2h14"></path><path d="M18 22V8a2 2 0 0 0-2-2H2"></path></svg>Erkennung manuell korrigieren</button>
         </div>
 
         <div id="stapelBox" class="stat-card" style="display:none; margin-bottom:16px;">
             <h3 style="margin-bottom:8px;">Erkannte Dienste</h3>
             <div id="stapelListe"></div>
-            <button class="btn-save" id="stapelSpeichern" onclick="stapelAlleSpeichern()" style="display:none;">💾 Alle speichern</button>
+            <button class="btn-save" id="stapelSpeichern" onclick="stapelAlleSpeichern()" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M12 3.5v11.5M8 11l4 4 4-4"></path><path d="M4.5 17.5v2A1.5 1.5 0 0 0 6 21h12a1.5 1.5 0 0 0 1.5-1.5v-2"></path></svg>Alle speichern</button>
         </div>
 
         <div id="cropModal">
-            <p style="margin-top:0; font-size:0.85rem; font-weight:bold;">✂️ Markiere den Bereich mit Datum, Beginn und Ende:</p>
+            <p style="margin-top:0; font-size:0.85rem; font-weight:bold; display:flex; align-items:center; gap:6px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2v14a2 2 0 0 0 2 2h14"></path><path d="M18 22V8a2 2 0 0 0-2-2H2"></path></svg>Markiere den Bereich mit Datum, Beginn und Ende:</p>
             <div class="img-container">
                 <img id="imageToCrop" src="" alt="Vorschau">
             </div>
-            <button onclick="scanneAusschnitt()">🔍 Datum & Zeiten auslesen</button>
+            <button onclick="scanneAusschnitt()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M20 20l-4.3-4.3"></path></svg>Datum & Zeiten auslesen</button>
         </div>
 
         <div class="row">
@@ -240,7 +240,7 @@
 
         <div class="form-group" id="pausenBereich">
             <label>Unbezahlte Pausen
-                <button class="hilfe-knopf" style="margin:0 0 0 6px !important;" onclick="hilfeOeffnen('pausen')">ℹ️ Erklärung</button>
+                <button class="hilfe-knopf" style="margin:0 0 0 6px !important;" onclick="hilfeOeffnen('pausen')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:3px;"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6"></path><path d="M12 7.5h.01"></path></svg>Erklärung</button>
             </label>
             <div id="pausenListe"></div>
             <button class="btn-secondary" style="margin-top:6px;" onclick="pauseHinzufuegen()">+ Pause hinzufügen</button>
@@ -265,13 +265,13 @@
 
         <div class="results" id="ausgabe" style="display:none;">
             <h3>Tagesschicht Auswertung</h3>
-            <div class="result-item"><span class="label">⏱️ Bezahlte Arbeitszeit:</span><span id="resNetto" class="highlight">–</span></div>
-            <div class="result-item"><span class="label">🌙 Nacht (+25%):</span><span id="resNacht">–</span></div>
-            <div class="result-item"><span class="label">📅 Samstag (+20%):</span><span id="resSamstag">–</span></div>
-            <div class="result-item"><span class="label">📅 Sonntag (+25%):</span><span id="resSonntag">–</span></div>
-            <div class="result-item"><span class="label">🎉 Feiertag (+135%):</span><span id="resFeiertag">–</span></div>
-            <div class="result-item"><span class="label">✨ Sondertag (+40%):</span><span id="resSonder">–</span></div>
-            <div class="result-item"><span class="label">➕ Mehrarbeit (+30%):</span><span id="resMehrarbeit">–</span></div>
+            <div class="result-item"><span class="label"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l2.5 2.5"></path><path d="M9.5 2.5h5"></path><path d="M18.5 5.5l1.3-1.3"></path></svg>Bezahlte Arbeitszeit:</span><span id="resNetto" class="highlight">–</span></div>
+            <div class="result-item"><span class="label"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.2A8.5 8.5 0 1 1 9.8 4a7 7 0 0 0 10.2 10.2Z"></path></svg>Nacht (+25%):</span><span id="resNacht">–</span></div>
+            <div class="result-item"><span class="label"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5.5" width="17" height="15" rx="2.5"></rect><path d="M3.5 9.5h17"></path><path d="M8 3.5v4M16 3.5v4"></path></svg>Samstag (+20%):</span><span id="resSamstag">–</span></div>
+            <div class="result-item"><span class="label"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5.5" width="17" height="15" rx="2.5"></rect><path d="M3.5 9.5h17"></path><path d="M8 3.5v4M16 3.5v4"></path></svg>Sonntag (+25%):</span><span id="resSonntag">–</span></div>
+            <div class="result-item"><span class="label"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5.5" width="17" height="15" rx="2.5"></rect><path d="M3.5 9.5h17"></path><path d="M12 12.3l1 2 2.2.2-1.7 1.5.5 2.1-2-1.2-2 1.2.5-2.1-1.7-1.5 2.2-.2Z"></path></svg>Feiertag (+135%):</span><span id="resFeiertag">–</span></div>
+            <div class="result-item"><span class="label"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l1.9 5.5 5.6 1.9-5.6 1.9L12 18.3l-1.9-5.5-5.6-1.9 5.6-1.9L12 3.5Z"></path></svg>Sondertag (+40%):</span><span id="resSonder">–</span></div>
+            <div class="result-item"><span class="label"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 16.5 10 10l4 4 6.5-6.5"></path><path d="M15.5 7.5H20.5V12.5"></path></svg>Mehrarbeit (+30%):</span><span id="resMehrarbeit">–</span></div>
 
             <div class="total-box">
                 <span>Zuschläge gesamt:</span>
@@ -281,12 +281,12 @@
             <div id="kontrolleBox" class="kontrolle-box" style="display:none;"></div>
 
             <div id="verlaufHinweis" style="display:none; margin-top:12px;">
-                <button class="btn-secondary" onclick="wechselSeite('verlauf')">🗺️ Dienstverlauf ansehen</button>
+                <button class="btn-secondary" onclick="wechselSeite('verlauf')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3.2 2"></path></svg>Dienstverlauf ansehen</button>
             </div>
 
-            <button class="btn-save" onclick="speichereTagInKalender()">💾 Für diesen Tag im internen Kalender speichern</button>
-            <button class="btn-gcal" onclick="exportToGoogleCalendar()">📅 Einzelne Schicht in Google Kalender eintragen</button>
-            <button class="btn-danger" id="btnDelete" style="display:none;" onclick="loescheTagAusKalender()">🗑️ Schicht für diesen Tag löschen</button>
+            <button class="btn-save" onclick="speichereTagInKalender()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M12 3.5v11.5M8 11l4 4 4-4"></path><path d="M4.5 17.5v2A1.5 1.5 0 0 0 6 21h12a1.5 1.5 0 0 0 1.5-1.5v-2"></path></svg>Für diesen Tag im internen Kalender speichern</button>
+            <button class="btn-gcal" onclick="exportToGoogleCalendar()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><rect x="3.5" y="5.5" width="17" height="15" rx="2.5"></rect><path d="M3.5 9.5h17"></path><path d="M8 3.5v4M16 3.5v4"></path></svg>Einzelne Schicht in Google Kalender eintragen</button>
+            <button class="btn-danger" id="btnDelete" style="display:none;" onclick="loescheTagAusKalender()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M4 7h16"></path><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"></path><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"></path><path d="M10 11v6M14 11v6"></path></svg>Schicht für diesen Tag löschen</button>
         </div>
     </div>
 </div>
@@ -352,8 +352,8 @@
         <h2>Datensicherung</h2>
         <p style="font-size:0.85rem; color:var(--text-soft); margin-top:-8px;">Alle Schichten sind nur auf diesem Gerät gespeichert. Sichere sie regelmäßig als Datei, z. B. vor einem Handywechsel.</p>
         <div class="backup-row">
-            <button onclick="backupExportieren()">⬇️ Backup exportieren</button>
-            <button class="btn-secondary" onclick="document.getElementById('importFileInput').click()">⬆️ Backup importieren</button>
+            <button onclick="backupExportieren()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M12 3.5v11.5M8 11l4 4 4-4"></path><path d="M4.5 17.5v2A1.5 1.5 0 0 0 6 21h12a1.5 1.5 0 0 0 1.5-1.5v-2"></path></svg>Backup exportieren</button>
+            <button class="btn-secondary" onclick="document.getElementById('importFileInput').click()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M12 20.5V9M8 13l4-4 4 4"></path><path d="M4.5 17.5v2A1.5 1.5 0 0 0 6 21h12a1.5 1.5 0 0 0 1.5-1.5v-2"></path></svg>Backup importieren</button>
         </div>
         <input type="file" id="importFileInput" accept="application/json" onchange="backupImportieren(this)">
     </div>
@@ -404,7 +404,7 @@
     <div class="container">
         <h2>Noch ein Schritt: Verdienst einrichten</h2>
         <p class="auth-hinweis">Damit die App deinen Verdienst berechnen kann, wähle deine Entgeltgruppe und Stufe. Das Monatsentgelt wird dann automatisch aus der TV-N-Berlin-Tabelle übernommen.</p>
-        <button class="hilfe-knopf" style="margin-bottom:10px !important;" onclick="hilfeOeffnen('verdienst')">ℹ️ Wo finde ich diese Werte?</button>
+        <button class="hilfe-knopf" style="margin-bottom:10px !important;" onclick="hilfeOeffnen('verdienst')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:3px;"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6"></path><path d="M12 7.5h.01"></path></svg>Wo finde ich diese Werte?</button>
 
         <div class="row">
             <div class="form-group">
@@ -439,7 +439,7 @@
     <div class="container">
         <h2>Verdienst-Einstellungen</h2>
         <p class="auth-hinweis">Diese Werte stehen auf deiner Verdienstabrechnung. Sie werden für alle Berechnungen genutzt.</p>
-        <button class="hilfe-knopf" style="margin-bottom:10px !important;" onclick="hilfeOeffnen('verdienst')">ℹ️ Wo finde ich diese Werte?</button>
+        <button class="hilfe-knopf" style="margin-bottom:10px !important;" onclick="hilfeOeffnen('verdienst')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:3px;"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6"></path><path d="M12 7.5h.01"></path></svg>Wo finde ich diese Werte?</button>
 
         <div class="row">
             <div class="form-group">
@@ -553,8 +553,8 @@
         <div id="dienstDetails" style="display:none;">
             <div id="dienstDetailsInhalt"></div>
             <div class="teilen-reihe">
-                <button class="btn-secondary" onclick="verlaufTeilenStarten()">💬 Im Chat</button>
-                <button class="btn-save" onclick="verlaufExternTeilen()">📤 WhatsApp &amp; Co.</button>
+                <button class="btn-secondary" onclick="verlaufTeilenStarten()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M4 5.5h16a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5H9l-4 3.5V17.5H4A1.5 1.5 0 0 1 2.5 16V7A1.5 1.5 0 0 1 4 5.5Z"></path></svg>Im Chat</button>
+                <button class="btn-save" onclick="verlaufExternTeilen()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M4 12 20 4l-6 16-3-7-7-3Z"></path></svg>WhatsApp &amp; Co.</button>
             </div>
         </div>
         <button class="btn-secondary" style="margin-top:14px;" onclick="wechselSeite('mehr')">↩️ Zurück</button>
@@ -570,10 +570,10 @@
             <button onclick="listeMonatWechseln(1)">▶</button>
         </div>
         <div id="listeInhalt"></div>
-        <button class="btn-gcal" onclick="listeAlsPdf()">📄 Diesen Monat als PDF herunterladen</button>
-        <button class="btn-save" onclick="listeAlsPdfVerpflegung()">🍽️ Verpflegungsmehraufwand als PDF</button>
-        <button class="btn-save" onclick="listeAlsPdfWeg()">🛣️ Fahrtkosten (Weg) als PDF</button>
-        <button class="btn-secondary" onclick="wegstreckenOeffnen()">📍 Wegstrecken pflegen</button>
+        <button class="btn-gcal" onclick="listeAlsPdf()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M7 3.5h7l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 19V5A1.5 1.5 0 0 1 7 3.5Z"></path><path d="M14 3.5V8h4"></path><path d="M8.5 12.5h7M8.5 15.5h7M8.5 9.5h2"></path></svg>Diesen Monat als PDF herunterladen</button>
+        <button class="btn-save" onclick="listeAlsPdfVerpflegung()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M7 3v6.5a2 2 0 0 0 4 0V3"></path><path d="M9 9.5V21"></path><path d="M16 3c-1.7 0-3 1.9-3 5s1.3 5 3 5"></path><path d="M16 3v18"></path></svg>Verpflegungsmehraufwand als PDF</button>
+        <button class="btn-save" onclick="listeAlsPdfWeg()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M9 3 5 21"></path><path d="M15 3l4 18"></path><path d="M11 9.5h2"></path><path d="M10.2 14.5h3.6"></path></svg>Fahrtkosten (Weg) als PDF</button>
+        <button class="btn-secondary" onclick="wegstreckenOeffnen()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M12 21s7-6.2 7-11.7A7 7 0 0 0 5 9.3C5 14.8 12 21 12 21Z"></path><circle cx="12" cy="9.3" r="2.4"></circle></svg>Wegstrecken pflegen</button>
         <button class="btn-secondary" onclick="wechselSeite('statistik')">↩️ Zurück zur Statistik</button>
     </div>
 </div>
@@ -609,11 +609,11 @@
     <div class="container">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
             <h2 style="margin:0;">Nachrichten</h2>
-            <button class="icon-btn" onclick="wechselSeite('kontakte')" title="Neues Gespräch">✏️</button>
+            <button class="icon-btn" onclick="wechselSeite('kontakte')" title="Neues Gespräch"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20.5 4.6 17.2 15.8 6l3 3L7.6 20.2 4 20.5Z"></path><path d="M13.8 7.2l3 3"></path></svg></button>
         </div>
         <div id="chatListe">Lade...</div>
         <button class="btn-secondary" id="btnGruppeNeu" style="display:none; margin-top:14px;"
-                onclick="wechselSeite('gruppe-neu')">👥 Neue Gruppe erstellen</button>
+                onclick="wechselSeite('gruppe-neu')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><circle cx="8.5" cy="8" r="3"></circle><path d="M2.8 19.5a5.7 5.7 0 0 1 11.4 0"></path><circle cx="17" cy="9" r="2.4"></circle><path d="M15 12.2c2.6.2 4.6 1.9 5.2 4.3"></path></svg>Neue Gruppe erstellen</button>
     </div>
 </div>
 
@@ -656,7 +656,7 @@
         <div id="chatVerlauf" class="chat-verlauf"></div>
         <div class="chat-eingabe">
             <textarea id="chatText" rows="1" placeholder="Nachricht..." oninput="chatFeldAnpassen(this)"></textarea>
-            <button class="chat-senden" onclick="nachrichtSenden()">➤</button>
+            <button class="chat-senden" onclick="nachrichtSenden()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg></button>
         </div>
     </div>
 </div>
@@ -736,7 +736,7 @@
     <div class="container">
         <h2>Einladungen</h2>
         <p class="auth-hinweis">Erzeuge einen Code und gib ihn an die Person weiter. Jeder Code funktioniert genau einmal.</p>
-        <button onclick="codeErzeugen()">➕ Neuen Einladungscode erzeugen</button>
+        <button onclick="codeErzeugen()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M12 5v14M5 12h14"></path></svg>Neuen Einladungscode erzeugen</button>
         <div class="meldung" id="adminMeldung"></div>
         <textarea id="einladungText" readonly rows="8" style="display:none; margin-top:10px; width:100%; padding:10px; border:1px solid var(--border); border-radius:6px; background:var(--card); color:var(--text); font-size:.85rem;"></textarea>
         <div id="codeListe" style="margin-top:16px;"></div>
@@ -793,7 +793,7 @@
     <div class="hilfe-fenster" onclick="event.stopPropagation()">
         <div class="hilfe-kopf">
             <span id="hilfeTitel">Hilfe</span>
-            <button class="icon-btn" onclick="hilfeSchliessen()">✕</button>
+            <button class="icon-btn" onclick="hilfeSchliessen()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12"></path><path d="M18 6 6 18"></path></svg></button>
         </div>
         <div class="hilfe-inhalt" id="hilfeInhalt"></div>
         <div class="hilfe-fuss">
