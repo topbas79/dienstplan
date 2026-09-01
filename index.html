@@ -318,6 +318,10 @@
         </div>
         <input type="file" id="importFileInput" accept="application/json" onchange="backupImportieren(this)">
     </div>
+
+    <div class="container">
+        <button class="btn-secondary" onclick="wechselSeite('mehr')">↩️ Zurück</button>
+    </div>
 </div>
 
 <!-- SEITE: Profil ausfüllen (Pflicht nach der Anmeldung) -->
@@ -480,6 +484,15 @@
             </div>
         </div>
 
+        <h3 style="margin-top:22px;">Verpflegungsmehraufwand</h3>
+        <div class="form-group">
+            <label for="einFahrzeit">Fahrzeit je Richtung (Min.)</label>
+            <input type="number" id="einFahrzeit" step="1" min="0" placeholder="30">
+            <div class="auth-hinweis" style="margin-top:6px;">
+                Für die 8-Stunden-Grenze beim Verpflegungsmehraufwand zählt die Abwesenheit von der Wohnung, also Anfahrt + Dienstzeit + Rückfahrt. Abweichende Fahrzeiten je Ort kannst du unter Mehr → Wegstrecken hinterlegen.
+            </div>
+        </div>
+
         <h3 style="margin-top:22px;">Hilfe durch den Admin</h3>
         <p class="auth-hinweis">Standardmäßig kann niemand deine Daten sehen. Wenn du Hilfe brauchst, kannst du dem Admin für 24 Stunden Zugriff geben. Er kann dann deine Dienste sehen und Einstellungen für dich anpassen.</p>
         <div id="hilfeStatus" class="auth-hinweis" style="margin-bottom:10px;"></div>
@@ -505,6 +518,7 @@
                 <button class="btn-save" onclick="verlaufExternTeilen()">📤 WhatsApp &amp; Co.</button>
             </div>
         </div>
+        <button class="btn-secondary" style="margin-top:14px;" onclick="wechselSeite('mehr')">↩️ Zurück</button>
     </div>
 </div>
 
@@ -539,6 +553,10 @@
                 <label for="wsKm">Entfernung (km, einfache Strecke)</label>
                 <input type="number" id="wsKm" step="0.1" min="0" placeholder="14">
             </div>
+        </div>
+        <div class="form-group">
+            <label for="wsFahrzeit">Fahrzeit je Richtung (Min.) — optional, sonst gilt die Voreinstellung</label>
+            <input type="number" id="wsFahrzeit" step="1" min="0" placeholder="z. B. 30">
         </div>
         <button onclick="wegstreckeSpeichern()">Speichern</button>
         <div class="meldung" id="wsMeldung"></div>
@@ -690,6 +708,10 @@
         <h2 id="fremdAnsichtTitel">Schichten von …</h2>
         <button class="btn-secondary" onclick="zurueckZuEigenenDaten()">↩️ Zurück zu meinen eigenen Daten</button>
         <p class="auth-hinweis" style="margin-top:12px;">Du siehst gerade fremde Daten. Kalender und Statistik zeigen diese Person. Bearbeiten ist nicht möglich.</p>
+    </div>
+
+    <div class="container">
+        <button class="btn-secondary" onclick="wechselSeite('mehr')">↩️ Zurück</button>
     </div>
 </div>
 

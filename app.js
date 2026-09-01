@@ -710,6 +710,17 @@
                     dauerMinuten: schichtDauerMinuten(k, s.startStr, s.endeIst || s.endeStr),
                     verdienst: s.zuschlagSumme || 0
                 };
+            })
+            .map(z => {
+                const fahrzeitBeginn = wegFahrzeitFuerOrt(z.beginnOrt);
+                const fahrzeitEnde = wegFahrzeitFuerOrt(z.endeOrt);
+                const anfahrt = fahrzeitBeginn ?? ein.fahrzeitMin;
+                const rueckfahrt = fahrzeitEnde ?? ein.fahrzeitMin;
+                return {
+                    ...z,
+                    abwesenheitMinuten: anfahrt + z.dauerMinuten + rueckfahrt,
+                    fahrzeitAbweichend: fahrzeitBeginn != null || fahrzeitEnde != null
+                };
             });
     }
 
@@ -837,6 +848,15 @@
         return eintrag ? eintrag.km : null;
     }
 
+    // Liefert die für einen Ort hinterlegte Fahrzeit (Minuten, je Richtung), oder null
+    // wenn dafür nichts eingetragen ist - dann gilt die Voreinstellung aus den Einstellungen.
+    function wegFahrzeitFuerOrt(name) {
+        const key = normOrt(name);
+        if (!key) return null;
+        const eintrag = wegstrecken[key];
+        return (eintrag && eintrag.fahrzeitMin != null) ? eintrag.fahrzeitMin : null;
+    }
+
     function wegstreckenOeffnen() {
         wechselSeite('wegstrecken');
     }
@@ -844,14 +864,17 @@
     function wegstreckeSpeichern() {
         const ortRoh = document.getElementById('wsOrt').value.trim();
         const km = parseFloat(document.getElementById('wsKm').value);
+        const fahrzeitRoh = document.getElementById('wsFahrzeit').value;
+        const fahrzeitMin = fahrzeitRoh === '' ? null : Math.max(0, parseFloat(fahrzeitRoh) || 0);
         if (!ortRoh || !(km >= 0)) {
             zeigeMeldung('wsMeldung', 'Bitte Ort und Entfernung (km) eingeben.', 'fehler');
             return;
         }
-        wegstrecken[normOrt(ortRoh)] = { name: ortRoh, km };
+        wegstrecken[normOrt(ortRoh)] = { name: ortRoh, km, fahrzeitMin };
         wegstreckenSpeichernLocal();
         document.getElementById('wsOrt').value = '';
         document.getElementById('wsKm').value = '';
+        document.getElementById('wsFahrzeit').value = '';
         zeigeMeldung('wsMeldung', ortRoh + ' gespeichert.', 'ok');
         wegstreckenRendern();
     }
@@ -861,6 +884,7 @@
         if (!e) return;
         document.getElementById('wsOrt').value = e.name;
         document.getElementById('wsKm').value = e.km;
+        document.getElementById('wsFahrzeit').value = e.fahrzeitMin != null ? e.fahrzeitMin : '';
         document.getElementById('wsOrt').scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
@@ -877,6 +901,7 @@
         if (!name) return;
         document.getElementById('wsOrt').value = name;
         document.getElementById('wsKm').value = '';
+        document.getElementById('wsFahrzeit').value = '';
         document.getElementById('wsOrt').scrollIntoView({ behavior: 'smooth', block: 'center' });
         document.getElementById('wsKm').focus();
     }
@@ -924,7 +949,7 @@
             html += `<p class="auth-hinweis" style="margin-top:${fehlKeys.length ? '16px' : '0'};">${bekanntKeys.length} gespeicherte Orte</p>` +
                 bekanntKeys.map(k => `
                 <div class="result-item">
-                    <span class="label"><b>${sicher(wegstrecken[k].name)}</b><br><small>${wegstrecken[k].km} km (einfache Strecke)</small></span>
+                    <span class="label"><b>${sicher(wegstrecken[k].name)}</b><br><small>${wegstrecken[k].km} km (einfache Strecke)${wegstrecken[k].fahrzeitMin != null ? ' · ' + wegstrecken[k].fahrzeitMin + ' Min. Fahrzeit je Richtung' : ''}</small></span>
                     <span>
                         <button class="btn-secondary" style="width:auto; margin:0 4px 0 0; padding:6px 10px;" onclick="wegstreckeBearbeiten('${k}')">✏️</button>
                         <button class="btn-danger" style="width:auto; margin:0; padding:6px 10px;" onclick="wegstreckeLoeschen('${k}')">🗑️</button>
@@ -944,7 +969,7 @@
     const KILOMETERPAUSCHALE_EURO_PRO_KM = 0.30;
 
     function listeAlsPdfVerpflegung() {
-        const zeilen = listeZeilen().filter(z => z.dauerMinuten > VERPFLEGUNGSPAUSCHALE_SCHWELLE_MIN);
+        const zeilen = listeZeilen().filter(z => z.abwesenheitMinuten > VERPFLEGUNGSPAUSCHALE_SCHWELLE_MIN);
         if (!zeilen.length) {
             alert('Für diesen Monat gibt es keine Dienste über 8 Stunden.');
             return;
@@ -973,12 +998,18 @@
         doc.setFontSize(9);
         doc.setTextColor(110);
         doc.text(`Abwesenheit jeweils mehr als 8 Stunden — Pauschale ${satzText} pro Tag`, 14, y);
+        y += 5;
+        const fahrzeitHinweis = zeilen.some(z => z.fahrzeitAbweichend)
+            ? `Abwesenheit einschließlich Anfahrt und Rückfahrt, pauschal ${ein.fahrzeitMin} Minuten je Richtung ` +
+              `(für einzelne Orte abweichend laut Wegstreckenbuch hinterlegt).`
+            : `Abwesenheit einschließlich Anfahrt und Rückfahrt, pauschal ${ein.fahrzeitMin} Minuten je Richtung.`;
+        doc.text(fahrzeitHinweis, 14, y);
         doc.setTextColor(0);
 
-        const kopf = [['Datum', 'Dienst', 'Beginn', 'Ende', 'Dauer', 'Pauschale']];
+        const kopf = [['Datum', 'Dienst', 'Beginn', 'Ende', 'Dauer', 'Abwesenheit', 'Pauschale']];
         const koerper = zeilen.map(z => [
             z.datumKurz, z.dienst, z.beginnZeit, z.endeZeit,
-            stundenMinutenKurz(z.dauerMinuten), satzText
+            stundenMinutenKurz(z.dauerMinuten), stundenMinutenKurz(z.abwesenheitMinuten), satzText
         ]);
 
         doc.autoTable({
@@ -988,7 +1019,7 @@
             styles: { fontSize: 9, cellPadding: 2.5 },
             headStyles: { fillColor: [37, 99, 235], textColor: 255 },
             alternateRowStyles: { fillColor: [246, 248, 252] },
-            columnStyles: { 5: { halign: 'right' } },
+            columnStyles: { 5: { halign: 'right' }, 6: { halign: 'right' } },
             didDrawPage: (daten) => {
                 const fussY = daten.cursor.y + 8;
                 doc.setFontSize(10);
@@ -1102,7 +1133,8 @@
         monatsentgelt: 3365.46, unregelm: 255.00, dienstklasse: 80.00, zz: 19.85,
         nacht: 25, samstag: 20, sonntag: 25, feiertag: 135, sonder: 40, mehrarbeit: 30,
         nachtVon: 21, nachtBis: 6, samstagAb: 13,
-        wochenstunden: 37.5, entgeltgruppe: '', stufe: '', tarifStand: '', eingerichtetAm: ''
+        wochenstunden: 37.5, entgeltgruppe: '', stufe: '', tarifStand: '', eingerichtetAm: '',
+        fahrzeitMin: 30
     };
     let ein = { ...EIN_STANDARD };
 
@@ -1127,6 +1159,7 @@
         setze('einNachtVon', ein.nachtVon);
         setze('einNachtBis', ein.nachtBis);
         setze('einSamstagAb', ein.samstagAb);
+        setze('einFahrzeit', ein.fahrzeitMin);
 
         tarifListenFuellen('setEG', 'setStufe');
         if (ein.entgeltgruppe) setze('setEG', ein.entgeltgruppe);
@@ -1158,6 +1191,7 @@
             nachtVon: hole('einNachtVon', EIN_STANDARD.nachtVon),
             nachtBis: hole('einNachtBis', EIN_STANDARD.nachtBis),
             samstagAb: hole('einSamstagAb', EIN_STANDARD.samstagAb),
+            fahrzeitMin: hole('einFahrzeit', EIN_STANDARD.fahrzeitMin),
             // Tarif-Angaben unveraendert uebernehmen
             entgeltgruppe: ein.entgeltgruppe || '',
             stufe: ein.stufe || '',
