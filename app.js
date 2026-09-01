@@ -4406,10 +4406,26 @@
     pausenregelGeaendert();
     starteApp();
 
-    // PWA: Service Worker registrieren (ermöglicht Offline-Nutzung & Installation)
+    // PWA: Service Worker registrieren (ermöglicht Offline-Nutzung & Installation).
+    // Browser prüfen von sich aus höchstens einmal pro 24 Stunden auf eine neue
+    // service-worker.js - das reicht nicht, wenn mehrmals am Tag ein Update
+    // erscheint. Deshalb selbst aktiv nach Updates suchen (bei jedem Start und
+    // wann immer die App wieder in den Vordergrund kommt) und, sobald eine
+    // neue Version übernimmt, die Seite automatisch neu laden.
     if ('serviceWorker' in navigator) {
+        let neuladenLaeuft = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (neuladenLaeuft) return;
+            neuladenLaeuft = true;
+            window.location.reload();
+        });
+
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./service-worker.js')
-                .catch((err) => console.log('Service Worker Registrierung fehlgeschlagen:', err));
+            navigator.serviceWorker.register('./service-worker.js').then((reg) => {
+                reg.update().catch(() => {});
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'visible') reg.update().catch(() => {});
+                });
+            }).catch((err) => console.log('Service Worker Registrierung fehlgeschlagen:', err));
         });
     }
