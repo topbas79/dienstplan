@@ -2640,7 +2640,10 @@
     // eingefügt, sofern dafür nicht schon eine eigene Zeile existiert.
     // Wird sowohl von der Dienstverlauf- ("Alle Fahrten") als auch der
     // "Aktuelle Fahrt"-Ansicht genutzt, damit beide dieselben Wenden zeigen.
-    function fahrtenMitAbgeleitetenWenden(fahrten, beginnZeit) {
+    // "pausen" (optional) sind die separat gespeicherten Pausen des Dienstes -
+    // liegt eine echte Pause bereits in der Lücke, wird dort nichts
+    // Zusätzliches eingefügt (sonst Überlappung mit den Pausen-Punkten).
+    function fahrtenMitAbgeleitetenWenden(fahrten, beginnZeit, pausen) {
         const beginnMin = (() => {
             if (!beginnZeit) return 0;
             const [h, m] = beginnZeit.split(':').map(Number);
@@ -2655,17 +2658,22 @@
             return wert;
         };
 
-        const liste = (fahrten || []).slice();
+        const liste = (fahrten || []).slice()
+            .filter(f => sortWert(f.von_zeit) !== null)
+            .sort((a, b) => sortWert(a.von_zeit) - sortWert(b.von_zeit));
         const explizit = new Set();
         liste.forEach(f => {
             if (!f.linie) explizit.add(`${f.von_zeit}|${f.bis_zeit}|${f.von_kuerzel || f.von || ''}`);
         });
 
-        const linienfahrten = liste.filter(f => f.linie && sortWert(f.von_zeit) !== null)
-            .sort((a, b) => sortWert(a.von_zeit) - sortWert(b.von_zeit));
-
-        for (let i = 0; i < linienfahrten.length - 1; i++) {
-            const aktuell = linienfahrten[i], naechste = linienfahrten[i + 1];
+        // Nur WIRKLICH direkt benachbarte Zeilen (nichts dazwischen) prüfen -
+        // liegt bereits eine eigene Zeile (Rüst, Pause, ...) in der Lücke,
+        // sind die direkten Nachbarn keine zwei Linienfahrten mehr und es
+        // wird nichts Zusätzliches eingefügt (sonst Überlappung).
+        const zusaetzliche = [];
+        for (let i = 0; i < liste.length - 1; i++) {
+            const aktuell = liste[i], naechste = liste[i + 1];
+            if (!aktuell.linie || !naechste.linie) continue;
             const gleicherOrt = aktuell.nach_kuerzel && naechste.von_kuerzel &&
                 aktuell.nach_kuerzel === naechste.von_kuerzel;
             if (!gleicherOrt) continue;
@@ -2673,7 +2681,13 @@
             if (ankunftSort === null || abfahrtSort === null || abfahrtSort <= ankunftSort) continue;
             const schluessel = `${aktuell.bis_zeit}|${naechste.von_zeit}|${aktuell.nach_kuerzel}`;
             if (explizit.has(schluessel)) continue;   // schon als eigene Zeile erfasst
-            liste.push({
+            const durchPauseAbgedeckt = (pausen || []).some(p => {
+                if ((p.ort_kuerzel || '') !== aktuell.nach_kuerzel) return false;
+                const pVon = sortWert(p.von), pBis = sortWert(p.bis);
+                return pVon !== null && pBis !== null && pVon < abfahrtSort && pBis > ankunftSort;
+            });
+            if (durchPauseAbgedeckt) continue;   // Luecke ist bereits eine erfasste Pause
+            zusaetzliche.push({
                 von_zeit: aktuell.bis_zeit, von: aktuell.nach, von_kuerzel: aktuell.nach_kuerzel,
                 bis_zeit: naechste.von_zeit, nach: aktuell.nach, nach_kuerzel: aktuell.nach_kuerzel,
                 typ: 'Wenden', linie: '', umlauf: aktuell.umlauf || naechste.umlauf || '',
@@ -2681,7 +2695,7 @@
             });
         }
 
-        return liste.sort((a, b) => (sortWert(a.von_zeit) ?? 0) - (sortWert(b.von_zeit) ?? 0));
+        return liste.concat(zusaetzliche).sort((a, b) => (sortWert(a.von_zeit) ?? 0) - (sortWert(b.von_zeit) ?? 0));
     }
 
     // Baut aus den Dienst-Details eine chronologische Liste aller Punkte,
@@ -2703,7 +2717,7 @@
             return wert;
         };
 
-        const fahrten = fahrtenMitAbgeleitetenWenden(d.fahrten, d.beginn);
+        const fahrten = fahrtenMitAbgeleitetenWenden(d.fahrten, d.beginn, d.pausen);
 
         // Nächste Linienfahrt ab einem Zeitpunkt (für die "danach"-Zeile bei
         // Standzeilen, die selbst keine Linie tragen).
@@ -2715,12 +2729,73 @@
 
         const punkte = [];
 
+        // Dienstbeginn/-ende: reine Abfahrt- bzw. Ankunft-Punkte am Rand.
+        // Faellt der Dienstbeginn zeitlich und oertlich genau mit der ersten
+        // Uebernahme zusammen (Dienst beginnt direkt durch Uebernahme eines
+        // fremden Wagens), reicht der Uebernahme-Punkt allein - sonst
+        // erscheinen zwei fast identische Punkte fuer denselben Moment.
+        const beginnIstUebernahme = (d.wechsel || []).some(w =>
+            (w.art || '').toLowerCase().startsWith('uebernahme') &&
+            w.zeit === d.beginn && w.ort_kuerzel && w.ort_kuerzel === d.beginn_ort_kuerzel);
+        if (d.beginn && !beginnIstUebernahme) {
+            punkte.push({
+                ankunft: null, abfahrt: d.beginn,
+                ort: aktuelleFahrtOrtName(d.beginn_ort, d.beginn_ort_kuerzel),
+                ortKuerzel: d.beginn_ort_kuerzel || '',
+                sort: sortWert(d.beginn),
+                folgeLinie: d.beginn_linie || '', folgeUmlauf: d.beginn_umlauf || '',
+                folgeNach: aktuelleFahrtOrtName(d.beginn_nach, d.beginn_nach_kuerzel),
+                label: 'Dienstbeginn'
+            });
+        }
+        if (d.ende) {
+            punkte.push({
+                ankunft: d.ende, abfahrt: null,
+                ort: aktuelleFahrtOrtName(d.ende_ort, d.ende_ort_kuerzel),
+                ortKuerzel: d.ende_ort_kuerzel || '',
+                sort: sortWert(d.ende),
+                label: 'Dienstende'
+            });
+        }
+
+        // Einsetzen/Aussetzen: eigener Punkt an dem Rand, an dem der Fahrer
+        // in den bzw. aus dem Fahrgastbetrieb wechselt (Betriebshof).
+        fahrten.forEach(f => {
+            const typ = (f.typ || '').toLowerCase();
+            if (typ === 'e') {
+                punkte.push({
+                    ankunft: null, abfahrt: f.von_zeit || null,
+                    ort: aktuelleFahrtOrtName(f.von, f.von_kuerzel),
+                    ortKuerzel: f.von_kuerzel || '',
+                    sort: sortWert(f.von_zeit),
+                    folgeLinie: f.linie || '', folgeUmlauf: f.umlauf || '',
+                    folgeNach: aktuelleFahrtOrtName(f.nach, f.nach_kuerzel),
+                    label: 'Einsetzen'
+                });
+            } else if (typ === 'a') {
+                punkte.push({
+                    ankunft: f.bis_zeit || null, abfahrt: null,
+                    ort: aktuelleFahrtOrtName(f.nach, f.nach_kuerzel),
+                    ortKuerzel: f.nach_kuerzel || '',
+                    sort: sortWert(f.bis_zeit),
+                    label: 'Aussetzen'
+                });
+            }
+        });
+
         (d.wechsel || []).forEach(w => {
             const art = (w.art || '').toLowerCase();
             if (art.startsWith('uebernahme')) {
+                // "w.abfahrt" ist in der Praxis unzuverlässig (bezieht sich
+                // teils auf die Fahrt des ABGEBENDEN Fahrers, nicht auf die
+                // eigene Abfahrt) - stattdessen die tatsächlich folgende
+                // Linienfahrt ab dem Übernahme-Zeitpunkt nachschlagen.
+                const folgeAbfahrt = naechsteLinie(w.zeit);
                 punkte.push({
-                    ankunft: w.zeit || null, abfahrt: w.abfahrt || null,
+                    ankunft: w.zeit || null,
+                    abfahrt: (folgeAbfahrt && folgeAbfahrt.von_zeit) || w.abfahrt || null,
                     ort: aktuelleFahrtOrtName(w.ort, w.ort_kuerzel),
+                    ortKuerzel: w.ort_kuerzel || '',
                     sort: sortWert(w.zeit),
                     folgeLinie: w.linie, folgeUmlauf: w.umlauf,
                     folgeNach: aktuelleFahrtOrtName(w.nach, w.nach_kuerzel),
@@ -2730,6 +2805,7 @@
                 punkte.push({
                     ankunft: null, abfahrt: w.zeit || null,
                     ort: aktuelleFahrtOrtName(w.ort, w.ort_kuerzel),
+                    ortKuerzel: w.ort_kuerzel || '',
                     sort: sortWert(w.zeit),
                     label: 'Übergabe'
                 });
@@ -2741,6 +2817,7 @@
             punkte.push({
                 ankunft: p.von || null, abfahrt: p.bis || null,
                 ort: aktuelleFahrtOrtName(p.ort, p.ort_kuerzel),
+                ortKuerzel: p.ort_kuerzel || '',
                 sort: sortWert(p.von),
                 folgeLinie: p.danach_linie || (folge && folge.linie) || '',
                 folgeUmlauf: p.danach_umlauf || (folge && folge.umlauf) || '',
@@ -2763,6 +2840,7 @@
             punkte.push({
                 ankunft: f.von_zeit || null, abfahrt: f.bis_zeit || null,
                 ort: aktuelleFahrtOrtName(f.von, f.von_kuerzel) + (ortBis ? ' → ' + ortBis : ''),
+                ortKuerzel: f.von_kuerzel || '',
                 sort: sortWert(f.von_zeit),
                 folgeLinie: (folge && folge.linie) || '', folgeUmlauf: (folge && folge.umlauf) || '',
                 folgeNach: folge ? aktuelleFahrtOrtName(folge.nach, folge.nach_kuerzel) : '',
@@ -2770,7 +2848,64 @@
             });
         });
 
-        return punkte.filter(p => p.sort !== null).sort((a, b) => a.sort - b.sort);
+        // Übergänge OHNE Wartezeit zwischen zwei direkt aufeinanderfolgenden
+        // Fahrten an derselben Haltestelle (z. B. Einsetzen endet genau da,
+        // wo die erste Linienfahrt beginnt) - fahrtenMitAbgeleitetenWenden
+        // ergänzt nur echte Standzeiten, diese 0-Minuten-Übergänge fehlen
+        // sonst als Punkt.
+        const linienfolge = fahrten.filter(f => f.linie && sortWert(f.von_zeit) !== null)
+            .sort((a, b) => sortWert(a.von_zeit) - sortWert(b.von_zeit));
+        for (let i = 0; i < linienfolge.length - 1; i++) {
+            const aktuell = linienfolge[i], naechste = linienfolge[i + 1];
+            if (!aktuell.nach_kuerzel || aktuell.nach_kuerzel !== naechste.von_kuerzel) continue;
+            const ankunftSort = sortWert(aktuell.bis_zeit), abfahrtSort = sortWert(naechste.von_zeit);
+            if (ankunftSort === null || abfahrtSort !== ankunftSort) continue;   // nur echte 0-Minuten-Übergänge
+            punkte.push({
+                ankunft: aktuell.bis_zeit, abfahrt: naechste.von_zeit,
+                ort: aktuelleFahrtOrtName(aktuell.nach, aktuell.nach_kuerzel),
+                ortKuerzel: aktuell.nach_kuerzel || '',
+                sort: ankunftSort,
+                folgeLinie: naechste.linie || '', folgeUmlauf: naechste.umlauf || '',
+                folgeNach: aktuelleFahrtOrtName(naechste.nach, naechste.nach_kuerzel),
+                label: 'Weiter'
+            });
+        }
+
+        const sortiert = punkte.filter(p => p.sort !== null).sort((a, b) => a.sort - b.sort);
+        return aktuelleFahrtPunkteZusammenfassen(sortiert);
+    }
+
+    // Fasst mehrere lückenlos aufeinanderfolgende Punkte an DERSELBEN
+    // Haltestelle (z. B. Rüst, dann bezahlte, dann unbezahlte Pause direkt
+    // hintereinander an einem Ort) zu einem einzigen Ankunft/Abfahrt-Punkt
+    // zusammen - für den Fahrtbericht zählt nur die erste Ankunft und die
+    // letzte Abfahrt an diesem Ort, nicht die Unterteilung dazwischen.
+    // Grenzpunkte bleiben immer eigenständig, auch wenn sie lückenlos an
+    // einen Wenden-/Pausen-Punkt anschließen - sie markieren einen fürs
+    // Melden wichtigen Wechsel (Dienstbeginn/-ende, Betriebshof, Fahrerwechsel).
+    const AKTUELLEFAHRT_GRENZPUNKTE = ['Dienstbeginn', 'Dienstende', 'Einsetzen', 'Aussetzen', 'Übernahme', 'Übergabe'];
+
+    function aktuelleFahrtPunkteZusammenfassen(punkte) {
+        const ergebnis = [];
+        punkte.forEach(p => {
+            const letzter = ergebnis[ergebnis.length - 1];
+            const gleicherOrt = letzter && letzter.ortKuerzel && p.ortKuerzel &&
+                letzter.ortKuerzel === p.ortKuerzel;
+            const nahtlos = letzter && letzter.abfahrt && p.ankunft && letzter.abfahrt === p.ankunft;
+            const grenzpunkt = AKTUELLEFAHRT_GRENZPUNKTE.includes(letzter && letzter.label) ||
+                AKTUELLEFAHRT_GRENZPUNKTE.includes(p.label);
+            if (letzter && gleicherOrt && nahtlos && !grenzpunkt) {
+                if (p.abfahrt) letzter.abfahrt = p.abfahrt;
+                if (p.folgeLinie) {
+                    letzter.folgeLinie = p.folgeLinie;
+                    letzter.folgeUmlauf = p.folgeUmlauf;
+                    letzter.folgeNach = p.folgeNach;
+                }
+            } else {
+                ergebnis.push({ ...p });
+            }
+        });
+        return ergebnis;
     }
 
     // Minuten seit Mitternacht "jetzt", mit derselben Folgetag-Logik wie
@@ -2822,11 +2957,19 @@
         let folge = folgeTeile.join(' · ');
         if (p.folgeNach) folge += (folge ? ' → ' : '→ ') + p.folgeNach;
 
+        // Eigene Dienstnummer nur auf den ersten beiden Punkten des Tages
+        // zeigen (Übernahme/Dienstbeginn + erste Endhaltestelle) - dort
+        // steht sie auch auf dem Fahrtbericht.
+        const eigeneDienstnummer = aktuelleFahrtDetails && aktuelleFahrtDetails.dienstnummer;
+        const zeigeDienstnummer = index < 2 && eigeneDienstnummer;
+
         box.innerHTML = `
             <div class="af-gross">
+                ${zeigeDienstnummer ? `<div class="af-von-dienst">Dienst ${sicher(eigeneDienstnummer)}</div>` : ''}
                 <div class="af-ort">${sicher(p.ort || '–')}</div>
+                ${(p.ankunft && p.ankunft === p.abfahrt) ? `<div class="af-zeit">Abfahrt <b>${sicher(p.abfahrt)}</b></div>` : `
                 ${p.ankunft ? `<div class="af-zeit">Ankunft <b>${sicher(p.ankunft)}</b></div>` : ''}
-                ${p.abfahrt ? `<div class="af-zeit">Abfahrt <b>${sicher(p.abfahrt)}</b></div>` : ''}
+                ${p.abfahrt ? `<div class="af-zeit">Abfahrt <b>${sicher(p.abfahrt)}</b></div>` : ''}`}
                 ${folge ? `<div class="af-folge">danach: ${sicher(folge)}</div>` : ''}
             </div>
             <div class="af-nav">
@@ -3414,7 +3557,7 @@
                     `</span></div>`;
         });
 
-        const alleFahrten = fahrtenMitAbgeleitetenWenden(d.fahrten, d.beginn);
+        const alleFahrten = fahrtenMitAbgeleitetenWenden(d.fahrten, d.beginn, d.pausen);
         if (alleFahrten.length) {
             const reihen = alleFahrten.map(f =>
                 `<div class="result-item" style="font-size:.82rem;">

@@ -733,6 +733,14 @@
             padding: 26px 22px;
             text-align: center;
         }
+        .af-von-dienst {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-faint);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 4px;
+        }
         .af-ort {
             font-size: 1.55rem;
             font-weight: 800;
