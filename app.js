@@ -2631,6 +2631,59 @@
 
     const AKTUELLEFAHRT_STANDTYPEN = ['wenden', 'ruest', 'rüst', 'nb', 'uewegz', 'üwegz'];
 
+    // Manche Dienstzettel listen Wenden als eigene Tabellenzeile (Typ
+    // "Wenden"/"NB"/...), andere reihen die Linienfahrten einfach direkt
+    // aneinander und die KI übernimmt dann keine eigene Zeile für die
+    // Standzeit dazwischen. Diese Funktion ergänzt genau solche fehlenden
+    // Wenden: jede Lücke zwischen zwei aufeinanderfolgenden Linienfahrten
+    // an DERSELBEN Haltestelle wird als zusätzliche "Wenden"-Zeile
+    // eingefügt, sofern dafür nicht schon eine eigene Zeile existiert.
+    // Wird sowohl von der Dienstverlauf- ("Alle Fahrten") als auch der
+    // "Aktuelle Fahrt"-Ansicht genutzt, damit beide dieselben Wenden zeigen.
+    function fahrtenMitAbgeleitetenWenden(fahrten, beginnZeit) {
+        const beginnMin = (() => {
+            if (!beginnZeit) return 0;
+            const [h, m] = beginnZeit.split(':').map(Number);
+            return isNaN(h) ? 0 : h * 60 + m;
+        })();
+        const sortWert = (zeit) => {
+            if (!zeit) return null;
+            const [h, m] = String(zeit).split(':').map(Number);
+            if (isNaN(h)) return null;
+            let wert = h * 60 + m;
+            if (wert < beginnMin) wert += 24 * 60;   // Folgetag
+            return wert;
+        };
+
+        const liste = (fahrten || []).slice();
+        const explizit = new Set();
+        liste.forEach(f => {
+            if (!f.linie) explizit.add(`${f.von_zeit}|${f.bis_zeit}|${f.von_kuerzel || f.von || ''}`);
+        });
+
+        const linienfahrten = liste.filter(f => f.linie && sortWert(f.von_zeit) !== null)
+            .sort((a, b) => sortWert(a.von_zeit) - sortWert(b.von_zeit));
+
+        for (let i = 0; i < linienfahrten.length - 1; i++) {
+            const aktuell = linienfahrten[i], naechste = linienfahrten[i + 1];
+            const gleicherOrt = aktuell.nach_kuerzel && naechste.von_kuerzel &&
+                aktuell.nach_kuerzel === naechste.von_kuerzel;
+            if (!gleicherOrt) continue;
+            const ankunftSort = sortWert(aktuell.bis_zeit), abfahrtSort = sortWert(naechste.von_zeit);
+            if (ankunftSort === null || abfahrtSort === null || abfahrtSort <= ankunftSort) continue;
+            const schluessel = `${aktuell.bis_zeit}|${naechste.von_zeit}|${aktuell.nach_kuerzel}`;
+            if (explizit.has(schluessel)) continue;   // schon als eigene Zeile erfasst
+            liste.push({
+                von_zeit: aktuell.bis_zeit, von: aktuell.nach, von_kuerzel: aktuell.nach_kuerzel,
+                bis_zeit: naechste.von_zeit, nach: aktuell.nach, nach_kuerzel: aktuell.nach_kuerzel,
+                typ: 'Wenden', linie: '', umlauf: aktuell.umlauf || naechste.umlauf || '',
+                abgeleitet: true
+            });
+        }
+
+        return liste.sort((a, b) => (sortWert(a.von_zeit) ?? 0) - (sortWert(b.von_zeit) ?? 0));
+    }
+
     // Baut aus den Dienst-Details eine chronologische Liste aller Punkte,
     // für die ein Fahrtbericht anfällt: Wendezeiten, Pausen, Übernahme/
     // Übergabe - jeweils mit Ankunft/Abfahrt und der anschließenden Fahrt.
@@ -2650,8 +2703,7 @@
             return wert;
         };
 
-        const fahrten = (d.fahrten || []).slice()
-            .sort((a, b) => (sortWert(a.von_zeit) ?? 0) - (sortWert(b.von_zeit) ?? 0));
+        const fahrten = fahrtenMitAbgeleitetenWenden(d.fahrten, d.beginn);
 
         // Nächste Linienfahrt ab einem Zeitpunkt (für die "danach"-Zeile bei
         // Standzeilen, die selbst keine Linie tragen).
@@ -2698,6 +2750,9 @@
             });
         });
 
+        // Standzeiten (Wenden/Rüst/NB/ÜWegZ) - eigene Zeilen der KI plus die
+        // von fahrtenMitAbgeleitetenWenden ergänzten Lücken zwischen zwei
+        // Linienfahrten an derselben Haltestelle.
         fahrten.forEach(f => {
             if (f.linie) return;   // normale Linienfahrt - kein Report-Punkt
             const typ = (f.typ || '').toLowerCase();
@@ -3359,15 +3414,16 @@
                     `</span></div>`;
         });
 
-        if ((d.fahrten || []).length) {
-            const reihen = d.fahrten.map(f =>
+        const alleFahrten = fahrtenMitAbgeleitetenWenden(d.fahrten, d.beginn);
+        if (alleFahrten.length) {
+            const reihen = alleFahrten.map(f =>
                 `<div class="result-item" style="font-size:.82rem;">
                     <span class="label">${f.von_zeit || ''} ${ortText(f.von, f.von_kuerzel)}${f.typ ? ' <small style="opacity:.6;">' + f.typ + '</small>' : ''}</span>
                     <span style="text-align:right;">${fahrtInfo(f.linie, f.umlauf, f.nach, f.nach_kuerzel, null)}</span>
                  </div>`).join('');
             html += `<details style="margin-top:14px;">
                         <summary style="cursor:pointer; font-weight:600; font-size:.85rem; display:flex; align-items:center; gap:6px;">
-                            ${ICONS.bus} Alle Fahrten (${d.fahrten.length})
+                            ${ICONS.bus} Alle Fahrten (${alleFahrten.length})
                         </summary>${reihen}</details>`;
         }
 
