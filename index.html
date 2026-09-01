@@ -121,6 +121,11 @@
         <div class="start-zeile"><span id="startSchichten">0 Dienste</span><span id="startStunden">–</span></div>
     </div>
 
+    <button id="startAktuelleFahrtBtn" onclick="aktuelleFahrtOeffnen()" style="display:none; align-items:center; justify-content:center; gap:10px; background:var(--primary);">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3.2 2"></path></svg>
+        Aktuelle Fahrt
+    </button>
+
     <button class="btn-scan" onclick="wechselSeite('erfassen')" style="display:flex; align-items:center; justify-content:center; gap:10px;">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5a2 2 0 0 1 2-2h1.2l1-1.5h7.6l1 1.5H19a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8.5Z"></path><circle cx="12" cy="13" r="3.3"></circle></svg>
         Dienst erfassen
@@ -171,6 +176,19 @@
             <span id="startFeiertag" style="font-weight:700;">–</span>
         </div>
     </div>
+</div>
+
+<!-- SEITE: Aktuelle Fahrt (Fahrtbericht-Ansicht für unterwegs) -->
+<div class="page" id="page-aktuellefahrt">
+    <div class="container" style="max-width:650px; margin:0 auto 16px auto;">
+        <button class="btn-secondary" onclick="wechselSeite('start')" style="margin-top:0;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M15 5.5 8.5 12 15 18.5"></path></svg>Start
+        </button>
+    </div>
+
+    <div style="max-width:650px; margin:0 auto 16px auto;" id="afInhalt"></div>
+
+    <div style="max-width:650px; margin:0 auto 20px auto;" id="afNaechste"></div>
 </div>
 
 <!-- SEITE 1: Erfassen -->

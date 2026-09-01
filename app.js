@@ -2574,6 +2574,10 @@
             box.style.display = 'none';
         }
 
+        // "Aktuelle Fahrt" nur anbieten, wenn heute ein Dienst ansteht
+        const afBtn = document.getElementById('startAktuelleFahrtBtn');
+        if (afBtn) afBtn.style.display = gespeicherteSchichten[heuteStr] ? 'flex' : 'none';
+
         // Nächster Feiertag
         let naechster = null;
         for (let jahr = heute.getFullYear(); jahr <= heute.getFullYear() + 1 && !naechster; jahr++) {
@@ -2594,6 +2598,255 @@
         klickKalenderTag(datumStr);
         wechselSeite('verlauf');
     }
+
+    // ============================================================
+    //  AKTUELLE FAHRT — großformatige Ansicht für den Fahrtbericht bei
+    //  jeder Wende: zeigt Soll-Ankunft/-Abfahrt am Punkt, an dem der
+    //  Fahrer gerade ist oder der als nächstes kommt. Aktualisiert sich
+    //  selbst und hält den Bildschirm wach (Vorstufe zu einer späteren
+    //  Sperrbildschirm-Benachrichtigung in der nativen App).
+    // ============================================================
+    let aktuelleFahrtPunkte = [];
+    let aktuelleFahrtDetails = null;          // die Dienst-Details, aus denen aktuelleFahrtPunkte gebaut wurden
+    let aktuelleFahrtManuellerIndex = null;   // null = automatisch anhand der Uhrzeit
+    let aktuelleFahrtIntervall = null;
+    let aktuelleFahrtWakeLock = null;
+
+    // Heutiges Datum als "YYYY-MM-DD" in der lokalen Zeitzone (nicht UTC).
+    function heutigesDatumStr() {
+        const heute = new Date();
+        const pad = (n) => n < 10 ? '0' + n : n;
+        return `${heute.getFullYear()}-${pad(heute.getMonth() + 1)}-${pad(heute.getDate())}`;
+    }
+
+    // Zeigt den vollen Haltestellennamen: Klartext, sonst aus der gelernten
+    // Haltestellen-Liste, sonst als letzten Rückfall das rohe Kürzel.
+    function aktuelleFahrtOrtName(name, kuerzel) {
+        const n = (name || '').trim();
+        if (n) return n;
+        const gelernt = haltestelleName(kuerzel);
+        if (gelernt) return gelernt;
+        return (kuerzel || '').trim();
+    }
+
+    const AKTUELLEFAHRT_STANDTYPEN = ['wenden', 'ruest', 'rüst', 'nb', 'uewegz', 'üwegz'];
+
+    // Baut aus den Dienst-Details eine chronologische Liste aller Punkte,
+    // für die ein Fahrtbericht anfällt: Wendezeiten, Pausen, Übernahme/
+    // Übergabe - jeweils mit Ankunft/Abfahrt und der anschließenden Fahrt.
+    function aktuelleFahrtPunkteBauen(d) {
+        if (!d) return [];
+        const beginnMin = (() => {
+            if (!d.beginn) return 0;
+            const [h, m] = d.beginn.split(':').map(Number);
+            return isNaN(h) ? 0 : h * 60 + m;
+        })();
+        const sortWert = (zeit) => {
+            if (!zeit) return null;
+            const [h, m] = String(zeit).split(':').map(Number);
+            if (isNaN(h)) return null;
+            let wert = h * 60 + m;
+            if (wert < beginnMin) wert += 24 * 60;   // Folgetag
+            return wert;
+        };
+
+        const fahrten = (d.fahrten || []).slice()
+            .sort((a, b) => (sortWert(a.von_zeit) ?? 0) - (sortWert(b.von_zeit) ?? 0));
+
+        // Nächste Linienfahrt ab einem Zeitpunkt (für die "danach"-Zeile bei
+        // Standzeilen, die selbst keine Linie tragen).
+        const naechsteLinie = (abZeit) => {
+            const ab = sortWert(abZeit);
+            if (ab === null) return null;
+            return fahrten.find(f => f.linie && sortWert(f.von_zeit) !== null && sortWert(f.von_zeit) >= ab) || null;
+        };
+
+        const punkte = [];
+
+        (d.wechsel || []).forEach(w => {
+            const art = (w.art || '').toLowerCase();
+            if (art.startsWith('uebernahme')) {
+                punkte.push({
+                    ankunft: w.zeit || null, abfahrt: w.abfahrt || null,
+                    ort: aktuelleFahrtOrtName(w.ort, w.ort_kuerzel),
+                    sort: sortWert(w.zeit),
+                    folgeLinie: w.linie, folgeUmlauf: w.umlauf,
+                    folgeNach: aktuelleFahrtOrtName(w.nach, w.nach_kuerzel),
+                    label: 'Übernahme'
+                });
+            } else if (art.startsWith('uebergabe')) {
+                punkte.push({
+                    ankunft: null, abfahrt: w.zeit || null,
+                    ort: aktuelleFahrtOrtName(w.ort, w.ort_kuerzel),
+                    sort: sortWert(w.zeit),
+                    label: 'Übergabe'
+                });
+            }
+        });
+
+        (d.pausen || []).forEach(p => {
+            const folge = naechsteLinie(p.bis);
+            punkte.push({
+                ankunft: p.von || null, abfahrt: p.bis || null,
+                ort: aktuelleFahrtOrtName(p.ort, p.ort_kuerzel),
+                sort: sortWert(p.von),
+                folgeLinie: p.danach_linie || (folge && folge.linie) || '',
+                folgeUmlauf: p.danach_umlauf || (folge && folge.umlauf) || '',
+                folgeNach: aktuelleFahrtOrtName(p.danach_nach, p.danach_nach_kuerzel) ||
+                    (folge ? aktuelleFahrtOrtName(folge.nach, folge.nach_kuerzel) : ''),
+                label: p.art === 'BEZPAU' ? 'Bezahlte Pause' : 'Pause'
+            });
+        });
+
+        fahrten.forEach(f => {
+            if (f.linie) return;   // normale Linienfahrt - kein Report-Punkt
+            const typ = (f.typ || '').toLowerCase();
+            if (!AKTUELLEFAHRT_STANDTYPEN.includes(typ)) return;
+            const folge = naechsteLinie(f.bis_zeit);
+            const ortBis = (f.nach_kuerzel && f.nach_kuerzel !== f.von_kuerzel)
+                ? aktuelleFahrtOrtName(f.nach, f.nach_kuerzel) : '';
+            punkte.push({
+                ankunft: f.von_zeit || null, abfahrt: f.bis_zeit || null,
+                ort: aktuelleFahrtOrtName(f.von, f.von_kuerzel) + (ortBis ? ' → ' + ortBis : ''),
+                sort: sortWert(f.von_zeit),
+                folgeLinie: (folge && folge.linie) || '', folgeUmlauf: (folge && folge.umlauf) || '',
+                folgeNach: folge ? aktuelleFahrtOrtName(folge.nach, folge.nach_kuerzel) : '',
+                label: f.typ || 'Wenden'
+            });
+        });
+
+        return punkte.filter(p => p.sort !== null).sort((a, b) => a.sort - b.sort);
+    }
+
+    // Minuten seit Mitternacht "jetzt", mit derselben Folgetag-Logik wie
+    // aktuelleFahrtPunkteBauen (vor Dienstbeginn liegende Zeiten zählen als
+    // Folgetag), damit der Vergleich mit den Punkt-Sortierwerten passt.
+    function aktuelleFahrtJetztMinuten(d) {
+        const beginnMin = (() => {
+            if (!d || !d.beginn) return 0;
+            const [h, m] = d.beginn.split(':').map(Number);
+            return isNaN(h) ? 0 : h * 60 + m;
+        })();
+        const jetzt = new Date();
+        let min = jetzt.getHours() * 60 + jetzt.getMinutes();
+        if (min < beginnMin) min += 24 * 60;
+        return min;
+    }
+
+    function aktuelleFahrtAutoIndex(punkte, d) {
+        if (!punkte.length) return 0;
+        const jetzt = aktuelleFahrtJetztMinuten(d);
+        let index = 0;
+        for (let i = 0; i < punkte.length; i++) {
+            if (punkte[i].sort <= jetzt) index = i; else break;
+        }
+        return index;
+    }
+
+    function aktuelleFahrtZeile(text) {
+        return text ? `<div class="af-zeile">${sicher(text)}</div>` : '';
+    }
+
+    function aktuelleFahrtRendern() {
+        const box = document.getElementById('afInhalt');
+        if (!box) return;
+
+        if (!aktuelleFahrtPunkte.length) {
+            box.innerHTML = '<p class="auth-hinweis">Für den heutigen Dienst wurden keine Wende-, Pausen- oder Übergabepunkte erkannt.</p>';
+            return;
+        }
+
+        const istManuell = aktuelleFahrtManuellerIndex !== null;
+        const index = Math.max(0, Math.min(aktuelleFahrtPunkte.length - 1,
+            istManuell ? aktuelleFahrtManuellerIndex : aktuelleFahrtAutoIndex(aktuelleFahrtPunkte, aktuelleFahrtDetails)));
+        const p = aktuelleFahrtPunkte[index];
+
+        const folgeTeile = [];
+        if (p.folgeLinie) folgeTeile.push('Linie ' + p.folgeLinie);
+        if (p.folgeUmlauf) folgeTeile.push('Umlauf ' + p.folgeUmlauf);
+        let folge = folgeTeile.join(' · ');
+        if (p.folgeNach) folge += (folge ? ' → ' : '→ ') + p.folgeNach;
+
+        box.innerHTML = `
+            <div class="af-gross">
+                <div class="af-ort">${sicher(p.ort || '–')}</div>
+                ${p.ankunft ? `<div class="af-zeit">Ankunft <b>${sicher(p.ankunft)}</b></div>` : ''}
+                ${p.abfahrt ? `<div class="af-zeit">Abfahrt <b>${sicher(p.abfahrt)}</b></div>` : ''}
+                ${folge ? `<div class="af-folge">danach: ${sicher(folge)}</div>` : ''}
+            </div>
+            <div class="af-nav">
+                <button class="btn-secondary" onclick="aktuelleFahrtZurueck()" ${index === 0 ? 'disabled' : ''}>‹ Zurück</button>
+                ${istManuell ? '<button class="btn-secondary" onclick="aktuelleFahrtJetzt()">Jetzt</button>' : ''}
+                <button class="btn-secondary" onclick="aktuelleFahrtWeiter()" ${index === aktuelleFahrtPunkte.length - 1 ? 'disabled' : ''}>Weiter ›</button>
+            </div>`;
+
+        const naechste = aktuelleFahrtPunkte.slice(index + 1, index + 3);
+        const naechsteEl = document.getElementById('afNaechste');
+        if (naechsteEl) {
+            naechsteEl.innerHTML = naechste.length ? naechste.map(np => `
+                <div class="af-kleine-karte">
+                    <span class="af-kleine-zeit">${sicher(np.ankunft || np.abfahrt || '')}</span>
+                    <span class="af-kleine-ort">${sicher(np.ort || '–')}</span>
+                </div>`).join('') : '';
+        }
+    }
+
+    function aktuelleFahrtWeiter() {
+        const aktuell = aktuelleFahrtManuellerIndex !== null
+            ? aktuelleFahrtManuellerIndex : aktuelleFahrtAutoIndex(aktuelleFahrtPunkte, aktuelleFahrtDetails);
+        aktuelleFahrtManuellerIndex = Math.min(aktuelleFahrtPunkte.length - 1, aktuell + 1);
+        aktuelleFahrtRendern();
+    }
+    function aktuelleFahrtZurueck() {
+        const aktuell = aktuelleFahrtManuellerIndex !== null
+            ? aktuelleFahrtManuellerIndex : aktuelleFahrtAutoIndex(aktuelleFahrtPunkte, aktuelleFahrtDetails);
+        aktuelleFahrtManuellerIndex = Math.max(0, aktuell - 1);
+        aktuelleFahrtRendern();
+    }
+    function aktuelleFahrtJetzt() {
+        aktuelleFahrtManuellerIndex = null;
+        aktuelleFahrtRendern();
+    }
+
+    // Von der Startseite: heutigen Dienst laden und die Ansicht öffnen.
+    function aktuelleFahrtOeffnen() {
+        const heuteStr = heutigesDatumStr();
+        const sch = gespeicherteSchichten[heuteStr];
+        if (!sch) return;
+        aktuelleFahrtManuellerIndex = null;
+        aktuelleFahrtDetails = sch.details || null;
+        aktuelleFahrtPunkte = aktuelleFahrtPunkteBauen(aktuelleFahrtDetails);
+        wechselSeite('aktuellefahrt');
+    }
+
+    function aktuelleFahrtIntervallStarten() {
+        aktuelleFahrtIntervallStoppen();
+        aktuelleFahrtIntervall = setInterval(aktuelleFahrtRendern, 15000);
+    }
+    function aktuelleFahrtIntervallStoppen() {
+        if (aktuelleFahrtIntervall) { clearInterval(aktuelleFahrtIntervall); aktuelleFahrtIntervall = null; }
+    }
+
+    async function aktuelleFahrtWakeLockAnfordern() {
+        if (!('wakeLock' in navigator)) return;
+        try {
+            aktuelleFahrtWakeLock = await navigator.wakeLock.request('screen');
+        } catch (e) {
+            console.warn('Wake Lock nicht verfügbar:', e);
+        }
+    }
+    function aktuelleFahrtWakeLockFreigeben() {
+        if (aktuelleFahrtWakeLock) { aktuelleFahrtWakeLock.release().catch(() => {}); aktuelleFahrtWakeLock = null; }
+    }
+    // Wake Lock wird vom Browser automatisch freigegeben, sobald die Seite
+    // in den Hintergrund geht - bei Rückkehr auf "Aktuelle Fahrt" erneut anfordern.
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' &&
+            document.getElementById('page-aktuellefahrt') &&
+            document.getElementById('page-aktuellefahrt').classList.contains('active')) {
+            aktuelleFahrtWakeLockAnfordern();
+        }
+    });
 
     // ---------- App starten ----------
     // Verbindungsdaten des Supabase-Projekts (dürfen öffentlich sein –
@@ -2637,6 +2890,15 @@
         if (seite === 'chat') chatListeLaden();
         if (seite === 'kontakte' || seite === 'gruppe-neu') kontakteLaden();
         if (seite !== 'chatraum') kanalTrennen();
+
+        if (seite === 'aktuellefahrt') {
+            aktuelleFahrtRendern();
+            aktuelleFahrtIntervallStarten();
+            aktuelleFahrtWakeLockAnfordern();
+        } else {
+            aktuelleFahrtIntervallStoppen();
+            aktuelleFahrtWakeLockFreigeben();
+        }
     }
 
     // ---------- Dark Mode ----------
