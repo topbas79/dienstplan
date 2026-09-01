@@ -395,7 +395,7 @@
                 if (!istIch) {
                     if (entfernt) {
                         knoepfe = `
-                            <button class="btn-save stapel-btn" onclick="nutzerWiederherstellen('${n.id}','${name}')">↩️ Zurück</button>
+                            <button class="btn-save stapel-btn" onclick="nutzerWiederherstellen('${n.id}','${name}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M15 5.5 8.5 12 15 18.5"></path></svg>Zurück</button>
                             <button class="btn-danger stapel-btn" onclick="nutzerSofortLoeschen('${n.id}','${name}')">${ICONS.trash} Sofort</button>`;
                     } else {
                         const freigabe = n.hilfe_bis && new Date(n.hilfe_bis) > new Date();
@@ -661,7 +661,7 @@
         if (treffer) {
             auswahlEl.value = treffer.art;
             const zuschlag = treffer.art === 'feiertag' ? '+135%' : '+40%';
-            hinweisEl.innerHTML = `<span style="display:flex; align-items:center; gap:6px;">${ICONS.star} <span><b>${treffer.name}</b> – automatisch als ${zuschlag} gesetzt. Du kannst es oben überschreiben.</span></span>`;
+            hinweisEl.innerHTML = `<span style="display:flex; align-items:flex-start; gap:6px;">${ICONS.star} <span><b>${treffer.name}</b> – automatisch als ${zuschlag} gesetzt. Du kannst es oben überschreiben.</span></span>`;
         } else {
             // nur zurücksetzen, wenn vorher automatisch gesetzt war
             if (auswahlEl.dataset.autoGesetzt === 'ja') auswahlEl.value = 'normal';
@@ -1709,11 +1709,11 @@
             const minuten = Math.floor((rest % 3600000) / 60000);
             const text = `Der Admin kann deine Dienste noch ${stunden} Std. ${minuten} Min. lang sehen und Einstellungen für dich anpassen.`;
             if (box) { box.style.display = 'block'; document.getElementById('hilfeAktivText').innerText = text; }
-            if (status) status.innerHTML = `<span style="display:flex; align-items:center; gap:6px;">${ICONS.unlock} ${text}</span>`;
+            if (status) status.innerHTML = `<span style="display:flex; align-items:flex-start; gap:6px;">${ICONS.unlock} ${text}</span>`;
             if (knopf) { knopf.innerText = 'Zugriff jetzt beenden'; knopf.className = 'btn-danger'; }
         } else {
             if (box) box.style.display = 'none';
-            if (status) status.innerHTML = `<span style="display:flex; align-items:center; gap:6px;">${ICONS.lock} Zurzeit kann niemand deine Daten sehen.</span>`;
+            if (status) status.innerHTML = `<span style="display:flex; align-items:flex-start; gap:6px;">${ICONS.lock} Zurzeit kann niemand deine Daten sehen.</span>`;
             if (knopf) { knopf.innerText = 'Zugriff für 24 Std. freigeben'; knopf.className = 'btn-secondary'; }
         }
     }
@@ -2001,8 +2001,8 @@
     // Geteilter Dienstverlauf: nur wann und wo, keine Beträge
     function dienstSymbol(art) {
         const a = (art || '').toLowerCase();
-        if (a.startsWith('dienstbeginn')) return ICONS.play;
-        if (a.startsWith('dienstende')) return ICONS.stop;
+        if (a.startsWith('beginn')) return ICONS.play;
+        if (a.startsWith('ende')) return ICONS.stop;
         if (a.startsWith('pause')) return ICONS.coffee;
         if (/(ü|ue|u)bergabe/.test(a)) return ICONS.handoverOut;
         if (/(ü|ue|u)bernahme/.test(a)) return ICONS.handoverIn;
