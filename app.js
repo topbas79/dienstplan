@@ -1210,7 +1210,8 @@
         nacht: 25, samstag: 20, sonntag: 25, feiertag: 135, sonder: 40, mehrarbeit: 30,
         nachtVon: 21, nachtBis: 6, samstagAb: 13,
         wochenstunden: 37.5, entgeltgruppe: '', stufe: '', tarifStand: '', eingerichtetAm: '',
-        fahrzeitMin: 30
+        fahrzeitMin: 30,
+        vorlaufBeginn: 30, vorlaufPause: 5, vorlaufStandard: 3
     };
     let ein = { ...EIN_STANDARD };
 
@@ -1236,6 +1237,9 @@
         setze('einNachtBis', ein.nachtBis);
         setze('einSamstagAb', ein.samstagAb);
         setze('einFahrzeit', ein.fahrzeitMin);
+        setze('einVorlaufBeginn', ein.vorlaufBeginn);
+        setze('einVorlaufPause', ein.vorlaufPause);
+        setze('einVorlaufStandard', ein.vorlaufStandard);
 
         tarifListenFuellen('setEG', 'setStufe');
         if (ein.entgeltgruppe) setze('setEG', ein.entgeltgruppe);
@@ -1268,6 +1272,9 @@
             nachtBis: hole('einNachtBis', EIN_STANDARD.nachtBis),
             samstagAb: hole('einSamstagAb', EIN_STANDARD.samstagAb),
             fahrzeitMin: hole('einFahrzeit', EIN_STANDARD.fahrzeitMin),
+            vorlaufBeginn: hole('einVorlaufBeginn', EIN_STANDARD.vorlaufBeginn),
+            vorlaufPause: hole('einVorlaufPause', EIN_STANDARD.vorlaufPause),
+            vorlaufStandard: hole('einVorlaufStandard', EIN_STANDARD.vorlaufStandard),
             // Tarif-Angaben unveraendert uebernehmen
             entgeltgruppe: ein.entgeltgruppe || '',
             stufe: ein.stufe || '',
@@ -3184,6 +3191,14 @@
         return d;
     }
 
+    // Wie viele Minuten vor dem jeweiligen Punkt die Erinnerung kommen soll -
+    // je Nutzer in den Einstellungen konfigurierbar (Mehr → Einstellungen).
+    function aktuelleFahrtVorlaufMinuten(label) {
+        if (label === 'Dienstbeginn') return ein.vorlaufBeginn ?? EIN_STANDARD.vorlaufBeginn;
+        if (label === 'Pause' || label === 'Bezahlte Pause') return ein.vorlaufPause ?? EIN_STANDARD.vorlaufPause;
+        return ein.vorlaufStandard ?? EIN_STANDARD.vorlaufStandard;
+    }
+
     async function aktuelleFahrtBenachrichtigungenPlanen(punkte, heuteStr) {
         if (!capacitorAktiv()) return;
         const LN = window.Capacitor.Plugins.LocalNotifications;
@@ -3206,8 +3221,10 @@
             const notifications = [];
             let id = AKTUELLEFAHRT_NOTIF_BASIS_ID;
             punkte.forEach(p => {
-                const wann = aktuelleFahrtAlsDatum(heuteStr, p.sort);
-                if (!wann || wann.getTime() <= jetzt.getTime()) return;
+                const zeitpunkt = aktuelleFahrtAlsDatum(heuteStr, p.sort);
+                if (!zeitpunkt) return;
+                const wann = new Date(zeitpunkt.getTime() - aktuelleFahrtVorlaufMinuten(p.label) * 60000);
+                if (wann.getTime() <= jetzt.getTime()) return;
                 const zeitText = [p.ankunft ? 'Ankunft ' + p.ankunft : '', p.abfahrt ? 'Abfahrt ' + p.abfahrt : '']
                     .filter(Boolean).join(' · ');
                 notifications.push({

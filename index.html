@@ -495,65 +495,100 @@
             <input type="number" id="einZZ" step="0.01" min="0" placeholder="19.85">
         </div>
 
-        <h3 style="margin-top:22px;">Zuschlagssätze (%)</h3>
-        <div class="row">
-            <div class="form-group">
-                <label for="einNacht">Nacht</label>
-                <input type="number" id="einNacht" step="1" min="0" placeholder="25">
+        <details class="einst-abschnitt" open>
+            <summary>Zuschlagssätze (%)</summary>
+            <div class="einst-inhalt">
+                <div class="row">
+                    <div class="form-group">
+                        <label for="einNacht">Nacht</label>
+                        <input type="number" id="einNacht" step="1" min="0" placeholder="25">
+                    </div>
+                    <div class="form-group">
+                        <label for="einSamstag">Samstag</label>
+                        <input type="number" id="einSamstag" step="1" min="0" placeholder="20">
+                    </div>
+                    <div class="form-group">
+                        <label for="einSonntag">Sonntag</label>
+                        <input type="number" id="einSonntag" step="1" min="0" placeholder="25">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="form-group">
+                        <label for="einFeiertag">Feiertag</label>
+                        <input type="number" id="einFeiertag" step="1" min="0" placeholder="135">
+                    </div>
+                    <div class="form-group">
+                        <label for="einSonder">Sondertag</label>
+                        <input type="number" id="einSonder" step="1" min="0" placeholder="40">
+                    </div>
+                    <div class="form-group">
+                        <label for="einMehrarbeit">Mehrarbeit</label>
+                        <input type="number" id="einMehrarbeit" step="1" min="0" placeholder="30">
+                    </div>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="einSamstag">Samstag</label>
-                <input type="number" id="einSamstag" step="1" min="0" placeholder="20">
-            </div>
-            <div class="form-group">
-                <label for="einSonntag">Sonntag</label>
-                <input type="number" id="einSonntag" step="1" min="0" placeholder="25">
-            </div>
-        </div>
-        <div class="row">
-            <div class="form-group">
-                <label for="einFeiertag">Feiertag</label>
-                <input type="number" id="einFeiertag" step="1" min="0" placeholder="135">
-            </div>
-            <div class="form-group">
-                <label for="einSonder">Sondertag</label>
-                <input type="number" id="einSonder" step="1" min="0" placeholder="40">
-            </div>
-            <div class="form-group">
-                <label for="einMehrarbeit">Mehrarbeit</label>
-                <input type="number" id="einMehrarbeit" step="1" min="0" placeholder="30">
-            </div>
-        </div>
+        </details>
 
-        <h3 style="margin-top:22px;">Zeitfenster</h3>
-        <div class="row">
-            <div class="form-group">
-                <label for="einNachtVon">Nacht ab (Uhr)</label>
-                <input type="number" id="einNachtVon" step="1" min="0" max="23" placeholder="21">
+        <details class="einst-abschnitt">
+            <summary>Zeitfenster</summary>
+            <div class="einst-inhalt">
+                <div class="row">
+                    <div class="form-group">
+                        <label for="einNachtVon">Nacht ab (Uhr)</label>
+                        <input type="number" id="einNachtVon" step="1" min="0" max="23" placeholder="21">
+                    </div>
+                    <div class="form-group">
+                        <label for="einNachtBis">Nacht bis (Uhr)</label>
+                        <input type="number" id="einNachtBis" step="1" min="0" max="23" placeholder="6">
+                    </div>
+                    <div class="form-group">
+                        <label for="einSamstagAb">Samstag ab (Uhr)</label>
+                        <input type="number" id="einSamstagAb" step="1" min="0" max="23" placeholder="13">
+                    </div>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="einNachtBis">Nacht bis (Uhr)</label>
-                <input type="number" id="einNachtBis" step="1" min="0" max="23" placeholder="6">
-            </div>
-            <div class="form-group">
-                <label for="einSamstagAb">Samstag ab (Uhr)</label>
-                <input type="number" id="einSamstagAb" step="1" min="0" max="23" placeholder="13">
-            </div>
-        </div>
+        </details>
 
-        <h3 style="margin-top:22px;">Verpflegungsmehraufwand</h3>
-        <div class="form-group">
-            <label for="einFahrzeit">Fahrzeit je Richtung (Min.)</label>
-            <input type="number" id="einFahrzeit" step="1" min="0" placeholder="30">
-            <div class="auth-hinweis" style="margin-top:6px;">
-                Für die 8-Stunden-Grenze beim Verpflegungsmehraufwand zählt die Abwesenheit von der Wohnung, also Anfahrt + Dienstzeit + Rückfahrt. Abweichende Fahrzeiten je Ort kannst du unter Mehr → Wegstrecken hinterlegen.
+        <details class="einst-abschnitt">
+            <summary>Verpflegungsmehraufwand</summary>
+            <div class="einst-inhalt">
+                <div class="form-group">
+                    <label for="einFahrzeit">Fahrzeit je Richtung (Min.)</label>
+                    <input type="number" id="einFahrzeit" step="1" min="0" placeholder="30">
+                    <div class="auth-hinweis" style="margin-top:6px;">
+                        Für die 8-Stunden-Grenze beim Verpflegungsmehraufwand zählt die Abwesenheit von der Wohnung, also Anfahrt + Dienstzeit + Rückfahrt. Abweichende Fahrzeiten je Ort kannst du unter Mehr → Wegstrecken hinterlegen.
+                    </div>
+                </div>
             </div>
-        </div>
+        </details>
 
-        <h3 style="margin-top:22px;">Hilfe durch den Admin</h3>
-        <p class="auth-hinweis">Standardmäßig kann niemand deine Daten sehen. Wenn du Hilfe brauchst, kannst du dem Admin für 24 Stunden Zugriff geben. Er kann dann deine Dienste sehen und Einstellungen für dich anpassen.</p>
-        <div id="hilfeStatus" class="auth-hinweis" style="margin-bottom:10px;"></div>
-        <button class="btn-secondary" id="hilfeKnopf" onclick="hilfeUmschalten()">Zugriff für 24 Std. freigeben</button>
+        <details class="einst-abschnitt">
+            <summary>Sperrbildschirm-Benachrichtigungen</summary>
+            <div class="einst-inhalt">
+                <div class="auth-hinweis" style="margin-bottom:10px;">Nur in der nativen App wirksam. Wie viele Minuten vorher du bei "Aktuelle Fahrt" erinnert werden willst.</div>
+                <div class="form-group">
+                    <label for="einVorlaufBeginn">Dienstbeginn (Min. vorher)</label>
+                    <input type="number" id="einVorlaufBeginn" step="1" min="0" placeholder="30">
+                </div>
+                <div class="form-group">
+                    <label for="einVorlaufPause">Pause (Min. vorher)</label>
+                    <input type="number" id="einVorlaufPause" step="1" min="0" placeholder="5">
+                </div>
+                <div class="form-group">
+                    <label for="einVorlaufStandard">Alle anderen Punkte, z.B. Wenden (Min. vorher)</label>
+                    <input type="number" id="einVorlaufStandard" step="1" min="0" placeholder="3">
+                </div>
+            </div>
+        </details>
+
+        <details class="einst-abschnitt">
+            <summary>Hilfe durch den Admin</summary>
+            <div class="einst-inhalt">
+                <p class="auth-hinweis">Standardmäßig kann niemand deine Daten sehen. Wenn du Hilfe brauchst, kannst du dem Admin für 24 Stunden Zugriff geben. Er kann dann deine Dienste sehen und Einstellungen für dich anpassen.</p>
+                <div id="hilfeStatus" class="auth-hinweis" style="margin-bottom:10px;"></div>
+                <button class="btn-secondary" id="hilfeKnopf" onclick="hilfeUmschalten()">Zugriff für 24 Std. freigeben</button>
+            </div>
+        </details>
 
         <button onclick="einstellungenSpeichern()" style="margin-top:22px;">Einstellungen speichern</button>
         <div class="meldung" id="einMeldung"></div>
