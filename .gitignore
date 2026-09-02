@@ -8,3 +8,4 @@ android/app/release/
 android/captures/
 android/*.iml
 android/app/*.iml
+android/.idea/

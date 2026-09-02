@@ -867,7 +867,7 @@
         });
 
         const pad = (n) => n < 10 ? '0' + n : n;
-        doc.save(`Dienstuebersicht_${listeDatum.getFullYear()}-${pad(listeDatum.getMonth() + 1)}.pdf`);
+        dateiSpeichernOderTeilen(`Dienstuebersicht_${listeDatum.getFullYear()}-${pad(listeDatum.getMonth() + 1)}.pdf`, doc.output('blob'));
     }
 
     // ============================================================
@@ -1108,7 +1108,7 @@
         });
 
         const pad = (n) => n < 10 ? '0' + n : n;
-        doc.save(`Verpflegungsmehraufwand_${listeDatum.getFullYear()}-${pad(listeDatum.getMonth() + 1)}.pdf`);
+        dateiSpeichernOderTeilen(`Verpflegungsmehraufwand_${listeDatum.getFullYear()}-${pad(listeDatum.getMonth() + 1)}.pdf`, doc.output('blob'));
     }
 
     function wegZeilen() {
@@ -1198,7 +1198,7 @@
         });
 
         const pad = (n) => n < 10 ? '0' + n : n;
-        doc.save(`Fahrtkosten_${listeDatum.getFullYear()}-${pad(listeDatum.getMonth() + 1)}.pdf`);
+        dateiSpeichernOderTeilen(`Fahrtkosten_${listeDatum.getFullYear()}-${pad(listeDatum.getMonth() + 1)}.pdf`, doc.output('blob'));
     }
 
 
@@ -3090,14 +3090,54 @@
         }
     });
 
-    // ---------- Sperrbildschirm-Benachrichtigungen (nur native App via Capacitor) ----------
+    // ---------- Native App via Capacitor ----------
     // Im normalen Browser/PWA gibt es kein window.Capacitor - dort bleiben
-    // diese Funktionen wirkungslose No-Ops.
+    // diese Funktionen wirkungslose No-Ops bzw. der bisherige Web-Weg greift.
     const AKTUELLEFAHRT_NOTIF_BASIS_ID = 84000;
 
     function capacitorAktiv() {
         return typeof window !== 'undefined' && !!window.Capacitor &&
             typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform();
+    }
+
+    function blobZuBase64(blob) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const ergebnis = reader.result || '';
+                const kommaIndex = ergebnis.indexOf(',');
+                resolve(kommaIndex >= 0 ? ergebnis.slice(kommaIndex + 1) : ergebnis);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    }
+
+    // Datei speichern: im Browser wie bisher per Download-Link, in der nativen
+    // App gibt es dafür keinen Download-Ordner - dort wird die Datei ins
+    // App-eigene Cache-Verzeichnis geschrieben und direkt der native
+    // Teilen-Dialog geöffnet (speichern/WhatsApp/Drucken uebernimmt der Nutzer dort).
+    async function dateiSpeichernOderTeilen(dateiname, blob) {
+        if (!capacitorAktiv()) {
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute('download', dateiname);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            return;
+        }
+        try {
+            const Filesystem = window.Capacitor.Plugins.Filesystem;
+            const Share = window.Capacitor.Plugins.Share;
+            const base64 = await blobZuBase64(blob);
+            const geschrieben = await Filesystem.writeFile({ path: dateiname, data: base64, directory: 'CACHE' });
+            await Share.share({ title: dateiname, url: geschrieben.uri });
+        } catch (e) {
+            if (e && e.message === 'Share canceled') return;   // Nutzer hat den Teilen-Dialog abgebrochen
+            console.log('Datei speichern/teilen fehlgeschlagen:', e);
+            alert('Datei konnte nicht erstellt werden.');
+        }
     }
 
     // Uhrzeit "HH:MM" auf den Kalendertag von "heuteStr" gelegt, plus die
@@ -4271,24 +4311,14 @@
         icsContent += "END:VCALENDAR\r\n";
 
         const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8;' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.setAttribute('download', `Dienstplan_${monatStr}.ics`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        dateiSpeichernOderTeilen(`Dienstplan_${monatStr}.ics`, blob);
     }
 
     // ---------- Backup ----------
     function backupExportieren() {
         const blob = new Blob([JSON.stringify(gespeicherteSchichten, null, 2)], { type: 'application/json' });
-        const link = document.createElement('a');
         const heute = new Date().toISOString().split('T')[0];
-        link.href = URL.createObjectURL(blob);
-        link.setAttribute('download', `Dienstplan_Backup_${heute}.json`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        dateiSpeichernOderTeilen(`Dienstplan_Backup_${heute}.json`, blob);
     }
 
     function backupImportieren(input) {
