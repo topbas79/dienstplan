@@ -3100,6 +3100,40 @@
             typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform();
     }
 
+    // "Dienstzettel fotografieren oder auswählen": im Browser öffnet das
+    // <label for="dienstplanBild"> wie gewohnt den Datei-Dialog des Systems
+    // (der dort auch die Kamera anbietet). In der nativen App zeigt Capacitors
+    // WebView bei einem einfachen <input type=file> aber nur den Galerie-
+    // Picker ohne Kamera-Zugriff - dort wird stattdessen per @capacitor/camera
+    // gefragt, ob fotografiert oder aus der Galerie gewählt werden soll.
+    function dienstzettelLabelKlick(ev) {
+        if (!capacitorAktiv()) return true;
+        ev.preventDefault();
+        document.getElementById('dzWahlOverlay').style.display = 'flex';
+        return false;
+    }
+
+    // ereignis nur gesetzt, wenn per Klick auf den Hintergrund ausgelöst (wie hilfeSchliessen).
+    async function dienstzettelWahl(wahl, ereignis) {
+        if (ereignis && ereignis.target !== document.getElementById('dzWahlOverlay')) return;
+        document.getElementById('dzWahlOverlay').style.display = 'none';
+        if (wahl === 'abbrechen') return;
+        if (wahl === 'galerie') { document.getElementById('dienstplanBild').click(); return; }
+
+        try {
+            const Camera = window.Capacitor.Plugins.Camera;
+            const foto = await Camera.getPhoto({ resultType: 'uri', source: 'CAMERA', quality: 85 });
+            const antwort = await fetch(foto.webPath);
+            const blob = await antwort.blob();
+            document.getElementById('stapelBox').style.display = 'none';
+            starteAutomatischeAnalyse(blob);
+        } catch (e) {
+            if (e && /cancel/i.test(e.message || '')) return;   // Nutzer hat abgebrochen
+            console.log('Kamera-Aufnahme fehlgeschlagen:', e);
+            alert('Kamera konnte nicht geöffnet werden.');
+        }
+    }
+
     function blobZuBase64(blob) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();

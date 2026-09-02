@@ -439,7 +439,7 @@
             min-height: 0 !important; width: auto !important;
             text-decoration: underline; cursor: pointer;
         }
-        #hilfeOverlay {
+        #hilfeOverlay, #dzWahlOverlay {
             display: none; position: fixed; inset: 0; z-index: 200;
             background: rgba(0,0,0,.6); align-items: center; justify-content: center;
             padding: 16px;
