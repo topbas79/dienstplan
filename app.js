@@ -3090,6 +3090,63 @@
         }
     });
 
+    // ---------- Sperrbildschirm-Benachrichtigungen (nur native App via Capacitor) ----------
+    // Im normalen Browser/PWA gibt es kein window.Capacitor - dort bleiben
+    // diese Funktionen wirkungslose No-Ops.
+    const AKTUELLEFAHRT_NOTIF_BASIS_ID = 84000;
+
+    function capacitorAktiv() {
+        return typeof window !== 'undefined' && !!window.Capacitor &&
+            typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform();
+    }
+
+    // Uhrzeit "HH:MM" auf den Kalendertag von "heuteStr" gelegt, plus die
+    // Folgetag-Verschiebung aus p.sort (>= 24*60 bei Zeiten nach Mitternacht).
+    function aktuelleFahrtAlsDatum(heuteStr, sortMinuten) {
+        if (sortMinuten == null) return null;
+        const [jahr, monat, tag] = heuteStr.split('-').map(Number);
+        const d = new Date(jahr, monat - 1, tag, 0, 0, 0, 0);
+        d.setMinutes(sortMinuten);
+        return d;
+    }
+
+    async function aktuelleFahrtBenachrichtigungenPlanen(punkte, heuteStr) {
+        if (!capacitorAktiv()) return;
+        const LN = window.Capacitor.Plugins.LocalNotifications;
+        try {
+            const erlaubnis = await LN.checkPermissions();
+            if (erlaubnis.display !== 'granted') {
+                const angefragt = await LN.requestPermissions();
+                if (angefragt.display !== 'granted') return;
+            }
+
+            // Vorherige Aktuelle-Fahrt-Benachrichtigungen verwerfen, bevor neu geplant wird
+            // (z. B. nach manuellem Neu-Öffnen oder wenn sich die Auswertung geändert hat).
+            const anstehend = await LN.getPending();
+            const alteIds = (anstehend.notifications || [])
+                .filter(n => n.id >= AKTUELLEFAHRT_NOTIF_BASIS_ID && n.id < AKTUELLEFAHRT_NOTIF_BASIS_ID + 1000)
+                .map(n => ({ id: n.id }));
+            if (alteIds.length) await LN.cancel({ notifications: alteIds });
+
+            const jetzt = new Date();
+            const notifications = [];
+            let id = AKTUELLEFAHRT_NOTIF_BASIS_ID;
+            punkte.forEach(p => {
+                const wann = aktuelleFahrtAlsDatum(heuteStr, p.sort);
+                if (!wann || wann.getTime() <= jetzt.getTime()) return;
+                const zeitText = [p.ankunft ? 'Ankunft ' + p.ankunft : '', p.abfahrt ? 'Abfahrt ' + p.abfahrt : '']
+                    .filter(Boolean).join(' · ');
+                notifications.push({
+                    id: id++,
+                    title: aktuelleFahrtLabelText(p.label) + (p.ort ? ' · ' + p.ort : ''),
+                    body: zeitText,
+                    schedule: { at: wann }
+                });
+            });
+            if (notifications.length) await LN.schedule({ notifications });
+        } catch (e) { console.log('Benachrichtigungen planen fehlgeschlagen:', e); }
+    }
+
     // ---------- App starten ----------
     // Verbindungsdaten des Supabase-Projekts (dürfen öffentlich sein –
     // der Zugriffsschutz passiert über die Regeln in der Datenbank).
@@ -3137,6 +3194,7 @@
             aktuelleFahrtRendern();
             aktuelleFahrtIntervallStarten();
             aktuelleFahrtWakeLockAnfordern();
+            aktuelleFahrtBenachrichtigungenPlanen(aktuelleFahrtPunkte, heutigesDatumStr());
         } else {
             aktuelleFahrtIntervallStoppen();
             aktuelleFahrtWakeLockFreigeben();
