@@ -2637,10 +2637,15 @@
         const d = sch.details || {};
         const ort = (n, kz) => (n || kz || '').trim();
         const wann = k === heuteStr ? 'Heute' : k.split('-').reverse().join('.');
+        const linieUmlauf = [d.beginn_linie ? 'Linie ' + d.beginn_linie : '', d.beginn_umlauf ? 'Umlauf ' + d.beginn_umlauf : '']
+            .filter(Boolean).join(' · ');
+        const richtung = ort(d.beginn_nach, d.beginn_nach_kuerzel);
         document.getElementById('startNaechster').innerHTML = `
             <div class="result-item klickbar-karte" onclick="dienstVerlaufOeffnen('${k}')">
                 <span class="label">${wann}${sch.dienstnummer ? ' · ' + sch.dienstnummer : ''}` +
                 (d.beginn_ort ? `<br><small style="opacity:.75;">Start: ${ort(d.beginn_ort, d.beginn_ort_kuerzel)}</small>` : '') +
+                (linieUmlauf ? `<br><small style="opacity:.75;">${linieUmlauf}</small>` : '') +
+                (richtung ? `<br><small style="opacity:.75;">Richtung: ${richtung}</small>` : '') +
                 `</span>
                 <span style="text-align:right;">${sch.startStr || ''} – ${sch.endeStr || ''}<br>
                 <small style="opacity:.7;">Verlauf ansehen ›</small></span>
