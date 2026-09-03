@@ -116,9 +116,14 @@
 <!-- SEITE: Start / Überblick -->
 <div class="page active" id="page-start">
     <div class="container start-karte">
-        <div class="start-monat" id="startMonatName">–</div>
-        <div class="start-gross" id="startBrutto">–</div>
-        <div class="start-zeile"><span id="startSchichten">0 Dienste</span><span id="startStunden">–</span></div>
+        <div class="start-karte-kopf" onclick="startUebersichtUmschalten()">
+            <div class="start-monat" id="startMonatName">–</div>
+            <span class="start-karte-pfeil" id="startUebersichtPfeil"></span>
+        </div>
+        <div id="startUebersichtInhalt" style="display:none;">
+            <div class="start-gross" id="startBrutto">–</div>
+            <div class="start-zeile"><span id="startSchichten">0 Dienste</span><span id="startStunden">–</span></div>
+        </div>
     </div>
 
     <button id="startAktuelleFahrtBtn" onclick="aktuelleFahrtOeffnen()" style="display:none; align-items:center; justify-content:center; gap:10px; background:var(--primary);">

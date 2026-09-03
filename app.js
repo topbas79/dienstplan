@@ -2564,6 +2564,15 @@
     // ============================================================
     //  STARTSEITE
     // ============================================================
+    function startUebersichtUmschalten() {
+        const inhalt = document.getElementById('startUebersichtInhalt');
+        const pfeil = document.getElementById('startUebersichtPfeil');
+        if (!inhalt || !pfeil) return;
+        const offen = inhalt.style.display !== 'none';
+        inhalt.style.display = offen ? 'none' : 'block';
+        pfeil.classList.toggle('aktiv', !offen);
+    }
+
     function startseiteAktualisieren() {
         const heute = new Date();
         const pad = (n) => n < 10 ? '0' + n : n;

@@ -503,6 +503,16 @@
             color: #f8fafc;
         }
         .start-monat { font-size: .82rem; opacity: .75; letter-spacing: .04em; text-transform: uppercase; }
+        .start-karte-kopf { display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+        .start-karte-pfeil {
+            width: 8px; height: 8px;
+            border-right: 2px solid rgba(248,250,252,.6);
+            border-bottom: 2px solid rgba(248,250,252,.6);
+            transform: rotate(-45deg);
+            transition: transform .15s;
+            flex: none;
+        }
+        .start-karte-pfeil.aktiv { transform: rotate(45deg); }
         .start-gross { font-size: 2.1rem; font-weight: 700; margin: 4px 0 10px 0; color: #FFD100; }
         .start-zeile {
             display: flex; justify-content: space-between;
