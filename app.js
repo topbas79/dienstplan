@@ -2593,27 +2593,14 @@
         setze('startZuschlaege', euroText(zuschlaege));
         setze('startZeitkonto', zeitkonto ? zeitText(zeitkonto) : '–');
 
-        // Nächster Dienst ab heute
-        const kommende = Object.keys(gespeicherteSchichten).filter(k => k >= heuteStr).sort();
-        const box = document.getElementById('startNaechsterBox');
-        if (kommende.length) {
-            const k = kommende[0];
-            const sch = gespeicherteSchichten[k];
-            const d = sch.details || {};
-            const ort = (n, kz) => (n || kz || '').trim();
-            const wann = k === heuteStr ? 'Heute' : k.split('-').reverse().join('.');
-            document.getElementById('startNaechster').innerHTML = `
-                <div class="result-item klickbar-karte" onclick="dienstVerlaufOeffnen('${k}')">
-                    <span class="label">${wann}${sch.dienstnummer ? ' · ' + sch.dienstnummer : ''}` +
-                    (d.beginn_ort ? `<br><small style="opacity:.75;">Start: ${ort(d.beginn_ort, d.beginn_ort_kuerzel)}</small>` : '') +
-                    `</span>
-                    <span style="text-align:right;">${sch.startStr || ''} – ${sch.endeStr || ''}<br>
-                    <small style="opacity:.7;">Verlauf ansehen ›</small></span>
-                </div>`;
-            box.style.display = 'block';
-        } else {
-            box.style.display = 'none';
-        }
+        // Dienst-Karte: startet beim naechsten anstehenden (oder letzten
+        // vergangenen, falls keiner mehr ansteht) und laesst sich per
+        // Weiter/Zurueck durch alle gespeicherten Dienste blaettern.
+        startDienstListe = Object.keys(gespeicherteSchichten).sort();
+        let defaultIndex = startDienstListe.findIndex(k => k >= heuteStr);
+        if (defaultIndex === -1) defaultIndex = startDienstListe.length - 1;
+        startDienstIndex = defaultIndex;
+        startDienstKarteRendern();
 
         // "Aktuelle Fahrt" nur anbieten, wenn heute ein Dienst ansteht
         const afBtn = document.getElementById('startAktuelleFahrtBtn');
@@ -2630,6 +2617,45 @@
         setze('startFeiertag', naechster
             ? `${naechster.name} · ${naechster.datum.split('-').reverse().join('.')}`
             : '–');
+    }
+
+    let startDienstListe = [];   // sortierte Datums-Schlüssel aller gespeicherten Dienste
+    let startDienstIndex = -1;   // aktuell angezeigter Index in startDienstListe
+
+    function startDienstKarteRendern() {
+        const box = document.getElementById('startNaechsterBox');
+        if (!box) return;
+        if (!startDienstListe.length || startDienstIndex < 0) {
+            box.style.display = 'none';
+            return;
+        }
+        box.style.display = 'block';
+
+        const heuteStr = heutigesDatumStr();
+        const k = startDienstListe[startDienstIndex];
+        const sch = gespeicherteSchichten[k];
+        const d = sch.details || {};
+        const ort = (n, kz) => (n || kz || '').trim();
+        const wann = k === heuteStr ? 'Heute' : k.split('-').reverse().join('.');
+        document.getElementById('startNaechster').innerHTML = `
+            <div class="result-item klickbar-karte" onclick="dienstVerlaufOeffnen('${k}')">
+                <span class="label">${wann}${sch.dienstnummer ? ' · ' + sch.dienstnummer : ''}` +
+                (d.beginn_ort ? `<br><small style="opacity:.75;">Start: ${ort(d.beginn_ort, d.beginn_ort_kuerzel)}</small>` : '') +
+                `</span>
+                <span style="text-align:right;">${sch.startStr || ''} – ${sch.endeStr || ''}<br>
+                <small style="opacity:.7;">Verlauf ansehen ›</small></span>
+            </div>
+            <div class="af-nav">
+                <button class="btn-secondary" onclick="startDienstZurueck()" ${startDienstIndex === 0 ? 'disabled' : ''}>‹ Zurück</button>
+                <button class="btn-secondary" onclick="startDienstWeiter()" ${startDienstIndex === startDienstListe.length - 1 ? 'disabled' : ''}>Weiter ›</button>
+            </div>`;
+    }
+
+    function startDienstWeiter() {
+        if (startDienstIndex < startDienstListe.length - 1) { startDienstIndex++; startDienstKarteRendern(); }
+    }
+    function startDienstZurueck() {
+        if (startDienstIndex > 0) { startDienstIndex--; startDienstKarteRendern(); }
     }
 
     // Öffnet den Dienstverlauf eines bestimmten Tages
@@ -2957,27 +2983,20 @@
         return ergebnis;
     }
 
-    // Minuten seit Mitternacht "jetzt", mit derselben Folgetag-Logik wie
-    // aktuelleFahrtPunkteBauen (vor Dienstbeginn liegende Zeiten zählen als
-    // Folgetag), damit der Vergleich mit den Punkt-Sortierwerten passt.
-    function aktuelleFahrtJetztMinuten(d) {
-        const beginnMin = (() => {
-            if (!d || !d.beginn) return 0;
-            const [h, m] = d.beginn.split(':').map(Number);
-            return isNaN(h) ? 0 : h * 60 + m;
-        })();
-        const jetzt = new Date();
-        let min = jetzt.getHours() * 60 + jetzt.getMinutes();
-        if (min < beginnMin) min += 24 * 60;
-        return min;
-    }
-
-    function aktuelleFahrtAutoIndex(punkte, d) {
+    // Anhand der tatsächlichen Uhrzeit den aktuellen Punkt bestimmen: der
+    // letzte Punkt, dessen (Folgetag-korrigierte) Zeit schon erreicht ist.
+    // Nutzt echte Date-Objekte statt reiner Minuten-Arithmetik, damit z. B.
+    // ein Öffnen VOR Dienstbeginn (Uhrzeit liegt vor der ersten Wende, ohne
+    // dass der Dienst über Mitternacht geht) nicht faelschlich als "schon
+    // fast am Ende, muss ueber Mitternacht gelaufen sein" missverstanden wird.
+    function aktuelleFahrtAutoIndex(punkte) {
         if (!punkte.length) return 0;
-        const jetzt = aktuelleFahrtJetztMinuten(d);
+        const heuteStr = heutigesDatumStr();
+        const jetzt = new Date();
         let index = 0;
         for (let i = 0; i < punkte.length; i++) {
-            if (punkte[i].sort <= jetzt) index = i; else break;
+            const wann = aktuelleFahrtAlsDatum(heuteStr, punkte[i].sort);
+            if (wann && wann.getTime() <= jetzt.getTime()) index = i; else break;
         }
         return index;
     }
@@ -2997,7 +3016,7 @@
 
         const istManuell = aktuelleFahrtManuellerIndex !== null;
         const index = Math.max(0, Math.min(aktuelleFahrtPunkte.length - 1,
-            istManuell ? aktuelleFahrtManuellerIndex : aktuelleFahrtAutoIndex(aktuelleFahrtPunkte, aktuelleFahrtDetails)));
+            istManuell ? aktuelleFahrtManuellerIndex : aktuelleFahrtAutoIndex(aktuelleFahrtPunkte)));
         const p = aktuelleFahrtPunkte[index];
 
         const folgeTeile = [];
@@ -3042,13 +3061,13 @@
 
     function aktuelleFahrtWeiter() {
         const aktuell = aktuelleFahrtManuellerIndex !== null
-            ? aktuelleFahrtManuellerIndex : aktuelleFahrtAutoIndex(aktuelleFahrtPunkte, aktuelleFahrtDetails);
+            ? aktuelleFahrtManuellerIndex : aktuelleFahrtAutoIndex(aktuelleFahrtPunkte);
         aktuelleFahrtManuellerIndex = Math.min(aktuelleFahrtPunkte.length - 1, aktuell + 1);
         aktuelleFahrtRendern();
     }
     function aktuelleFahrtZurueck() {
         const aktuell = aktuelleFahrtManuellerIndex !== null
-            ? aktuelleFahrtManuellerIndex : aktuelleFahrtAutoIndex(aktuelleFahrtPunkte, aktuelleFahrtDetails);
+            ? aktuelleFahrtManuellerIndex : aktuelleFahrtAutoIndex(aktuelleFahrtPunkte);
         aktuelleFahrtManuellerIndex = Math.max(0, aktuell - 1);
         aktuelleFahrtRendern();
     }
