@@ -194,6 +194,9 @@
             font-size: 0.9rem;
         }
         .result-item:last-child { border-bottom: none; }
+        .fm-label { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+        .fm-icon { width: 46px; height: 32px; object-fit: cover; border-radius: 5px; flex: none; }
+        .result-item.fm-zeile { cursor: pointer; }
         .result-item .label { display: flex; align-items: center; gap: 6px; }
         .highlight { font-weight: bold; color: var(--primary); }
         .total-box {
@@ -439,7 +442,7 @@
             min-height: 0 !important; width: auto !important;
             text-decoration: underline; cursor: pointer;
         }
-        #hilfeOverlay, #dzWahlOverlay {
+        #hilfeOverlay, #dzWahlOverlay, #fmDetailOverlay {
             display: none; position: fixed; inset: 0; z-index: 200;
             background: rgba(0,0,0,.6); align-items: center; justify-content: center;
             padding: 16px;

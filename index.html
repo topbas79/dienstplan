@@ -196,6 +196,47 @@
     <div style="max-width:650px; margin:0 auto 20px auto;" id="afNaechste"></div>
 </div>
 
+<!-- SEITE: Fehlermeldung am Fahrerpult -->
+<div class="page" id="page-fehlermeldung">
+    <div class="container">
+        <h2>Fehlermeldung</h2>
+        <p class="auth-hinweis" id="fmBusmodell">Busmodell: –</p>
+
+        <button class="btn-scan" onclick="fehlermeldungFotoButton()" style="display:flex; align-items:center; justify-content:center; gap:10px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5a2 2 0 0 1 2-2h1.2l1-1.5h7.6l1 1.5H19a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8.5Z"></path><circle cx="12" cy="13" r="3.3"></circle></svg>
+            Meldung fotografieren
+        </button>
+        <input type="file" id="fmBild" accept="image/*" style="display:none" onchange="fehlermeldungDateiVerarbeiten(this)">
+
+        <div id="fmStatus" style="margin-top:12px;"></div>
+        <div id="fmErgebnis" class="stat-card" style="display:none; margin-top:12px;"></div>
+
+        <button class="btn-secondary" onclick="wechselSeite('mehr')" style="margin-top:18px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M15 5.5 8.5 12 15 18.5"></path></svg>Zurück</button>
+    </div>
+
+    <div class="container">
+        <h3 style="margin-bottom:8px;">Piktogramme durchsuchen</h3>
+        <div class="form-group">
+            <input type="text" id="fmSuche" placeholder="z. B. Retarder, MUX, Bremskreis..." oninput="fehlermeldungListeRendern()">
+        </div>
+        <div id="fmListe"></div>
+    </div>
+</div>
+
+<!-- Fehlermeldung-Detail (Popup) -->
+<div id="fmDetailOverlay" onclick="fehlermeldungDetailSchliessen(event)">
+    <div class="hilfe-fenster" onclick="event.stopPropagation()" style="max-width:320px;">
+        <div class="hilfe-kopf">
+            <span>Piktogramm</span>
+            <button class="icon-btn" onclick="fehlermeldungDetailSchliessen()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12"></path><path d="M18 6 6 18"></path></svg></button>
+        </div>
+        <div class="hilfe-inhalt" style="text-align:center;">
+            <img id="fmDetailBild" src="" alt="" style="width:160px; border-radius:12px; margin-bottom:16px;">
+            <p id="fmDetailText" style="font-size:1.1rem; font-weight:700; line-height:1.4;"></p>
+        </div>
+    </div>
+</div>
+
 <!-- SEITE 1: Erfassen -->
 <div class="page" id="page-erfassen">
     <div class="container">
@@ -739,6 +780,15 @@
             <button class="menue-punkt-neu" onclick="listeOeffnen()" style="border-bottom:none;">
                 <span class="menue-icon" style="background:var(--tint-blue); color:var(--primary);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h7l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 19V5A1.5 1.5 0 0 1 7 3.5Z"></path><path d="M14 3.5V8h4"></path><path d="M8.5 12.5h7M8.5 15.5h7M8.5 9.5h2"></path></svg></span>
                 <span class="menue-text"><b>Dienstliste &amp; PDF-Export</b><small>Für Steuererklärung &amp; Unterlagen</small></span>
+                <span class="menue-pfeil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5 15.5 12 9 18.5"></path></svg></span>
+            </button>
+        </div>
+
+        <div style="font-size:.76rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-faint); margin:22px 4px 8px 4px;">Fahrzeug</div>
+        <div style="background:var(--card); border:1px solid var(--border); border-radius:20px; overflow:hidden;">
+            <button class="menue-punkt-neu" onclick="wechselSeite('fehlermeldung')" style="border-bottom:none;">
+                <span class="menue-icon" style="background:var(--tint-amber); color:#b45309;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 21.5 20h-19L12 3.5Z"></path><path d="M12 10v4"></path><path d="M12 16.8h.01"></path></svg></span>
+                <span class="menue-text"><b>Fehlermeldung</b><small>Piktogramm fotografieren oder nachschlagen</small></span>
                 <span class="menue-pfeil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5 15.5 12 9 18.5"></path></svg></span>
             </button>
         </div>

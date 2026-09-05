@@ -3130,6 +3130,227 @@
         }
     });
 
+    // ============================================================
+    //  FEHLERMELDUNG AM FAHRERPULT - Piktogramm fotografieren (KI-Abgleich)
+    //  oder manuell nachschlagen. Alle Eintraege stammen ausschliesslich aus
+    //  dem Handbuch-Auszug "Steuerungselemente" des jeweiligen Busmodells -
+    //  bei weiteren Busmodellen hier einfach einen neuen Eintrag ergaenzen.
+    // ============================================================
+    const BUSMODELLE = {
+        'solaris-urbino-12-electric': {
+            name: 'Solaris Urbino 12 electric',
+            rotHinweis: 'Fahrzeug sofort anhalten, ohne eine Verkehrsgefahr zu verursachen. Weitere Fahrt ist untersagt.',
+            gelbHinweis: 'Fahrzeug anhalten, ohne Gefährdung des Straßenverkehrs. Bei einer Störung ist das Service zu benachrichtigen.',
+            rot: [
+                { symbol: 'MUX 1.1 / 1.2 / 1.3 / 1.4 / 2.1 / 2.2 / 2.3 / 2.4', bedeutung: 'Störung MUX (1.1; 1.2; 1.3; 1.4; 2.1; 2.2; 2.3; 2.4)' },
+                { symbol: 'MUX', bedeutung: 'Störung mehr als eines Multiplexers' },
+                { symbol: 'PCAN', bedeutung: 'CAN (PCAN)-Störung' },
+                { symbol: 'XCAN', bedeutung: 'CAN (XCAN)-Störung' },
+                { symbol: 'Batterie-Symbol', bedeutung: 'Nicht aufgeladen' },
+                { symbol: 'Batterie-Symbol', bedeutung: 'Spannung unter 21 V' },
+                { symbol: 'Batterie mit Ausrufezeichen', bedeutung: 'Störung des Ladegeräts' },
+                { symbol: 'P im Kreis', bedeutung: 'Feststellbremse' },
+                { symbol: 'Durchgestrichenes Feststellbrems-Symbol', bedeutung: 'Störung des Feststellbremsventils' },
+                { symbol: 'Dreieck mit Ausrufezeichen', bedeutung: 'Fehler / Störung der Isolierung' },
+                { symbol: 'Dreieck (Türnotöffnung)', bedeutung: 'Türnotöffnung eingeschaltet' },
+                { symbol: 'Doppeltür-Symbol', bedeutung: 'Tür Störung' },
+                { symbol: 'Tür-Symbol', bedeutung: 'BCAN-Kommunikationsfehler' },
+                { symbol: 'EBS', bedeutung: 'Störung des EBS' },
+                { symbol: 'ECAS + PCAN', bedeutung: 'PCAN-Kommunikationsfehler (ECAS)' },
+                { bedeutung: 'Störung des DC/AC-Wandlers' },
+                { bedeutung: 'Störung des ECAS-Systems' },
+                { symbol: 'ECAS + PCAN', bedeutung: 'PCAN-Kommunikationsfehler (ECAS)' },
+                { symbol: 'R im Kreis', bedeutung: 'Störung Retarder' },
+                { symbol: 'R + PCAN', bedeutung: 'PCAN-Kommunikationsfehler (Retarder)' },
+                { bedeutung: 'Störung des Elektroantriebs' },
+                { symbol: '(1)', bedeutung: 'Störung – Bremskreis 1' },
+                { symbol: '(2)', bedeutung: 'Störung – Bremskreis 1' },
+                { bedeutung: 'Störung – Luftdruck' },
+                { symbol: 'F + Hauptplatine', bedeutung: 'Brand der Hauptplatine' },
+                { symbol: 'F + Hilfspumpenkammer', bedeutung: 'Brand in der Hilfspumpenkammer' },
+                { symbol: 'F + Antriebssystem', bedeutung: 'Brand in der Kammer des Antriebssystems' },
+                { symbol: 'F + Dach', bedeutung: 'Brand auf dem Dach' },
+                { symbol: 'F + Kompressorkammer', bedeutung: 'Brand in der Kompressorkammer' },
+                { symbol: 'F + Fahrmotor', bedeutung: 'Brand in der Kammer des Fahrmotors' },
+                { symbol: 'F + Batterienkammer', bedeutung: 'Brand in der Batterienkammer' },
+                { symbol: 'F', bedeutung: 'Fehler des Brandmeldesystems' },
+                { bedeutung: 'Zu hohe Temperatur der Kühlflüssigkeit' },
+                { bedeutung: 'Überhitzung des Kühlsystems' },
+                { bedeutung: 'Überhitzung des Kompressors' },
+                { symbol: 'I CAN', bedeutung: 'Kommunikationsfehler (Tachograph)' },
+                { symbol: 'Batterie-Symbol', bedeutung: 'Störung der Antriebsbatterien' },
+                { symbol: 'NOTSTOPP', bedeutung: 'NOTSTOPP' },
+                { bedeutung: 'Störung der Sicherung' },
+                { bedeutung: 'Sehr niedriger Reifendruck' },
+                { bedeutung: 'Trennschalter des Antriebsbehälters ist offen' },
+                { bedeutung: 'Retarder CAN' },
+                { bedeutung: 'Kompressorfehler' },
+                { symbol: 'STOP', bedeutung: 'STOP' }
+            ],
+            gelb: [
+                { symbol: 'Batterie-Symbol', bedeutung: 'Spannung unter 23 V' },
+                { symbol: 'Batterie mit Ausrufezeichen', bedeutung: 'Fehler des Ladegeräts' },
+                { symbol: 'Dreieck mit Ausrufezeichen', bedeutung: 'Fehler / Störung der Isolierung' },
+                { bedeutung: 'Niedriges Niveau des Kühlmittels' },
+                { bedeutung: 'Niedriger Scheibenwischwasserstand' },
+                { bedeutung: 'Türfehler' },
+                { symbol: 'Dreieck (Türnotöffnung)', bedeutung: 'Türnotöffnung eingeschaltet' },
+                { bedeutung: 'Niedriger Heizflüssigkeitsstand' },
+                { bedeutung: 'Hoher Verbrauch der Bremsbeläge' },
+                { symbol: 'ASR', bedeutung: 'Auslösung des ASR-Systems' },
+                { symbol: 'ABS', bedeutung: 'Auslösung des ABS' },
+                { symbol: 'EBS', bedeutung: 'Fehler des EBS' },
+                { symbol: 'ATC', bedeutung: 'ATC-Fehler' },
+                { symbol: 'ATC', bedeutung: 'ATC-Kommunikationsfehler' },
+                { bedeutung: 'Fehler des DC/AC-Wandlers' },
+                { bedeutung: 'Fehler des ECAS-Systems' },
+                { symbol: 'R', bedeutung: 'Fehler des Retarders' },
+                { bedeutung: 'Ladefehler' },
+                { bedeutung: 'Fehler des Elektroantriebs' },
+                { bedeutung: 'Notlösung Haltestellenbremse' },
+                { symbol: 'F', bedeutung: 'Fehler des Brandmeldesystems' },
+                { symbol: 'F + Dach', bedeutung: 'Fehler der Meldeleitung auf dem Dach' },
+                { symbol: 'F + Antriebssystem', bedeutung: 'Fehler der Meldeleitung in der Kammer des Antriebssystems' },
+                { bedeutung: 'Niedriger Ölstand im Luftkompressor' },
+                { bedeutung: 'Überwachungsfehler' },
+                { bedeutung: 'Hohe Temperatur des Kühlmittels' },
+                { bedeutung: 'Sicherungsfehler' },
+                { bedeutung: 'Blockade - Alkomat' },
+                { bedeutung: 'Fehler des zentralen Schmiersystems' },
+                { bedeutung: 'Niedriger Schmiermittelstand im zentralen Schmiersystem' },
+                { bedeutung: 'Niedriger Druck im zentralen Schmiersystem' },
+                { bedeutung: 'Niedriger Reifendruck' },
+                { bedeutung: 'Fehler des Systems zur Überwachung des Reifendrucks' },
+                { bedeutung: 'Hohe Temperatur der Reifen' },
+                { bedeutung: 'Reserve Ofenkraftstoff' },
+                { bedeutung: 'Ölstand für Servolenkung niedrig' },
+                { bedeutung: 'Fehler der Servolenkung' },
+                { bedeutung: 'Fehler der Außenbeleuchtung' },
+                { symbol: 'ESC', bedeutung: 'ESC aktiv' },
+                { bedeutung: 'FEHLER des DC/AC-Umformers' },
+                { symbol: 'Batterie-Symbol', bedeutung: 'Fehler der Antriebsbatterien' },
+                { bedeutung: 'Öffnen der Fahrerkabine' },
+                { bedeutung: 'Niedriger Kühlmittelstand im Generator-/Fahrmotorsystem' },
+                { bedeutung: 'Niedriger Kühlmittelstand des Hochspannungsumrichters' },
+                { symbol: 'A/C', bedeutung: 'Konverterfehler A/C' },
+                { bedeutung: 'Keine Möglichkeit, die Traktionsbatterien aufzuladen' },
+                { bedeutung: 'Keine Möglichkeit, die Traktionsbatterien zu entladen' },
+                { bedeutung: 'Ladefehler' },
+                { bedeutung: 'Antriebausschalten' },
+                { bedeutung: 'Reduzierung des Drehmoments' },
+                { symbol: 'MAX km/h', bedeutung: 'Geschwindigkeitsüberschreitung' },
+                { bedeutung: 'Notfahrt' },
+                { bedeutung: 'Ausfall des Hilfswechselrichters' }
+            ]
+        }
+    };
+    let aktuellesBusmodell = 'solaris-urbino-12-electric';
+    let fotoWahlZiel = 'dienstzettel';   // 'dienstzettel' oder 'fehlermeldung' - steuert, wohin der Kamera/Galerie-Dialog liefert
+
+    function fehlermeldungSeiteOeffnen() {
+        const modell = BUSMODELLE[aktuellesBusmodell];
+        document.getElementById('fmBusmodell').innerText = 'Busmodell: ' + (modell ? modell.name : '–');
+        document.getElementById('fmStatus').innerText = '';
+        document.getElementById('fmErgebnis').style.display = 'none';
+        fehlermeldungListeRendern();
+    }
+
+    function fehlermeldungIconPfad(farbe, index) {
+        return `busfehler-icons/${aktuellesBusmodell}/${farbe}-${String(index).padStart(2, '0')}.jpg`;
+    }
+
+    function fehlermeldungListeRendern() {
+        const modell = BUSMODELLE[aktuellesBusmodell];
+        const el = document.getElementById('fmListe');
+        if (!modell || !el) return;
+        const suchbegriff = (document.getElementById('fmSuche').value || '').toLowerCase().trim();
+        const zeile = (farbe, e, index) => {
+            const text = [e.symbol, e.bedeutung].filter(Boolean).join(' ').toLowerCase();
+            if (suchbegriff && !text.includes(suchbegriff)) return '';
+            const iconSrc = fehlermeldungIconPfad(farbe, index);
+            return `<div class="result-item fm-zeile" onclick="fehlermeldungDetailOeffnen('${farbe}', ${index})">
+                <span class="label fm-label">
+                    <img src="${iconSrc}" alt="" class="fm-icon">
+                    ${e.symbol ? sicher(e.symbol) : ''}
+                </span>
+                <span style="text-align:right; max-width:55%;">${sicher(e.bedeutung)}</span>
+            </div>`;
+        };
+        const inhalt = modell.rot.map((e, i) => zeile('rot', e, i + 1)).join('') +
+            modell.gelb.map((e, i) => zeile('gelb', e, i + 1)).join('');
+        el.innerHTML = inhalt || '<p class="auth-hinweis">Kein Piktogramm gefunden.</p>';
+    }
+
+    // Popup mit grossem Piktogramm + Bedeutung, wenn eine Zeile angetippt wird.
+    function fehlermeldungDetailOeffnen(farbe, index) {
+        const modell = BUSMODELLE[aktuellesBusmodell];
+        const liste = farbe === 'rot' ? modell.rot : modell.gelb;
+        const eintrag = liste[index - 1];
+        if (!eintrag) return;
+        document.getElementById('fmDetailBild').src = fehlermeldungIconPfad(farbe, index);
+        document.getElementById('fmDetailText').innerText = eintrag.bedeutung;
+        document.getElementById('fmDetailOverlay').style.display = 'flex';
+    }
+
+    function fehlermeldungDetailSchliessen(ereignis) {
+        if (ereignis && ereignis.target !== document.getElementById('fmDetailOverlay')) return;
+        document.getElementById('fmDetailOverlay').style.display = 'none';
+    }
+
+    function fehlermeldungFotoButton() {
+        if (!capacitorAktiv()) { document.getElementById('fmBild').click(); return; }
+        fotoWahlZiel = 'fehlermeldung';
+        document.getElementById('dzWahlOverlay').style.display = 'flex';
+    }
+
+    function fehlermeldungDateiVerarbeiten(input) {
+        if (!input.files || !input.files[0]) return;
+        fehlermeldungAnalysieren(input.files[0]);
+        input.value = '';
+    }
+
+    async function fehlermeldungAnalysieren(blob) {
+        const status = document.getElementById('fmStatus');
+        const box = document.getElementById('fmErgebnis');
+        box.style.display = 'none';
+        status.style.color = '#2563eb';
+        status.innerText = '🤖 KI prüft das Foto...';
+        try {
+            const dataUrl = await dateiAlsDataUrl(blob);
+            const komma = dataUrl.indexOf(',');
+            const base64 = dataUrl.slice(komma + 1);
+            const medienTyp = (dataUrl.match(/^data:(image\/[a-z+]+);/) || [])[1] || 'image/jpeg';
+            const { data, error } = await sb.functions.invoke('fehlermeldung-lesen', {
+                body: { bild_base64: base64, medien_typ: medienTyp, busmodell: aktuellesBusmodell }
+            });
+            if (error) throw error;
+            if (data && data.fehler) throw new Error(data.fehler);
+            status.innerText = '';
+            fehlermeldungErgebnisAnzeigen(data);
+        } catch (e) {
+            status.style.color = '#dc2626';
+            status.innerText = '⚠️ ' + (e.message || 'Fehler bei der Erkennung.');
+        }
+    }
+
+    function fehlermeldungErgebnisAnzeigen(daten) {
+        const box = document.getElementById('fmErgebnis');
+        box.style.display = 'block';
+        const modell = BUSMODELLE[aktuellesBusmodell];
+        if (!daten || !daten.erkannt) {
+            box.innerHTML = '<p class="auth-hinweis">Piktogramm nicht eindeutig erkannt. Bitte unten manuell nachschlagen oder das Foto schärfer/näher aufnehmen.</p>';
+            return;
+        }
+        const farbeSymbol = daten.farbe === 'rot' ? '🔴' : '🟡';
+        const hinweis = daten.farbe === 'rot' ? modell.rotHinweis : modell.gelbHinweis;
+        box.innerHTML = `
+            <div class="result-item">
+                <span class="label">${farbeSymbol} ${sicher(daten.bezeichnung || '')}</span>
+            </div>
+            <p style="margin-top:10px;"><b>Was zu tun ist:</b> ${sicher(hinweis)}</p>
+        `;
+    }
+
     // ---------- Native App via Capacitor ----------
     // Im normalen Browser/PWA gibt es kein window.Capacitor - dort bleiben
     // diese Funktionen wirkungslose No-Ops bzw. der bisherige Web-Weg greift.
@@ -3149,24 +3370,33 @@
     function dienstzettelLabelKlick(ev) {
         if (!capacitorAktiv()) return true;
         ev.preventDefault();
+        fotoWahlZiel = 'dienstzettel';
         document.getElementById('dzWahlOverlay').style.display = 'flex';
         return false;
     }
 
     // ereignis nur gesetzt, wenn per Klick auf den Hintergrund ausgelöst (wie hilfeSchliessen).
+    // fotoWahlZiel steuert, wohin das Ergebnis geht ('dienstzettel' oder 'fehlermeldung').
     async function dienstzettelWahl(wahl, ereignis) {
         if (ereignis && ereignis.target !== document.getElementById('dzWahlOverlay')) return;
         document.getElementById('dzWahlOverlay').style.display = 'none';
         if (wahl === 'abbrechen') return;
-        if (wahl === 'galerie') { document.getElementById('dienstplanBild').click(); return; }
+        if (wahl === 'galerie') {
+            document.getElementById(fotoWahlZiel === 'fehlermeldung' ? 'fmBild' : 'dienstplanBild').click();
+            return;
+        }
 
         try {
             const Camera = window.Capacitor.Plugins.Camera;
             const foto = await Camera.getPhoto({ resultType: 'uri', source: 'CAMERA', quality: 85 });
             const antwort = await fetch(foto.webPath);
             const blob = await antwort.blob();
-            document.getElementById('stapelBox').style.display = 'none';
-            starteAutomatischeAnalyse(blob);
+            if (fotoWahlZiel === 'fehlermeldung') {
+                fehlermeldungAnalysieren(blob);
+            } else {
+                document.getElementById('stapelBox').style.display = 'none';
+                starteAutomatischeAnalyse(blob);
+            }
         } catch (e) {
             if (e && /cancel/i.test(e.message || '')) return;   // Nutzer hat abgebrochen
             console.log('Kamera-Aufnahme fehlgeschlagen:', e);
@@ -3291,7 +3521,8 @@
     // ---------- Tabs ----------
     // Unterseiten ohne eigenen Tab: welcher Tab bleibt markiert?
     const TAB_ZUORDNUNG = {
-        verlauf: 'mehr', liste: 'mehr', einstellungen: 'mehr', admin: 'mehr', wegstrecken: 'mehr'
+        verlauf: 'mehr', liste: 'mehr', einstellungen: 'mehr', admin: 'mehr', wegstrecken: 'mehr',
+        fehlermeldung: 'mehr'
     };
 
     function wechselSeite(seite) {
@@ -3310,6 +3541,7 @@
         if (seite === 'liste') listeRendern();
         if (seite === 'wegstrecken') wegstreckenRendern();
         if (seite === 'einstellungen') { einstellungenLaden(); hilfeAnzeigeAktualisieren(); }
+        if (seite === 'fehlermeldung') fehlermeldungSeiteOeffnen();
         if (seite === 'chat') chatListeLaden();
         if (seite === 'kontakte' || seite === 'gruppe-neu') kontakteLaden();
         if (seite !== 'chatraum') kanalTrennen();
