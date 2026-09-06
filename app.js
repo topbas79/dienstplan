@@ -3136,12 +3136,17 @@
     //  dem Handbuch-Auszug "Steuerungselemente" des jeweiligen Busmodells -
     //  bei weiteren Busmodellen hier einfach einen neuen Eintrag ergaenzen.
     // ============================================================
+    // Jedes Busmodell hat "gruppen" (frueher fest "rot"/"gelb") - eine Liste
+    // beliebig vieler Farbkategorien mit eigener Handlungsanweisung. So lassen
+    // sich Modelle mit anderen Kategorien (z. B. zusaetzlich Gruen oder eine
+    // nicht farblich sortierte Gruppe) ergaenzen, ohne den Code zu aendern.
     const BUSMODELLE = {
         'solaris-urbino-12-electric': {
             name: 'Solaris Urbino 12 electric',
-            rotHinweis: 'Fahrzeug sofort anhalten, ohne eine Verkehrsgefahr zu verursachen. Weitere Fahrt ist untersagt.',
-            gelbHinweis: 'Fahrzeug anhalten, ohne Gefährdung des Straßenverkehrs. Bei einer Störung ist das Service zu benachrichtigen.',
-            rot: [
+            gruppen: [{
+                farbe: 'rot', label: 'Rot',
+                hinweis: 'Fahrzeug sofort anhalten, ohne eine Verkehrsgefahr zu verursachen. Weitere Fahrt ist untersagt.',
+                eintraege: [
                 { symbol: 'MUX 1.1 / 1.2 / 1.3 / 1.4 / 2.1 / 2.2 / 2.3 / 2.4', bedeutung: 'Störung MUX (1.1; 1.2; 1.3; 1.4; 2.1; 2.2; 2.3; 2.4)' },
                 { symbol: 'MUX', bedeutung: 'Störung mehr als eines Multiplexers' },
                 { symbol: 'PCAN', bedeutung: 'CAN (PCAN)-Störung' },
@@ -3185,9 +3190,12 @@
                 { bedeutung: 'Trennschalter des Antriebsbehälters ist offen' },
                 { bedeutung: 'Retarder CAN' },
                 { bedeutung: 'Kompressorfehler' },
-                { symbol: 'STOP', bedeutung: 'STOP' }
-            ],
-            gelb: [
+                    { symbol: 'STOP', bedeutung: 'STOP' }
+                ]
+            }, {
+                farbe: 'gelb', label: 'Gelb',
+                hinweis: 'Fahrzeug anhalten, ohne Gefährdung des Straßenverkehrs. Bei einer Störung ist das Service zu benachrichtigen.',
+                eintraege: [
                 { symbol: 'Batterie-Symbol', bedeutung: 'Spannung unter 23 V' },
                 { symbol: 'Batterie mit Ausrufezeichen', bedeutung: 'Fehler des Ladegeräts' },
                 { symbol: 'Dreieck mit Ausrufezeichen', bedeutung: 'Fehler / Störung der Isolierung' },
@@ -3240,35 +3248,162 @@
                 { bedeutung: 'Reduzierung des Drehmoments' },
                 { symbol: 'MAX km/h', bedeutung: 'Geschwindigkeitsüberschreitung' },
                 { bedeutung: 'Notfahrt' },
-                { bedeutung: 'Ausfall des Hilfswechselrichters' }
-            ]
+                    { bedeutung: 'Ausfall des Hilfswechselrichters' }
+                ]
+            }]
+        },
+        'adl-enviro500': {
+            name: 'Alexander Dennis Enviro500',
+            gruppen: [{
+                // Nicht farblich einsortiert - im Original ohne Rahmenfarbe abgebildet.
+                farbe: 'allgemein', label: 'Allgemeine Warnleuchten', hinweis: '',
+                eintraege: [
+                    { bedeutung: 'Stop-Warnung (RSL): Leuchtet auf, wenn ein Fehler vorliegt. Wird mit einer Bildschirmwarnung angezeigt. Leuchtet, bis der Fehler behoben ist.' },
+                    { bedeutung: 'Motorstörung: Zeigt an, dass der Motor eine Fehlfunktion hat.' },
+                    { bedeutung: 'ABS/ASR: Leuchtet auf, wenn ein Fehler (rot) oder eine Störung (gelb) im ABS oder ASR-System vorliegt.' },
+                    { bedeutung: 'Niedriger Luftdruck: Zeigt an, dass der Luftdruck zu niedrig ist.' }
+                ]
+            }, {
+                farbe: 'rot', label: 'Rot',
+                hinweis: 'Fahrzeug sofort sicher anhalten, Motor abstellen und Service/Werkstatt kontaktieren.',
+                eintraege: [
+                    { bedeutung: 'Niveauregulierung Fehler' },
+                    { bedeutung: 'Motorhaube geöffnet' },
+                    { bedeutung: 'Tür offen / Fehler' },
+                    { bedeutung: 'Zentrale Steuerung Fehler' },
+                    { bedeutung: 'E – Kühlung Fehler' },
+                    { bedeutung: 'Notabschaltung Aktiv' },
+                    { bedeutung: 'Feuerlöschanlage Aktiv' },
+                    { bedeutung: 'Rampe Ausgefahren' }
+                ]
+            }, {
+                farbe: 'gelb', label: 'Gelb',
+                hinweis: 'Baldmöglichst prüfen lassen. Vorsichtig weiterfahren und die Anzeige im Blick behalten.',
+                eintraege: [
+                    { bedeutung: 'Motor prüfen' },
+                    { bedeutung: 'Motor Öldruck niedrig' },
+                    { bedeutung: 'Temperatur Kühlflüssigkeit hoch' },
+                    { bedeutung: 'Motor-Kühlflüssigkeitsstand niedrig' },
+                    { bedeutung: 'Luftsystem Fehler' },
+                    { bedeutung: 'EBS Warnung' },
+                    { bedeutung: 'ESC Fehler' },
+                    { bedeutung: 'Retarder Fehler' },
+                    { bedeutung: 'Getriebefehler' },
+                    { bedeutung: 'Getriebetemperatur zu hoch' },
+                    { bedeutung: 'Getriebeschutzfunktion' },
+                    { bedeutung: 'Lenkachse hinten Fehler' },
+                    { bedeutung: 'Geschwindigkeitsbegrenzer aktiv' },
+                    { bedeutung: 'Lichtmaschine Fehler' },
+                    { bedeutung: 'Batterieschutz aktiviert' },
+                    { bedeutung: 'Niveauregulierung Fehler' },
+                    { bedeutung: 'Fehler in Abgasreinigung' },
+                    { bedeutung: 'Diesel Partikelfilter Rußpegel hoch' },
+                    { bedeutung: 'Haltebremse Fehler' },
+                    { bedeutung: 'Notschalter' },
+                    { bedeutung: 'E – Kühlung Fehler' },
+                    { bedeutung: 'Motorhaube Geöffnet' },
+                    { bedeutung: 'Motor-Kühlflüssigkeitsstand niedrig' },
+                    { bedeutung: 'Fehlfunktion OBD' },
+                    { bedeutung: 'ESC Fehler' },
+                    { bedeutung: 'ESC deaktiviert' },
+                    { bedeutung: 'EBS Umkehrtest aktiv' },
+                    { bedeutung: 'Retarder Aus' },
+                    { bedeutung: 'Bremsbelag-Verschleiß' },
+                    { bedeutung: 'Berganfahrhilfe Aus' },
+                    { bedeutung: 'Lenkachse hinten Fehler' },
+                    { bedeutung: 'Tankinhalt niedrig' },
+                    { bedeutung: 'DEF Füllstand niedrig' },
+                    { bedeutung: 'Fehler in Abgasreinigung' },
+                    { bedeutung: 'Diesel Partikelfilter Rußpegel zu hoch' },
+                    { bedeutung: 'Partikelfilter Regeneration geblockt' },
+                    { bedeutung: 'Abgastemperatur hoch' },
+                    { bedeutung: 'Motor gestoppt' },
+                    { bedeutung: 'Stand Ölfüll-System niedrig' },
+                    { bedeutung: 'Wischerflüssigkeit niedrig' },
+                    { bedeutung: 'Umgebungstemperatur niedrig' },
+                    { bedeutung: 'Zusatz-Kühlmittelheizung Fehler' },
+                    { bedeutung: 'Zusatz-Kühlmittelheizung Aus' },
+                    { bedeutung: 'Lampenausfall' },
+                    { bedeutung: 'Nebelleuchte hinten aktiv' },
+                    { bedeutung: 'Aussentür-Notkontrolle isoliert' },
+                    { bedeutung: 'Nächste Haltestelle anhalten' },
+                    { bedeutung: 'Rollstuhl/Rampe Stop' },
+                    { bedeutung: 'Vorrang Stop (Kinderwagen)' },
+                    { bedeutung: 'Vorrang Stop (ältere Person)' },
+                    { bedeutung: 'Tür Fehler' },
+                    { bedeutung: 'Fahrtenschreiber Fehler' },
+                    { bedeutung: 'Feststellbremse betätigen' }
+                ]
+            }, {
+                farbe: 'gruen', label: 'Grün (Info)',
+                hinweis: 'Nur Information, keine Handlung nötig.',
+                eintraege: [
+                    { bedeutung: 'Partikelfilter Regeneration aktiv' },
+                    { bedeutung: 'Anfahrhilfe aktiv' },
+                    { bedeutung: 'Niveauregulierung aktiv' },
+                    { bedeutung: 'Anzeige Gaspedalsperre aktiv' },
+                    { bedeutung: 'Anzeige Retarder aktiv' },
+                    { bedeutung: 'Seitenbeleuchtung aktiv' },
+                    { bedeutung: 'Haltestellenbremse aktiv' },
+                    { bedeutung: 'Prüfung Aussenbeleuchtung aktiviert' },
+                    { bedeutung: 'Motorstart hinten aktiv' },
+                    { bedeutung: 'Aussenspiegel Beheizung aktiv' },
+                    { bedeutung: 'Zusatz-Kühlmittelheizung aktiv' },
+                    { bedeutung: 'Bremspedal betätigen' },
+                    { bedeutung: 'Tür geschlossen' }
+                ]
+            }]
         }
     };
-    let aktuellesBusmodell = 'solaris-urbino-12-electric';
+    let fehlermeldungAktivesModell = null;   // Modell, dessen "Meldung fotografieren"-Button zuletzt gedrueckt wurde
     let fotoWahlZiel = 'dienstzettel';   // 'dienstzettel' oder 'fehlermeldung' - steuert, wohin der Kamera/Galerie-Dialog liefert
 
+    // Baut je Busmodell ein aufklappbares <details> (wie bei den Einstellungen) -
+    // erst beim Aufklappen wird die potenziell lange Piktogramm-Liste gerendert.
     function fehlermeldungSeiteOeffnen() {
-        const modell = BUSMODELLE[aktuellesBusmodell];
-        document.getElementById('fmBusmodell').innerText = 'Busmodell: ' + (modell ? modell.name : '–');
-        document.getElementById('fmStatus').innerText = '';
-        document.getElementById('fmErgebnis').style.display = 'none';
-        fehlermeldungListeRendern();
+        const el = document.getElementById('fmModelle');
+        if (!el) return;
+        el.innerHTML = Object.keys(BUSMODELLE).map((schluessel) => {
+            const modell = BUSMODELLE[schluessel];
+            return `<details class="einst-abschnitt" data-modell="${schluessel}">
+                <summary>${sicher(modell.name)}</summary>
+                <div class="einst-inhalt">
+                    <button class="btn-scan" onclick="fehlermeldungFotoButton('${schluessel}')" style="display:flex; align-items:center; justify-content:center; gap:10px;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5a2 2 0 0 1 2-2h1.2l1-1.5h7.6l1 1.5H19a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8.5Z"></path><circle cx="12" cy="13" r="3.3"></circle></svg>
+                        Meldung fotografieren
+                    </button>
+                    <div id="fmStatus-${schluessel}" style="margin-top:12px;"></div>
+                    <div id="fmErgebnis-${schluessel}" class="stat-card" style="display:none; margin-top:12px;"></div>
+                    <div class="form-group" style="margin-top:16px;">
+                        <input type="text" id="fmSuche-${schluessel}" placeholder="z. B. Retarder, Tür, Motor..." oninput="fehlermeldungListeRendern('${schluessel}')">
+                    </div>
+                    <div id="fmListe-${schluessel}"></div>
+                </div>
+            </details>`;
+        }).join('');
+
+        el.querySelectorAll('details').forEach((det) => {
+            det.addEventListener('toggle', () => {
+                if (det.open) fehlermeldungListeRendern(det.dataset.modell);
+            });
+        });
     }
 
-    function fehlermeldungIconPfad(farbe, index) {
-        return `busfehler-icons/${aktuellesBusmodell}/${farbe}-${String(index).padStart(2, '0')}.jpg`;
+    function fehlermeldungIconPfad(modellSchluessel, farbe, index) {
+        return `busfehler-icons/${modellSchluessel}/${farbe}-${String(index).padStart(2, '0')}.jpg`;
     }
 
-    function fehlermeldungListeRendern() {
-        const modell = BUSMODELLE[aktuellesBusmodell];
-        const el = document.getElementById('fmListe');
+    function fehlermeldungListeRendern(modellSchluessel) {
+        const modell = BUSMODELLE[modellSchluessel];
+        const el = document.getElementById(`fmListe-${modellSchluessel}`);
         if (!modell || !el) return;
-        const suchbegriff = (document.getElementById('fmSuche').value || '').toLowerCase().trim();
-        const zeile = (farbe, e, index) => {
+        const suchfeld = document.getElementById(`fmSuche-${modellSchluessel}`);
+        const suchbegriff = (suchfeld && suchfeld.value || '').toLowerCase().trim();
+        const zeile = (gruppenFarbe, e, index) => {
             const text = [e.symbol, e.bedeutung].filter(Boolean).join(' ').toLowerCase();
             if (suchbegriff && !text.includes(suchbegriff)) return '';
-            const iconSrc = fehlermeldungIconPfad(farbe, index);
-            return `<div class="result-item fm-zeile" onclick="fehlermeldungDetailOeffnen('${farbe}', ${index})">
+            const iconSrc = fehlermeldungIconPfad(modellSchluessel, gruppenFarbe, index);
+            return `<div class="result-item fm-zeile" onclick="fehlermeldungDetailOeffnen('${modellSchluessel}', '${gruppenFarbe}', ${index})">
                 <span class="label fm-label">
                     <img src="${iconSrc}" alt="" class="fm-icon">
                     ${e.symbol ? sicher(e.symbol) : ''}
@@ -3276,18 +3411,19 @@
                 <span style="text-align:right; max-width:55%;">${sicher(e.bedeutung)}</span>
             </div>`;
         };
-        const inhalt = modell.rot.map((e, i) => zeile('rot', e, i + 1)).join('') +
-            modell.gelb.map((e, i) => zeile('gelb', e, i + 1)).join('');
+        const inhalt = modell.gruppen
+            .map((gruppe) => gruppe.eintraege.map((e, i) => zeile(gruppe.farbe, e, i + 1)).join(''))
+            .join('');
         el.innerHTML = inhalt || '<p class="auth-hinweis">Kein Piktogramm gefunden.</p>';
     }
 
     // Popup mit grossem Piktogramm + Bedeutung, wenn eine Zeile angetippt wird.
-    function fehlermeldungDetailOeffnen(farbe, index) {
-        const modell = BUSMODELLE[aktuellesBusmodell];
-        const liste = farbe === 'rot' ? modell.rot : modell.gelb;
-        const eintrag = liste[index - 1];
+    function fehlermeldungDetailOeffnen(modellSchluessel, farbe, index) {
+        const modell = BUSMODELLE[modellSchluessel];
+        const gruppe = modell && modell.gruppen.find((g) => g.farbe === farbe);
+        const eintrag = gruppe && gruppe.eintraege[index - 1];
         if (!eintrag) return;
-        document.getElementById('fmDetailBild').src = fehlermeldungIconPfad(farbe, index);
+        document.getElementById('fmDetailBild').src = fehlermeldungIconPfad(modellSchluessel, farbe, index);
         document.getElementById('fmDetailText').innerText = eintrag.bedeutung;
         document.getElementById('fmDetailOverlay').style.display = 'flex';
     }
@@ -3297,7 +3433,8 @@
         document.getElementById('fmDetailOverlay').style.display = 'none';
     }
 
-    function fehlermeldungFotoButton() {
+    function fehlermeldungFotoButton(modellSchluessel) {
+        fehlermeldungAktivesModell = modellSchluessel;
         if (!capacitorAktiv()) { document.getElementById('fmBild').click(); return; }
         fotoWahlZiel = 'fehlermeldung';
         document.getElementById('dzWahlOverlay').style.display = 'flex';
@@ -3310,8 +3447,10 @@
     }
 
     async function fehlermeldungAnalysieren(blob) {
-        const status = document.getElementById('fmStatus');
-        const box = document.getElementById('fmErgebnis');
+        const modellSchluessel = fehlermeldungAktivesModell;
+        const status = document.getElementById(`fmStatus-${modellSchluessel}`);
+        const box = document.getElementById(`fmErgebnis-${modellSchluessel}`);
+        if (!status || !box) return;
         box.style.display = 'none';
         status.style.color = '#2563eb';
         status.innerText = '🤖 KI prüft das Foto...';
@@ -3321,33 +3460,34 @@
             const base64 = dataUrl.slice(komma + 1);
             const medienTyp = (dataUrl.match(/^data:(image\/[a-z+]+);/) || [])[1] || 'image/jpeg';
             const { data, error } = await sb.functions.invoke('fehlermeldung-lesen', {
-                body: { bild_base64: base64, medien_typ: medienTyp, busmodell: aktuellesBusmodell }
+                body: { bild_base64: base64, medien_typ: medienTyp, busmodell: modellSchluessel }
             });
             if (error) throw error;
             if (data && data.fehler) throw new Error(data.fehler);
             status.innerText = '';
-            fehlermeldungErgebnisAnzeigen(data);
+            fehlermeldungErgebnisAnzeigen(modellSchluessel, data);
         } catch (e) {
             status.style.color = '#dc2626';
             status.innerText = '⚠️ ' + (e.message || 'Fehler bei der Erkennung.');
         }
     }
 
-    function fehlermeldungErgebnisAnzeigen(daten) {
-        const box = document.getElementById('fmErgebnis');
+    function fehlermeldungErgebnisAnzeigen(modellSchluessel, daten) {
+        const box = document.getElementById(`fmErgebnis-${modellSchluessel}`);
+        if (!box) return;
         box.style.display = 'block';
-        const modell = BUSMODELLE[aktuellesBusmodell];
+        const modell = BUSMODELLE[modellSchluessel];
         if (!daten || !daten.erkannt) {
             box.innerHTML = '<p class="auth-hinweis">Piktogramm nicht eindeutig erkannt. Bitte unten manuell nachschlagen oder das Foto schärfer/näher aufnehmen.</p>';
             return;
         }
-        const farbeSymbol = daten.farbe === 'rot' ? '🔴' : '🟡';
-        const hinweis = daten.farbe === 'rot' ? modell.rotHinweis : modell.gelbHinweis;
+        const gruppe = modell.gruppen.find((g) => g.farbe === daten.farbe);
+        const hinweis = gruppe ? gruppe.hinweis : '';
         box.innerHTML = `
             <div class="result-item">
-                <span class="label">${farbeSymbol} ${sicher(daten.bezeichnung || '')}</span>
+                <span class="label">${sicher(daten.bezeichnung || '')}</span>
             </div>
-            <p style="margin-top:10px;"><b>Was zu tun ist:</b> ${sicher(hinweis)}</p>
+            ${hinweis ? `<p style="margin-top:10px;"><b>Was zu tun ist:</b> ${sicher(hinweis)}</p>` : ''}
         `;
     }
 
