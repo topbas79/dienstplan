@@ -582,6 +582,30 @@
             padding: 16px;
         }
 
+        /* Mehr-Menü: Slide-in-Panel von rechts */
+        #mehrPanelBackdrop {
+            display: none; position: fixed; inset: 0; z-index: 250;
+            background: rgba(0,0,0,.45);
+        }
+        #mehrPanelBackdrop.aktiv { display: block; }
+        #mehrPanel {
+            position: fixed; top: 0; right: 0; bottom: 0;
+            width: 50%; min-width: 250px; max-width: 420px;
+            background: var(--bg); z-index: 251;
+            display: flex; flex-direction: column;
+            transform: translateX(100%);
+            transition: transform .28s ease;
+            box-shadow: -6px 0 24px rgba(0,0,0,.18);
+        }
+        #mehrPanel.aktiv { transform: translateX(0); }
+        .mehr-panel-kopf {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px 14px 10px 16px; flex-shrink: 0;
+        }
+        .mehr-panel-inhalt {
+            flex: 1; overflow-y: auto; padding: 0 10px 24px 10px;
+        }
+
         /* Mehr-Menü: gruppierte Karten (neu) */
         .menue-punkt-neu {
             display: flex; align-items: center; gap: 12px;

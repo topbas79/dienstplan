@@ -90,11 +90,13 @@
 
         const appSichtbar = (zustand === 'app');
         document.querySelector('.tabbar').style.display = appSichtbar ? 'flex' : 'none';
+        document.getElementById('darkModeBtn').style.display = appSichtbar ? 'none' : 'block';
         document.getElementById('logoutBtn').style.display =
-            (zustand === 'app' || zustand === 'freischalten') ? 'block' : 'none';
-        document.getElementById('settingsBtn').style.display = appSichtbar ? 'block' : 'none';
+            (zustand === 'freischalten') ? 'block' : 'none';
+        document.getElementById('mehrBtn').style.display = appSichtbar ? 'block' : 'none';
+        if (!appSichtbar) schliesseMehrPanel();
 
-        ['start', 'erfassen', 'verlauf', 'kalender', 'statistik', 'liste', 'admin', 'einstellungen', 'mehr', 'einrichten', 'profil', 'chat', 'kontakte', 'gruppe-neu', 'chatraum'].forEach(s => {
+        ['start', 'erfassen', 'verlauf', 'kalender', 'statistik', 'liste', 'admin', 'einstellungen', 'einrichten', 'profil', 'chat', 'kontakte', 'gruppe-neu', 'chatraum'].forEach(s => {
             document.getElementById('page-' + s).classList.remove('active');
         });
         document.getElementById('page-freischalten').classList.toggle('active', zustand === 'freischalten');
@@ -3804,7 +3806,17 @@
         fehlermeldung: 'mehr'
     };
 
+    function oeffneMehrPanel() {
+        document.getElementById('mehrPanel').classList.add('aktiv');
+        document.getElementById('mehrPanelBackdrop').classList.add('aktiv');
+    }
+    function schliesseMehrPanel() {
+        document.getElementById('mehrPanel').classList.remove('aktiv');
+        document.getElementById('mehrPanelBackdrop').classList.remove('aktiv');
+    }
+
     function wechselSeite(seite) {
+        if (seite === 'mehr') { oeffneMehrPanel(); return; }
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
         document.getElementById('page-' + seite).classList.add('active');
@@ -3836,12 +3848,8 @@
 
     // ---------- Dark Mode ----------
     function darkModeIconAktualisieren(istDark) {
-        const btn = document.getElementById('darkModeBtn');
-        if (!btn) return;
-        const mond = btn.querySelector('.icon-mond');
-        const sonne = btn.querySelector('.icon-sonne');
-        if (mond) mond.style.display = istDark ? 'none' : '';
-        if (sonne) sonne.style.display = istDark ? '' : 'none';
+        document.querySelectorAll('.icon-mond').forEach(el => el.style.display = istDark ? 'none' : '');
+        document.querySelectorAll('.icon-sonne').forEach(el => el.style.display = istDark ? '' : 'none');
     }
     function toggleDarkMode() {
         document.body.classList.toggle('dark');

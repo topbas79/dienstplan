@@ -43,15 +43,15 @@
         </div>
     </div>
     <div style="display:flex; gap:6px;">
-        <button class="icon-btn" onclick="wechselSeite('einstellungen')" id="settingsBtn" style="display:none;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"></path><path d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V19.5a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H4.5a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.56-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H10.6a1.7 1.7 0 0 0 1-1.55V4.5a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V10.6a1.7 1.7 0 0 0 1 .9h.19a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1Z"></path></svg>
-        </button>
         <button class="icon-btn" onclick="toggleDarkMode()" id="darkModeBtn">
             <svg class="icon-mond" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.2A8.5 8.5 0 1 1 9.8 4a7 7 0 0 0 10.2 10.2Z"></path></svg>
             <svg class="icon-sonne" style="display:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"></circle><path d="M12 3.5v2M12 18.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M3.5 12h2M18.5 12h2M4.6 19.4l1.4-1.4M18 6l1.4-1.4"></path></svg>
         </button>
         <button class="icon-btn" onclick="abmelden()" id="logoutBtn" style="display:none;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20.5H6a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2h3"></path><path d="M15.5 16.5 20.5 12l-5-4.5"></path><path d="M20 12H9.5"></path></svg>
+        </button>
+        <button class="icon-btn" onclick="oeffneMehrPanel()" id="mehrBtn" style="display:none;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="1.5"></circle><circle cx="12" cy="12" r="1.5"></circle><circle cx="18" cy="12" r="1.5"></circle></svg>
         </button>
     </div>
 </div>
@@ -745,23 +745,38 @@
 </div>
 
 <!-- SEITE: Mehr -->
-<div class="page" id="page-mehr">
-    <div class="container" style="max-width:650px; margin:0 auto 20px auto; background:transparent; border:none; box-shadow:none; padding:0;">
-        <h2 style="padding:0 4px;">Mehr</h2>
+<div id="mehrPanelBackdrop" onclick="schliesseMehrPanel()"></div>
+<div id="mehrPanel">
+    <div class="mehr-panel-kopf">
+        <h2 style="margin:0;">Mehr</h2>
+        <div style="display:flex; gap:6px;">
+            <button class="icon-btn" onclick="toggleDarkMode()" title="Dunkelmodus">
+                <svg class="icon-mond" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.2A8.5 8.5 0 1 1 9.8 4a7 7 0 0 0 10.2 10.2Z"></path></svg>
+                <svg class="icon-sonne" style="display:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"></circle><path d="M12 3.5v2M12 18.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M3.5 12h2M18.5 12h2M4.6 19.4l1.4-1.4M18 6l1.4-1.4"></path></svg>
+            </button>
+            <button class="icon-btn" onclick="schliesseMehrPanel(); abmelden();" title="Abmelden">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20.5H6a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2h3"></path><path d="M15.5 16.5 20.5 12l-5-4.5"></path><path d="M20 12H9.5"></path></svg>
+            </button>
+            <button class="icon-btn" onclick="schliesseMehrPanel()" title="Schließen">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+            </button>
+        </div>
+    </div>
+    <div class="mehr-panel-inhalt">
 
         <div style="font-size:.76rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-faint); margin:18px 4px 8px 4px;">Auswertung</div>
         <div style="background:var(--card); border:1px solid var(--border); border-radius:20px; overflow:hidden;">
-            <button class="menue-punkt-neu" onclick="wechselSeite('statistik')">
+            <button class="menue-punkt-neu" onclick="schliesseMehrPanel(); wechselSeite('statistik');">
                 <span class="menue-icon" style="background:var(--tint-blue); color:var(--primary);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="12" width="3.4" height="8" rx="1"></rect><rect x="10.3" y="7" width="3.4" height="13" rx="1"></rect><rect x="16.6" y="3.5" width="3.4" height="16.5" rx="1"></rect></svg></span>
                 <span class="menue-text"><b>Auswertung &amp; Statistik</b><small>Monats- und Jahresübersicht</small></span>
                 <span class="menue-pfeil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5 15.5 12 9 18.5"></path></svg></span>
             </button>
-            <button class="menue-punkt-neu" onclick="wechselSeite('verlauf')">
+            <button class="menue-punkt-neu" onclick="schliesseMehrPanel(); wechselSeite('verlauf');">
                 <span class="menue-icon" style="background:var(--tint-blue); color:var(--primary);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3.2 2"></path></svg></span>
                 <span class="menue-text"><b>Dienstverlauf</b><small>Alle erfassten Dienste im Detail</small></span>
                 <span class="menue-pfeil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5 15.5 12 9 18.5"></path></svg></span>
             </button>
-            <button class="menue-punkt-neu" onclick="listeOeffnen()" style="border-bottom:none;">
+            <button class="menue-punkt-neu" onclick="schliesseMehrPanel(); listeOeffnen();" style="border-bottom:none;">
                 <span class="menue-icon" style="background:var(--tint-blue); color:var(--primary);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h7l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 19V5A1.5 1.5 0 0 1 7 3.5Z"></path><path d="M14 3.5V8h4"></path><path d="M8.5 12.5h7M8.5 15.5h7M8.5 9.5h2"></path></svg></span>
                 <span class="menue-text"><b>Dienstliste &amp; PDF-Export</b><small>Für Steuererklärung &amp; Unterlagen</small></span>
                 <span class="menue-pfeil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5 15.5 12 9 18.5"></path></svg></span>
@@ -770,7 +785,7 @@
 
         <div style="font-size:.76rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-faint); margin:22px 4px 8px 4px;">Fahrzeug</div>
         <div style="background:var(--card); border:1px solid var(--border); border-radius:20px; overflow:hidden;">
-            <button class="menue-punkt-neu" onclick="wechselSeite('fehlermeldung')" style="border-bottom:none;">
+            <button class="menue-punkt-neu" onclick="schliesseMehrPanel(); wechselSeite('fehlermeldung');" style="border-bottom:none;">
                 <span class="menue-icon" style="background:var(--tint-amber); color:#b45309;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 21.5 20h-19L12 3.5Z"></path><path d="M12 10v4"></path><path d="M12 16.8h.01"></path></svg></span>
                 <span class="menue-text"><b>Fehlermeldung</b><small>Piktogramm fotografieren oder nachschlagen</small></span>
                 <span class="menue-pfeil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5 15.5 12 9 18.5"></path></svg></span>
@@ -779,12 +794,12 @@
 
         <div style="font-size:.76rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-faint); margin:22px 4px 8px 4px;">Fahrt &amp; Wegstrecken</div>
         <div style="background:var(--card); border:1px solid var(--border); border-radius:20px; overflow:hidden;">
-            <button class="menue-punkt-neu" onclick="wegstreckenOeffnen()">
+            <button class="menue-punkt-neu" onclick="schliesseMehrPanel(); wegstreckenOeffnen();">
                 <span class="menue-icon" style="background:var(--tint-green); color:var(--success);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11.7A7 7 0 0 0 5 9.3C5 14.8 12 21 12 21Z"></path><circle cx="12" cy="9.3" r="2.4"></circle></svg></span>
                 <span class="menue-text"><b>Wegstrecken</b><small>Entfernungen für die Fahrtkostenpauschale</small></span>
                 <span class="menue-pfeil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5 15.5 12 9 18.5"></path></svg></span>
             </button>
-            <button class="menue-punkt-neu" onclick="exportMonatIcs()" style="border-bottom:none;">
+            <button class="menue-punkt-neu" onclick="schliesseMehrPanel(); exportMonatIcs();" style="border-bottom:none;">
                 <span class="menue-icon" style="background:var(--tint-green); color:var(--success);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5.5" width="17" height="15" rx="2.5"></rect><path d="M3.5 9.5h17"></path><path d="M12 12v5.5M9.7 15.3 12 17.6l2.3-2.3"></path></svg></span>
                 <span class="menue-text"><b>Monat als Kalenderdatei</b><small>.ics-Export für den Kalender</small></span>
                 <span class="menue-pfeil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5 15.5 12 9 18.5"></path></svg></span>
@@ -793,17 +808,17 @@
 
         <div style="font-size:.76rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-faint); margin:22px 4px 8px 4px;">Konto &amp; Daten</div>
         <div style="background:var(--card); border:1px solid var(--border); border-radius:20px; overflow:hidden;">
-            <button class="menue-punkt-neu" onclick="wechselSeite('einstellungen')">
+            <button class="menue-punkt-neu" onclick="schliesseMehrPanel(); wechselSeite('einstellungen');">
                 <span class="menue-icon" style="background:var(--tint-grey); color:var(--text-soft);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"></path><path d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V19.5a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H4.5a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.56-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H10.6a1.7 1.7 0 0 0 1-1.55V4.5a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V10.6a1.7 1.7 0 0 0 1 .9h.19a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1Z"></path></svg></span>
                 <span class="menue-text"><b>Verdienst-Einstellungen</b><small>Tarif, Zuschläge, Zeitfenster</small></span>
                 <span class="menue-pfeil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5 15.5 12 9 18.5"></path></svg></span>
             </button>
-            <button class="menue-punkt-neu" onclick="backupExportieren()">
+            <button class="menue-punkt-neu" onclick="schliesseMehrPanel(); backupExportieren();">
                 <span class="menue-icon" style="background:var(--tint-grey); color:var(--text-soft);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v11.5M8 11l4 4 4-4"></path><path d="M4.5 17.5v2A1.5 1.5 0 0 0 6 21h12a1.5 1.5 0 0 0 1.5-1.5v-2"></path></svg></span>
                 <span class="menue-text"><b>Backup exportieren</b><small>Alle Daten als Datei sichern</small></span>
                 <span class="menue-pfeil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5 15.5 12 9 18.5"></path></svg></span>
             </button>
-            <button class="menue-punkt-neu" onclick="document.getElementById('importFileInput').click()" style="border-bottom:none;">
+            <button class="menue-punkt-neu" onclick="schliesseMehrPanel(); document.getElementById('importFileInput').click();" style="border-bottom:none;">
                 <span class="menue-icon" style="background:var(--tint-grey); color:var(--text-soft);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5V9M8 13l4-4 4 4"></path><path d="M4.5 17.5v2A1.5 1.5 0 0 0 6 21h12a1.5 1.5 0 0 0 1.5-1.5v-2"></path></svg></span>
                 <span class="menue-text"><b>Backup importieren</b><small>Aus einer Datei wiederherstellen</small></span>
                 <span class="menue-pfeil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5 15.5 12 9 18.5"></path></svg></span>
@@ -813,7 +828,7 @@
         <div id="mehrVerwaltungGruppe" style="display:none;">
             <div style="font-size:.76rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-faint); margin:22px 4px 8px 4px;">Verwaltung</div>
             <div style="background:var(--card); border:1px solid var(--border); border-radius:20px; overflow:hidden;">
-                <button class="menue-punkt-neu" id="menueAdmin" style="border-bottom:none;" onclick="wechselSeite('admin')">
+                <button class="menue-punkt-neu" id="menueAdmin" style="border-bottom:none;" onclick="schliesseMehrPanel(); wechselSeite('admin');">
                     <span class="menue-icon" style="background:var(--tint-amber); color:#b45309;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.5" cy="8" r="3"></circle><path d="M2.8 19.5a5.7 5.7 0 0 1 11.4 0"></path><circle cx="17" cy="9" r="2.4"></circle><path d="M15 12.2c2.6.2 4.6 1.9 5.2 4.3"></path></svg></span>
                     <span class="menue-text"><b>Nutzer &amp; Einladungen</b><small>Codes, Haltestellen, KI-Nutzung</small></span>
                     <span class="menue-pfeil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5 15.5 12 9 18.5"></path></svg></span>
@@ -959,9 +974,6 @@
     </button>
     <button class="tab-btn" id="tab-chat" onclick="wechselSeite('chat')">
         <span class="tab-icon"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5h16a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5H9l-4 3.5V17.5H4A1.5 1.5 0 0 1 2.5 16V7A1.5 1.5 0 0 1 4 5.5Z"></path></svg></span>Chat<span class="tab-punkt" id="chatPunkt" style="display:none;"></span>
-    </button>
-    <button class="tab-btn" id="tab-mehr" onclick="wechselSeite('mehr')">
-        <span class="tab-icon"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="1.5"></circle><circle cx="12" cy="12" r="1.5"></circle><circle cx="18" cy="12" r="1.5"></circle></svg></span>Mehr
     </button>
 </div>
 
