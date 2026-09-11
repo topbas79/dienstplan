@@ -312,6 +312,16 @@
             <div id="feiertagHinweis" class="auth-hinweis" style="margin-top:6px;"></div>
         </div>
 
+        <div class="mehrarbeit-box">
+            <label class="mehrarbeit-check">
+                <input type="checkbox" id="istMehrarbeitTag" onchange="berechneSchicht()">
+                <span>Mehrarbeit: kompletter offener Dienst an einem dienstfrei­en Tag</span>
+            </label>
+            <div class="auth-hinweis" style="margin-top:4px;">
+                Zählt nicht zum regulären Dienstplan → die volle Vergütung für diesen Tag (nicht nur der Zuschlag) kommt zusätzlich zum Monatslohn dazu.
+            </div>
+        </div>
+
         <button onclick="berechneSchicht()">Berechnen</button>
 
         <div class="results" id="ausgabe" style="display:none;">
@@ -323,9 +333,10 @@
             <div class="result-item"><span class="label"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5.5" width="17" height="15" rx="2.5"></rect><path d="M3.5 9.5h17"></path><path d="M12 12.3l1 2 2.2.2-1.7 1.5.5 2.1-2-1.2-2 1.2.5-2.1-1.7-1.5 2.2-.2Z"></path></svg>Feiertag (+135%):</span><span id="resFeiertag">–</span></div>
             <div class="result-item"><span class="label"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l1.9 5.5 5.6 1.9-5.6 1.9L12 18.3l-1.9-5.5-5.6-1.9 5.6-1.9L12 3.5Z"></path></svg>Sondertag (+40%):</span><span id="resSonder">–</span></div>
             <div class="result-item"><span class="label"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 16.5 10 10l4 4 6.5-6.5"></path><path d="M15.5 7.5H20.5V12.5"></path></svg>Mehrarbeit (+30%):</span><span id="resMehrarbeit">–</span></div>
+            <div class="result-item" id="resGrundZeile" style="display:none;"><span class="label"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"></circle><path d="M14.6 9.3a3 3 0 0 0-2.4-1.1c-1.9 0-3.4 1.7-3.4 3.8s1.5 3.8 3.4 3.8a3 3 0 0 0 2.4-1.1M8 11h5.2M8 13.3h5.2"></path></svg>Grundvergütung (ganzer Tag):</span><span id="resGrundverguetung">–</span></div>
 
             <div class="total-box">
-                <span>Zuschläge gesamt:</span>
+                <span id="resGesamtLabel">Zuschläge gesamt:</span>
                 <span id="resGesamt">–</span>
             </div>
 

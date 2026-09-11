@@ -210,6 +210,17 @@
             align-items: center;
         }
         .total-box span:first-child { font-weight: bold; }
+
+        .mehrarbeit-box {
+            margin-top: 14px; padding: 12px 14px;
+            background: var(--total-bg); border: 1px dashed var(--primary);
+            border-radius: 12px;
+        }
+        .mehrarbeit-check {
+            display: flex; align-items: flex-start; gap: 10px;
+            cursor: pointer; font-weight: 600; font-size: .92rem;
+        }
+        .mehrarbeit-check input { margin-top: 3px; flex: none; width: 18px; height: 18px; }
         .total-box span:last-child { font-weight: bold; font-size: 1rem; color: var(--primary); text-align: right; }
 
         /* Kalender UI Styles */
@@ -268,6 +279,8 @@
         }
         body.dark .cal-day.has-shift { color: #4ade80; }
         .cal-day.today { outline: 2px solid var(--primary); outline-offset: -2px; }
+        .cal-day.mehrarbeit-tag { background: #fef3c7; border-color: #d97706; color: #92400e; }
+        body.dark .cal-day.mehrarbeit-tag { background: #78350f; border-color: #f59e0b; color: #fde68a; }
 
         /* Farbige Markierung im Dienstverlauf */
         .verlauf-zeile { border-left: 4px solid transparent; padding-left: 8px; }

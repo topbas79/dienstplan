@@ -4436,6 +4436,7 @@
 
     async function starteAutomatischeAnalyse(file) {
         if (!file) return;
+        document.getElementById('istMehrarbeitTag').checked = false;
         const statusEl = document.getElementById('statusText');
         const btnKorrigieren = document.getElementById('btnManuellKorrigieren');
 
@@ -4572,6 +4573,7 @@
         const feiertagsArt = document.getElementById('feiertagsArt').value;
         const dienstnummer = document.getElementById('dienstnummer').value.trim();
         const pausenregel = document.getElementById('pausenregel').value;
+        const istMehrarbeitTag = document.getElementById('istMehrarbeitTag').checked;
         const details = aktuelleDetails;
 
         if (!datumStr || !startStr || !endeStr) return;
@@ -4659,7 +4661,10 @@
             : Math.max(0, (dPlanEnde - dStart) / 60000 - pauschalPause) + ausgefallenMin;
         const nettoStunden = nettoMinuten / 60;
 
-        const mehrarbeitMinuten = mehrMin + ausgefallenMin;
+        // Bei einem kompletten Mehrarbeit-Tag (offener Dienst am dienstfreien
+        // Tag) zaehlt die GESAMTE gearbeitete Zeit als Ueberstunden, nicht nur
+        // die Minuten nach dem Plan-Ende bzw. in der Pause.
+        const mehrarbeitMinuten = istMehrarbeitTag ? nettoMinuten : (mehrMin + ausgefallenMin);
         const mehrarbeitStunden = mehrarbeitMinuten / 60;
 
         // --- Zuschlaege auf das Zuschlagsentgelt (ZZ) ---
@@ -4672,8 +4677,14 @@
         const sonderEuro = zuschlag(sonderMin, ein.sonder);
         const mehrarbeitEuro = zuschlag(mehrarbeitMinuten, ein.mehrarbeit);
 
+        // Ein Mehrarbeit-Tag ist nicht Teil des regulaeren Dienstplans, dessen
+        // Grundlohn bereits durchs Monatsentgelt abgedeckt ist - hier kommt
+        // deshalb zusaetzlich zu den Zuschlaegen auch die volle Grundverguetung
+        // fuer die gearbeitete Zeit dazu.
+        const grundverguetungEuro = istMehrarbeitTag ? (mehrarbeitMinuten / 60) * ein.zz : 0;
+
         const zuschlagSumme = nachtEuro + samstagEuro + sonntagEuro +
-                              feiertagEuro + sonderEuro + mehrarbeitEuro;
+                              feiertagEuro + sonderEuro + mehrarbeitEuro + grundverguetungEuro;
 
         aktuellesBerechnetesErgebnis = {
             datumStr, startStr, endeStr, endeIst, feiertagsArt, dienstnummer, details,
@@ -4683,6 +4694,7 @@
             nachtMin, samstagMin, sonntagMin, feiertagMin, sonderMin,
             mehrarbeitMinuten, mehrarbeitStunden,
             nachtEuro, samstagEuro, sonntagEuro, feiertagEuro, sonderEuro, mehrarbeitEuro,
+            istMehrarbeitTag, grundverguetungEuro,
             zuschlagSumme, zz: ein.zz,
             dEnde
         };
@@ -4720,7 +4732,15 @@
         setze('resMehrarbeit', r.mehrarbeitMinuten
             ? `${zeitText(r.mehrarbeitMinuten)} aufs Zeitkonto → ${euroText(r.mehrarbeitEuro)} Zuschlag`
             : '–');
-        setze('resGesamt', `Zuschläge: ${euroText(r.zuschlagSumme)}`);
+
+        const grundZeile = document.getElementById('resGrundZeile');
+        if (grundZeile) grundZeile.style.display = r.istMehrarbeitTag ? 'flex' : 'none';
+        setze('resGrundverguetung', euroText(r.grundverguetungEuro || 0));
+
+        setze('resGesamtLabel', r.istMehrarbeitTag ? 'Extra-Lohn gesamt:' : 'Zuschläge gesamt:');
+        setze('resGesamt', r.istMehrarbeitTag
+            ? euroText(r.zuschlagSumme)
+            : `Zuschläge: ${euroText(r.zuschlagSumme)}`);
     }
 
     // Vergleich mit den Kopfwerten des Dienstzettels
@@ -5084,6 +5104,8 @@
                 mMehrMin += sch.mehrarbeitMinuten || 0;
                 mMehrEuro += sch.mehrarbeitEuro || 0;
                 mZuschlaege += sch.zuschlagSumme || 0;
+
+                if (sch.istMehrarbeitTag) dayCell.classList.add('mehrarbeit-tag');
             }
 
             if (ereignisTage.has(currentDatumStr)) {
@@ -5150,6 +5172,7 @@
             document.getElementById('endeTatsaechlich').value = sch.endeIst || '';
             document.getElementById('dienstnummer').value = sch.dienstnummer || '';
             document.getElementById('feiertagsArt').value = sch.feiertagsArt || 'normal';
+            document.getElementById('istMehrarbeitTag').checked = !!sch.istMehrarbeitTag;
             document.getElementById('pausenregel').value = sch.pausenregel || 'B30';
             pausenEintraege = (sch.pausen || []).map(p => ({
                 von: p.von || '', bis: p.bis || '',
@@ -5165,6 +5188,7 @@
             detailsAnzeigen(sch.details || null);
             berechneSchicht();
         } else {
+            document.getElementById('istMehrarbeitTag').checked = false;
             document.getElementById('ausgabe').style.display = 'none';
             feiertagPruefen();
         }
