@@ -210,17 +210,6 @@
             align-items: center;
         }
         .total-box span:first-child { font-weight: bold; }
-
-        .mehrarbeit-box {
-            margin-top: 14px; padding: 12px 14px;
-            background: var(--total-bg); border: 1px dashed var(--primary);
-            border-radius: 12px;
-        }
-        .mehrarbeit-check {
-            display: flex; align-items: flex-start; gap: 10px;
-            cursor: pointer; font-weight: 600; font-size: .92rem;
-        }
-        .mehrarbeit-check input { margin-top: 3px; flex: none; width: 18px; height: 18px; }
         .total-box span:last-child { font-weight: bold; font-size: 1rem; color: var(--primary); text-align: right; }
 
         /* Kalender UI Styles */

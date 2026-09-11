@@ -4436,7 +4436,6 @@
 
     async function starteAutomatischeAnalyse(file) {
         if (!file) return;
-        document.getElementById('istMehrarbeitTag').checked = false;
         const statusEl = document.getElementById('statusText');
         const btnKorrigieren = document.getElementById('btnManuellKorrigieren');
 
@@ -4570,10 +4569,19 @@
         const startStr = document.getElementById('start').value;
         const endeStr = document.getElementById('ende').value;
         const endeIst = document.getElementById('endeTatsaechlich').value;
-        const feiertagsArt = document.getElementById('feiertagsArt').value;
+        // "Feiertags-/Sonderregelung" deckt per Dropdown auch die Mehrarbeit-
+        // Kombinationen ab (offener Dienst zusaetzlich an einem Feiertag/
+        // Sondertag) - fuer die minutenweise Zuschlagsberechnung wird daraus
+        // die zugrundeliegende Tagesart abgeleitet, "istMehrarbeitTag" steuert
+        // separat die Grundverguetung fuers Ganzetagesarbeit.
+        const feiertagsArtRoh = document.getElementById('feiertagsArt').value;
+        const istMehrarbeitTag = feiertagsArtRoh.startsWith('mehrarbeit');
+        const feiertagsArt = feiertagsArtRoh === 'mehrarbeit_feiertag' ? 'feiertag'
+            : feiertagsArtRoh === 'mehrarbeit_sonderstichtag' ? 'sonderstichtag'
+            : feiertagsArtRoh === 'mehrarbeit' ? 'normal'
+            : feiertagsArtRoh;
         const dienstnummer = document.getElementById('dienstnummer').value.trim();
         const pausenregel = document.getElementById('pausenregel').value;
-        const istMehrarbeitTag = document.getElementById('istMehrarbeitTag').checked;
         const details = aktuelleDetails;
 
         if (!datumStr || !startStr || !endeStr) return;
@@ -4687,7 +4695,7 @@
                               feiertagEuro + sonderEuro + mehrarbeitEuro + grundverguetungEuro;
 
         aktuellesBerechnetesErgebnis = {
-            datumStr, startStr, endeStr, endeIst, feiertagsArt, dienstnummer, details,
+            datumStr, startStr, endeStr, endeIst, feiertagsArt: feiertagsArtRoh, dienstnummer, details,
             pausenregel, pausen: JSON.parse(JSON.stringify(pausenEintraege)),
             pauseMinuten: unbezahltMinuten,
             genau, nettoStunden, nettoMinuten, unbezahltMinuten,
@@ -4741,6 +4749,17 @@
         setze('resGesamt', r.istMehrarbeitTag
             ? euroText(r.zuschlagSumme)
             : `Zuschläge: ${euroText(r.zuschlagSumme)}`);
+
+        mehrarbeitHinweisAktualisieren();
+    }
+
+    // Blendet den Mehrarbeit-Hinweistext unter dem Feiertags-/Sonderregelung-
+    // Dropdown ein/aus - unabhaengig davon, ob schon ein Ergebnis berechnet
+    // wurde (z. B. direkt nach Auswahl, bevor Start-/Endzeit ausgefuellt sind).
+    function mehrarbeitHinweisAktualisieren() {
+        const hinweis = document.getElementById('mehrarbeitHinweis');
+        const art = document.getElementById('feiertagsArt');
+        if (hinweis && art) hinweis.style.display = art.value.startsWith('mehrarbeit') ? 'block' : 'none';
     }
 
     // Vergleich mit den Kopfwerten des Dienstzettels
@@ -5171,8 +5190,16 @@
             document.getElementById('ende').value = sch.endeStr || '';
             document.getElementById('endeTatsaechlich').value = sch.endeIst || '';
             document.getElementById('dienstnummer').value = sch.dienstnummer || '';
-            document.getElementById('feiertagsArt').value = sch.feiertagsArt || 'normal';
-            document.getElementById('istMehrarbeitTag').checked = !!sch.istMehrarbeitTag;
+            // Aeltere gespeicherte Mehrarbeit-Tage (vor Zusammenlegung mit der
+            // Feiertags-/Sonderregelung ins selbe Dropdown) kannten "istMehrarbeitTag"
+            // noch als eigenes Flag neben einem einfachen feiertagsArt-Wert.
+            let feiertagsArtWert = sch.feiertagsArt || 'normal';
+            if (sch.istMehrarbeitTag && !feiertagsArtWert.startsWith('mehrarbeit')) {
+                feiertagsArtWert = feiertagsArtWert === 'feiertag' ? 'mehrarbeit_feiertag'
+                    : feiertagsArtWert === 'sonderstichtag' ? 'mehrarbeit_sonderstichtag'
+                    : 'mehrarbeit';
+            }
+            document.getElementById('feiertagsArt').value = feiertagsArtWert;
             document.getElementById('pausenregel').value = sch.pausenregel || 'B30';
             pausenEintraege = (sch.pausen || []).map(p => ({
                 von: p.von || '', bis: p.bis || '',
@@ -5188,7 +5215,8 @@
             detailsAnzeigen(sch.details || null);
             berechneSchicht();
         } else {
-            document.getElementById('istMehrarbeitTag').checked = false;
+            document.getElementById('feiertagsArt').value = 'normal';
+            mehrarbeitHinweisAktualisieren();
             document.getElementById('ausgabe').style.display = 'none';
             feiertagPruefen();
         }

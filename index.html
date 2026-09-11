@@ -304,20 +304,16 @@
 
         <div class="form-group">
             <label for="feiertagsArt">Feiertags- / Sonderregelung</label>
-            <select id="feiertagsArt">
+            <select id="feiertagsArt" onchange="mehrarbeitHinweisAktualisieren(); berechneSchicht();">
                 <option value="normal">Kein Feiertag / Normaler Tag</option>
                 <option value="feiertag">Gesetzlicher Feiertag (+135%)</option>
                 <option value="sonderstichtag">Sondertag (Vor Ostersonntag/Pfingsten, 24./31.12.) (+40%)</option>
+                <option value="mehrarbeit">Mehrarbeit: kompletter offener Dienst (+30% + Grundvergütung)</option>
+                <option value="mehrarbeit_feiertag">Mehrarbeit an einem Feiertag (+135%, +30% + Grundvergütung)</option>
+                <option value="mehrarbeit_sonderstichtag">Mehrarbeit an einem Sondertag (+40%, +30% + Grundvergütung)</option>
             </select>
             <div id="feiertagHinweis" class="auth-hinweis" style="margin-top:6px;"></div>
-        </div>
-
-        <div class="mehrarbeit-box">
-            <label class="mehrarbeit-check">
-                <input type="checkbox" id="istMehrarbeitTag" onchange="berechneSchicht()">
-                <span>Mehrarbeit: kompletter offener Dienst an einem dienstfrei­en Tag</span>
-            </label>
-            <div class="auth-hinweis" style="margin-top:4px;">
+            <div id="mehrarbeitHinweis" class="auth-hinweis" style="margin-top:6px; display:none;">
                 Zählt nicht zum regulären Dienstplan → die volle Vergütung für diesen Tag (nicht nur der Zuschlag) kommt zusätzlich zum Monatslohn dazu.
             </div>
         </div>
