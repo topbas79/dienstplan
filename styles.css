@@ -97,24 +97,32 @@
         .row { display: flex; gap: 12px; }
         .row .form-group { flex: 1; }
 
+        .erfassen-kopf {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .erfassen-kopf h2 { flex: 1; text-align: center; margin: 0; }
+        .erfassen-kopf-spacer { width: 34px; flex: none; }
+
         .upload-box {
-            border: 2px dashed var(--upload-border);
-            background-color: var(--upload-bg);
-            padding: 16px;
-            border-radius: 8px;
             text-align: center;
             margin-bottom: 20px;
         }
         .upload-box input[type="file"] { display: none; }
         .upload-label {
-            display: inline-block;
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
             background: var(--success);
             color: white;
-            padding: 8px 16px;
-            border-radius: 6px;
+            padding: 13px;
+            border-radius: 14px;
             cursor: pointer;
             font-weight: bold;
-            font-size: 0.9rem;
+            font-size: 1rem;
+            min-height: 46px;
         }
         .upload-label:hover { opacity: 0.9; }
         #statusText {
@@ -123,6 +131,8 @@
             color: #047857;
             font-weight: 500;
         }
+        #statusText:empty { margin-top: 0; }
+        #endeTatsaechlichZeigen { margin-top: -8px; }
 
         #cropModal {
             display: none;
@@ -472,7 +482,7 @@
             min-height: 0 !important; width: auto !important;
             text-decoration: underline; cursor: pointer;
         }
-        #hilfeOverlay, #dzWahlOverlay, #fmDetailOverlay, #ereignisTitelOverlay, #ereignisDetailOverlay {
+        #hilfeOverlay, #dzWahlOverlay, #fmDetailOverlay, #ereignisTitelOverlay, #ereignisDetailOverlay, #erfassenAktionenOverlay {
             display: none; position: fixed; inset: 0; z-index: 200;
             background: rgba(0,0,0,.6); align-items: center; justify-content: center;
             padding: 16px;

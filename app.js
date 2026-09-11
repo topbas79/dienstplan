@@ -3886,6 +3886,22 @@
         ladeBildInCropper(letztesHochgeladenesBild);
     }
 
+    function endeTatsaechlichAnzeigen() {
+        document.getElementById('endeTatsaechlichBereich').style.display = 'block';
+        document.getElementById('endeTatsaechlichZeigen').style.display = 'none';
+    }
+    function endeTatsaechlichVerbergen() {
+        document.getElementById('endeTatsaechlichBereich').style.display = 'none';
+        document.getElementById('endeTatsaechlichZeigen').style.display = 'block';
+    }
+
+    function oeffneErfassenAktionen() {
+        document.getElementById('erfassenAktionenOverlay').style.display = 'flex';
+    }
+    function schliesseErfassenAktionen() {
+        document.getElementById('erfassenAktionenOverlay').style.display = 'none';
+    }
+
     // ---------- Automatische Dienstzettel-Analyse (positionsbasiert) ----------
     // Statt reinem Text-Regex: findet einzelne Label-WÖRTER ("Beginn", "Ende", ...) im Bild
     // per Fuzzy-Matching und liest den Wert gezielt aus der Zeile darunter aus, an der
@@ -4719,6 +4735,7 @@
         pruefeGegenZettel(aktuellesBerechnetesErgebnis, details);
 
         document.getElementById('ausgabe').style.display = 'block';
+        document.getElementById('erfassenAktionenBtn').style.display = 'block';
         document.getElementById('btnDelete').style.display = gespeicherteSchichten[datumStr] ? 'block' : 'none';
 
         const verlaufHinweis = document.getElementById('verlaufHinweis');
@@ -4861,6 +4878,7 @@
 
             delete gespeicherteSchichten[datumStr];
             document.getElementById('ausgabe').style.display = 'none';
+            document.getElementById('erfassenAktionenBtn').style.display = 'none';
             renderCalendar();
             if (datumStr === heutigesDatumStr()) aktuelleFahrtWidgetSyncHeute();
             alert(`🗑️ Schicht für ${datumStr} gelöscht.`);
@@ -5197,6 +5215,7 @@
             document.getElementById('start').value = sch.startStr || '';
             document.getElementById('ende').value = sch.endeStr || '';
             document.getElementById('endeTatsaechlich').value = sch.endeIst || '';
+            if (sch.endeIst) endeTatsaechlichAnzeigen(); else endeTatsaechlichVerbergen();
             document.getElementById('dienstnummer').value = sch.dienstnummer || '';
             // Aeltere gespeicherte Mehrarbeit-Tage (vor Zusammenlegung mit der
             // Feiertags-/Sonderregelung ins selbe Dropdown) kannten "istMehrarbeitTag"
@@ -5226,6 +5245,8 @@
             document.getElementById('feiertagsArt').value = 'normal';
             mehrarbeitHinweisAktualisieren();
             document.getElementById('ausgabe').style.display = 'none';
+            document.getElementById('erfassenAktionenBtn').style.display = 'none';
+            endeTatsaechlichVerbergen();
             feiertagPruefen();
         }
         wechselSeite('erfassen');
