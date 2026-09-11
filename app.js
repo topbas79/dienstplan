@@ -1211,8 +1211,7 @@
         nacht: 25, samstag: 20, sonntag: 25, feiertag: 135, sonder: 40, mehrarbeit: 30,
         nachtVon: 21, nachtBis: 6, samstagAb: 13,
         wochenstunden: 37.5, entgeltgruppe: '', stufe: '', tarifStand: '', eingerichtetAm: '',
-        fahrzeitMin: 30,
-        vorlaufBeginn: 30, vorlaufPause: 5, vorlaufStandard: 3
+        fahrzeitMin: 30
     };
     let ein = { ...EIN_STANDARD };
 
@@ -1238,9 +1237,6 @@
         setze('einNachtBis', ein.nachtBis);
         setze('einSamstagAb', ein.samstagAb);
         setze('einFahrzeit', ein.fahrzeitMin);
-        setze('einVorlaufBeginn', ein.vorlaufBeginn);
-        setze('einVorlaufPause', ein.vorlaufPause);
-        setze('einVorlaufStandard', ein.vorlaufStandard);
 
         tarifListenFuellen('setEG', 'setStufe');
         if (ein.entgeltgruppe) setze('setEG', ein.entgeltgruppe);
@@ -1273,9 +1269,6 @@
             nachtBis: hole('einNachtBis', EIN_STANDARD.nachtBis),
             samstagAb: hole('einSamstagAb', EIN_STANDARD.samstagAb),
             fahrzeitMin: hole('einFahrzeit', EIN_STANDARD.fahrzeitMin),
-            vorlaufBeginn: hole('einVorlaufBeginn', EIN_STANDARD.vorlaufBeginn),
-            vorlaufPause: hole('einVorlaufPause', EIN_STANDARD.vorlaufPause),
-            vorlaufStandard: hole('einVorlaufStandard', EIN_STANDARD.vorlaufStandard),
             // Tarif-Angaben unveraendert uebernehmen
             entgeltgruppe: ein.entgeltgruppe || '',
             stufe: ein.stufe || '',
@@ -2691,14 +2684,13 @@
     //  AKTUELLE FAHRT — großformatige Ansicht für den Fahrtbericht bei
     //  jeder Wende: zeigt Soll-Ankunft/-Abfahrt am Punkt, an dem der
     //  Fahrer gerade ist oder der als nächstes kommt. Aktualisiert sich
-    //  selbst und hält den Bildschirm wach (Vorstufe zu einer späteren
-    //  Sperrbildschirm-Benachrichtigung in der nativen App).
+    //  selbst; Erinnerungen bei gesperrtem/ausgeschaltetem Bildschirm
+    //  übernimmt stattdessen das native Homescreen-Widget.
     // ============================================================
     let aktuelleFahrtPunkte = [];
     let aktuelleFahrtDetails = null;          // die Dienst-Details, aus denen aktuelleFahrtPunkte gebaut wurden
     let aktuelleFahrtManuellerIndex = null;   // null = automatisch anhand der Uhrzeit
     let aktuelleFahrtIntervall = null;
-    let aktuelleFahrtWakeLock = null;
 
     // Heutiges Datum als "YYYY-MM-DD" in der lokalen Zeitzone (nicht UTC).
     function heutigesDatumStr() {
@@ -3116,27 +3108,6 @@
         if (aktuelleFahrtIntervall) { clearInterval(aktuelleFahrtIntervall); aktuelleFahrtIntervall = null; }
     }
 
-    async function aktuelleFahrtWakeLockAnfordern() {
-        if (!('wakeLock' in navigator)) return;
-        try {
-            aktuelleFahrtWakeLock = await navigator.wakeLock.request('screen');
-        } catch (e) {
-            console.warn('Wake Lock nicht verfügbar:', e);
-        }
-    }
-    function aktuelleFahrtWakeLockFreigeben() {
-        if (aktuelleFahrtWakeLock) { aktuelleFahrtWakeLock.release().catch(() => {}); aktuelleFahrtWakeLock = null; }
-    }
-    // Wake Lock wird vom Browser automatisch freigegeben, sobald die Seite
-    // in den Hintergrund geht - bei Rückkehr auf "Aktuelle Fahrt" erneut anfordern.
-    document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible' &&
-            document.getElementById('page-aktuellefahrt') &&
-            document.getElementById('page-aktuellefahrt').classList.contains('active')) {
-            aktuelleFahrtWakeLockAnfordern();
-        }
-    });
-
     // ============================================================
     //  FEHLERMELDUNG AM FAHRERPULT - Piktogramm fotografieren (KI-Abgleich)
     //  oder manuell nachschlagen. Alle Eintraege stammen ausschliesslich aus
@@ -3501,8 +3472,6 @@
     // ---------- Native App via Capacitor ----------
     // Im normalen Browser/PWA gibt es kein window.Capacitor - dort bleiben
     // diese Funktionen wirkungslose No-Ops bzw. der bisherige Web-Weg greift.
-    const AKTUELLEFAHRT_NOTIF_BASIS_ID = 84000;
-
     function capacitorAktiv() {
         return typeof window !== 'undefined' && !!window.Capacitor &&
             typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform();
@@ -3601,53 +3570,6 @@
         return d;
     }
 
-    // Wie viele Minuten vor dem jeweiligen Punkt die Erinnerung kommen soll -
-    // je Nutzer in den Einstellungen konfigurierbar (Mehr → Einstellungen).
-    function aktuelleFahrtVorlaufMinuten(label) {
-        if (label === 'Dienstbeginn') return ein.vorlaufBeginn ?? EIN_STANDARD.vorlaufBeginn;
-        if (label === 'Pause' || label === 'Bezahlte Pause') return ein.vorlaufPause ?? EIN_STANDARD.vorlaufPause;
-        return ein.vorlaufStandard ?? EIN_STANDARD.vorlaufStandard;
-    }
-
-    async function aktuelleFahrtBenachrichtigungenPlanen(punkte, heuteStr) {
-        if (!capacitorAktiv()) return;
-        const LN = window.Capacitor.Plugins.LocalNotifications;
-        try {
-            const erlaubnis = await LN.checkPermissions();
-            if (erlaubnis.display !== 'granted') {
-                const angefragt = await LN.requestPermissions();
-                if (angefragt.display !== 'granted') return;
-            }
-
-            // Vorherige Aktuelle-Fahrt-Benachrichtigungen verwerfen, bevor neu geplant wird
-            // (z. B. nach manuellem Neu-Öffnen oder wenn sich die Auswertung geändert hat).
-            const anstehend = await LN.getPending();
-            const alteIds = (anstehend.notifications || [])
-                .filter(n => n.id >= AKTUELLEFAHRT_NOTIF_BASIS_ID && n.id < AKTUELLEFAHRT_NOTIF_BASIS_ID + 1000)
-                .map(n => ({ id: n.id }));
-            if (alteIds.length) await LN.cancel({ notifications: alteIds });
-
-            const jetzt = new Date();
-            const notifications = [];
-            let id = AKTUELLEFAHRT_NOTIF_BASIS_ID;
-            punkte.forEach(p => {
-                const zeitpunkt = aktuelleFahrtAlsDatum(heuteStr, p.sort);
-                if (!zeitpunkt) return;
-                const wann = new Date(zeitpunkt.getTime() - aktuelleFahrtVorlaufMinuten(p.label) * 60000);
-                if (wann.getTime() <= jetzt.getTime()) return;
-                const zeitText = [p.ankunft ? 'Ankunft ' + p.ankunft : '', p.abfahrt ? 'Abfahrt ' + p.abfahrt : '']
-                    .filter(Boolean).join(' · ');
-                notifications.push({
-                    id: id++,
-                    title: aktuelleFahrtLabelText(p.label) + (p.ort ? ' · ' + p.ort : ''),
-                    body: zeitText,
-                    schedule: { at: wann }
-                });
-            });
-            if (notifications.length) await LN.schedule({ notifications });
-        } catch (e) { console.log('Benachrichtigungen planen fehlgeschlagen:', e); }
-    }
-
     // Speist das native Homescreen-Widget "Aktuelle Fahrt" mit den Punkten
     // des heutigen Dienstes und plant Alarme, damit es sich exakt bei jedem
     // Wende-/Pausenwechsel auf den neuen aktuellen Punkt umschaltet -
@@ -3742,12 +3664,9 @@
         if (seite === 'aktuellefahrt') {
             aktuelleFahrtRendern();
             aktuelleFahrtIntervallStarten();
-            aktuelleFahrtWakeLockAnfordern();
-            aktuelleFahrtBenachrichtigungenPlanen(aktuelleFahrtPunkte, heutigesDatumStr());
             aktuelleFahrtWidgetSyncHeute();
         } else {
             aktuelleFahrtIntervallStoppen();
-            aktuelleFahrtWakeLockFreigeben();
         }
     }
 
