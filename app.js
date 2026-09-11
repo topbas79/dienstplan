@@ -273,6 +273,7 @@
             gespeicherteSchichten = {};
             (data || []).forEach(zeile => { gespeicherteSchichten[zeile.datum] = zeile.daten; });
             renderCalendar();
+            aktuelleFahrtWidgetSyncHeute();
         } catch (e) {
             console.error('Laden fehlgeschlagen:', e);
             alert('Schichten konnten nicht geladen werden: ' + (e.message || e));
@@ -2649,15 +2650,21 @@
         const linieUmlauf = [d.beginn_linie ? 'Linie ' + d.beginn_linie : '', d.beginn_umlauf ? 'Umlauf ' + d.beginn_umlauf : '']
             .filter(Boolean).join(' · ');
         const richtung = ort(d.beginn_nach, d.beginn_nach_kuerzel);
+        const startOrtText = d.beginn_ort ? ort(d.beginn_ort, d.beginn_ort_kuerzel) : '';
+        let linieZeile = linieUmlauf;
+        if (richtung) linieZeile += (linieZeile ? ' → ' : '→ ') + richtung;
+
         document.getElementById('startNaechster').innerHTML = `
-            <div class="result-item klickbar-karte" onclick="dienstVerlaufOeffnen('${k}')">
-                <span class="label">${wann}${sch.dienstnummer ? ' · ' + sch.dienstnummer : ''}` +
-                (d.beginn_ort ? `<br><small style="opacity:.75;">Start: ${ort(d.beginn_ort, d.beginn_ort_kuerzel)}</small>` : '') +
-                (linieUmlauf ? `<br><small style="opacity:.75;">${linieUmlauf}</small>` : '') +
-                (richtung ? `<br><small style="opacity:.75;">Richtung: ${richtung}</small>` : '') +
-                `</span>
-                <span style="text-align:right;">${sch.startStr || ''} – ${sch.endeStr || ''}<br>
-                <small style="opacity:.7;">Verlauf ansehen ›</small></span>
+            <div class="du-karte klickbar-karte" onclick="dienstVerlaufOeffnen('${k}')">
+                <div class="du-kopf">
+                    <span class="du-label">${sicher(wann)}${sch.dienstnummer ? ' · ' + sicher(sch.dienstnummer) : ''}</span>
+                    <span class="du-verlauf">Verlauf ansehen ›</span>
+                </div>
+                <div class="du-zeit">${sicher(sch.startStr || '')} – ${sicher(sch.endeStr || '')}</div>
+                <div class="du-meta">
+                    ${startOrtText ? `<span>Start: <b>${sicher(startOrtText)}</b></span>` : ''}
+                    ${linieZeile ? `<span>${sicher(linieZeile)}</span>` : ''}
+                </div>
             </div>
             <div class="af-nav">
                 <button class="btn-secondary" onclick="startDienstZurueck()" ${startDienstIndex === 0 ? 'disabled' : ''}>‹ Zurück</button>
@@ -3641,6 +3648,52 @@
         } catch (e) { console.log('Benachrichtigungen planen fehlgeschlagen:', e); }
     }
 
+    // Speist das native Homescreen-Widget "Aktuelle Fahrt" mit den Punkten
+    // des heutigen Dienstes und plant Alarme, damit es sich exakt bei jedem
+    // Wende-/Pausenwechsel auf den neuen aktuellen Punkt umschaltet -
+    // unabhängig davon, ob die "Aktuelle Fahrt"-Seite in der App gerade
+    // offen ist (wird bei jeder Änderung des heutigen Dienstes aufgerufen).
+    async function aktuelleFahrtWidgetSyncHeute() {
+        if (!capacitorAktiv()) return;
+        const WB = window.Capacitor.Plugins.WidgetBridge;
+        if (!WB) return;
+        const heuteStr = heutigesDatumStr();
+        const sch = gespeicherteSchichten[heuteStr];
+        if (!sch) {
+            try { await WB.leeren(); } catch (e) { console.log('Widget leeren fehlgeschlagen:', e); }
+            return;
+        }
+        const punkte = aktuelleFahrtPunkteBauen(sch.details || null);
+        // Dienstnummer auf jeder Übernahme (kann mehrfach am Tag vorkommen)
+        // und auf der ersten Wende zeigen - dort steht sie auch auf dem
+        // Fahrtbericht.
+        const dienstnummer = sch.details && sch.details.dienstnummer;
+        const ersteWendeIndex = punkte.findIndex(p => p.label === 'Wenden');
+        const daten = punkte.map((p, i) => {
+            const zeitpunkt = aktuelleFahrtAlsDatum(heuteStr, p.sort);
+            const folgeTeile = [];
+            if (p.folgeLinie) folgeTeile.push('Linie ' + p.folgeLinie);
+            if (p.folgeUmlauf) folgeTeile.push('Umlauf ' + p.folgeUmlauf);
+            let folge = folgeTeile.join(' · ');
+            if (p.folgeNach) folge += (folge ? ' → ' : '→ ') + p.folgeNach;
+            const zeigeDienstnummer = dienstnummer && (p.label === 'Übernahme' || i === ersteWendeIndex);
+            const label = aktuelleFahrtLabelText(p.label) + (zeigeDienstnummer ? ' · Dienst ' + dienstnummer : '');
+            return {
+                label,
+                ort: p.ort || '',
+                ankunft: p.ankunft || '',
+                abfahrt: p.abfahrt || '',
+                folge,
+                zeitMs: zeitpunkt ? zeitpunkt.getTime() : null
+            };
+        }).filter(p => p.zeitMs !== null);
+
+        try {
+            await WB.datenSpeichern({ punkteJson: JSON.stringify(daten) });
+            await WB.updatesPlanen({ zeitenMs: daten.map(p => p.zeitMs) });
+        } catch (e) { console.log('Widget-Sync fehlgeschlagen:', e); }
+    }
+
     // ---------- App starten ----------
     // Verbindungsdaten des Supabase-Projekts (dürfen öffentlich sein –
     // der Zugriffsschutz passiert über die Regeln in der Datenbank).
@@ -3691,6 +3744,7 @@
             aktuelleFahrtIntervallStarten();
             aktuelleFahrtWakeLockAnfordern();
             aktuelleFahrtBenachrichtigungenPlanen(aktuelleFahrtPunkte, heutigesDatumStr());
+            aktuelleFahrtWidgetSyncHeute();
         } else {
             aktuelleFahrtIntervallStoppen();
             aktuelleFahrtWakeLockFreigeben();
@@ -4596,6 +4650,7 @@
 
         gespeicherteSchichten[datumStr] = ergebnis;
         if (!stillschweigend) renderCalendar();
+        if (datumStr === heutigesDatumStr()) aktuelleFahrtWidgetSyncHeute();
     }
 
     async function speichereTagInKalender() {
@@ -4622,6 +4677,7 @@
             delete gespeicherteSchichten[datumStr];
             document.getElementById('ausgabe').style.display = 'none';
             renderCalendar();
+            if (datumStr === heutigesDatumStr()) aktuelleFahrtWidgetSyncHeute();
             alert(`🗑️ Schicht für ${datumStr} gelöscht.`);
         } catch (e) {
             alert('❌ Löschen fehlgeschlagen: ' + (e.message || e));

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="widget_karte_bg">#1E293B</color>
+    <color name="widget_rahmen">#334155</color>
+    <color name="widget_text">#F5F5F5</color>
+    <color name="widget_text_soft">#94A3B8</color>
+    <color name="widget_text_faint">#7C8494</color>
+    <color name="widget_akzent">#5B8DEF</color>
+    <color name="widget_gelb">#FFD100</color>
+</resources>

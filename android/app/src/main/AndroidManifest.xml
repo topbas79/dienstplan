@@ -27,6 +27,24 @@
             android:grantUriPermissions="true">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- Homescreen-Widget "Aktuelle Fahrt" -->
+        <receiver
+            android:name=".widget.AktuelleFahrtWidgetProvider"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/aktuelle_fahrt_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".widget.WidgetUpdateReceiver"
+            android:exported="false" />
+        <receiver
+            android:name=".widget.WidgetNavReceiver"
+            android:exported="false" />
     </application>
 
     <!-- Permissions -->

@@ -500,6 +500,26 @@
         .klickbar-karte { cursor: pointer; border-radius: 8px; padding: 8px; margin: -8px; }
         .klickbar-karte:hover { background: var(--bg); }
 
+        /* Dienst-Übersichtskarte (Startseite) */
+        .du-kopf {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .du-label {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-faint);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .du-verlauf { font-size: 0.82rem; color: var(--text-faint); white-space: nowrap; }
+        .du-zeit { font-size: 1.7rem; font-weight: 800; color: var(--primary); margin-bottom: 10px; }
+        .du-meta { display: flex; flex-direction: column; gap: 4px; font-size: 0.88rem; color: var(--text-soft); }
+        .du-meta b { color: var(--text); font-weight: 600; }
+
         /* Startseite */
         .start-karte {
             background: linear-gradient(135deg, #1e293b, #0f172a);
