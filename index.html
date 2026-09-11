@@ -619,6 +619,15 @@
         </div>
         <div id="dienstDetails" style="display:none;">
             <div id="dienstDetailsInhalt"></div>
+
+            <div class="verlauf-trenner" style="margin-top:18px;"></div>
+            <div class="ereignisse-kopf">
+                <h3 style="margin:0;">Ereignisse</h3>
+                <button class="btn-secondary" onclick="ereignisFotoButton()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M4 8.5a2 2 0 0 1 2-2h1.2l1-1.5h7.6l1 1.5H19a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8.5Z"></path><circle cx="12" cy="13" r="3.1"></circle></svg>Foto</button>
+            </div>
+            <input type="file" id="ereignisBild" accept="image/*" style="display:none" onchange="ereignisDateiVerarbeiten(this)">
+            <div id="ereignisListe"></div>
+
             <div class="teilen-reihe">
                 <button class="btn-secondary" onclick="verlaufTeilenStarten()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M4 5.5h16a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5H9l-4 3.5V17.5H4A1.5 1.5 0 0 1 2.5 16V7A1.5 1.5 0 0 1 4 5.5Z"></path></svg>Im Chat</button>
                 <button class="btn-save" onclick="verlaufExternTeilen()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M4 12 20 4l-6 16-3-7-7-3Z"></path></svg>WhatsApp &amp; Co.</button>
@@ -884,7 +893,7 @@
 <div id="dzWahlOverlay" onclick="dienstzettelWahl('abbrechen', event)">
     <div class="hilfe-fenster" onclick="event.stopPropagation()" style="max-width:320px;">
         <div class="hilfe-kopf">
-            <span>Dienstzettel hinzufügen</span>
+            <span id="dzWahlTitel">Dienstzettel hinzufügen</span>
             <button class="icon-btn" onclick="dienstzettelWahl('abbrechen')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12"></path><path d="M18 6 6 18"></path></svg></button>
         </div>
         <div class="hilfe-inhalt" style="display:flex; flex-direction:column; gap:10px;">
@@ -893,6 +902,40 @@
         </div>
         <div class="hilfe-fuss" style="justify-content:center;">
             <button class="btn-secondary" onclick="dienstzettelWahl('abbrechen')">Abbrechen</button>
+        </div>
+    </div>
+</div>
+
+<!-- Ereignis: Titel eingeben, bevor gespeichert wird -->
+<div id="ereignisTitelOverlay" onclick="if(event.target===this) ereignisTitelAbbrechen()">
+    <div class="hilfe-fenster" onclick="event.stopPropagation()" style="max-width:320px;">
+        <div class="hilfe-kopf">
+            <span>Ereignis speichern</span>
+            <button class="icon-btn" onclick="ereignisTitelAbbrechen()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12"></path><path d="M18 6 6 18"></path></svg></button>
+        </div>
+        <div class="hilfe-inhalt">
+            <img id="ereignisTitelBild" src="" alt="" style="width:100%; border-radius:12px; margin-bottom:14px;">
+            <div class="form-group">
+                <label for="ereignisTitelEingabe">Titel (optional)</label>
+                <input type="text" id="ereignisTitelEingabe" placeholder="z. B. Meldeformular, Mängelzettel">
+            </div>
+        </div>
+        <div class="hilfe-fuss" style="justify-content:center; gap:10px;">
+            <button class="btn-secondary" onclick="ereignisTitelAbbrechen()">Abbrechen</button>
+            <button class="btn-save" onclick="ereignisTitelSpeichern()">Speichern</button>
+        </div>
+    </div>
+</div>
+
+<!-- Ereignis-Detail (Popup) -->
+<div id="ereignisDetailOverlay" onclick="ereignisDetailSchliessen(event)">
+    <div class="hilfe-fenster" onclick="event.stopPropagation()" style="max-width:340px;">
+        <div class="hilfe-kopf">
+            <span id="ereignisDetailTitel">Ereignis</span>
+            <button class="icon-btn" onclick="ereignisDetailSchliessen()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12"></path><path d="M18 6 6 18"></path></svg></button>
+        </div>
+        <div class="hilfe-inhalt" style="text-align:center;">
+            <img id="ereignisDetailBild" src="" alt="" style="width:100%; border-radius:12px;">
         </div>
     </div>
 </div>

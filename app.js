@@ -51,6 +51,14 @@
     let aktuellesDatumAnzeige = new Date();
     let gespeicherteSchichten = {};
 
+    // Tagesereignisse (z. B. Meldeformular, Mängelzettel): Foto + optionaler
+    // Titel, einem Tag zugeordnet. ereignisTage merkt sich, an welchen Tagen
+    // mind. ein Ereignis existiert (für die Markierung im Kalender).
+    let ereignisTage = new Set();
+    let ereignisAktuellesDatum = null;
+    let ereignisListeAktuell = [];
+    let ereignisAusstehendesFoto = null;
+
     // Persönliches Entfernungs-Buch: Ort -> km von der Wohnung (einfache Strecke),
     // für die Fahrtkosten-Kilometerpauschale. Nur lokal auf diesem Gerät gespeichert.
     let wegstrecken = {};
@@ -274,6 +282,7 @@
             (data || []).forEach(zeile => { gespeicherteSchichten[zeile.datum] = zeile.daten; });
             renderCalendar();
             aktuelleFahrtWidgetSyncHeute();
+            ereignisTageLaden();
         } catch (e) {
             console.error('Laden fehlgeschlagen:', e);
             alert('Schichten konnten nicht geladen werden: ' + (e.message || e));
@@ -2681,6 +2690,154 @@
     }
 
     // ============================================================
+    //  TAGESEREIGNISSE — Foto + optionaler Titel zu einem bestimmten Tag
+    //  (z. B. Meldeformular, Mängelzettel). Wird im Dienstverlauf gezeigt
+    //  und im Kalender mit einem "*" markiert.
+    // ============================================================
+
+    // Lädt, an welchen Tagen mind. ein Ereignis existiert (Kalender-Markierung).
+    async function ereignisTageLaden() {
+        if (!sb || !angezeigterNutzerId) return;
+        try {
+            const { data, error } = await sb.from('ereignisse')
+                .select('datum').eq('user_id', angezeigterNutzerId);
+            if (error) throw error;
+            ereignisTage = new Set((data || []).map(r => r.datum));
+            renderCalendar();
+        } catch (e) { console.log('Ereignis-Tage laden fehlgeschlagen:', e); }
+    }
+
+    // Zeigt die Ereignisliste für den aktuell im Dienstverlauf offenen Tag.
+    async function ereignisseAnzeigen(datumStr) {
+        ereignisAktuellesDatum = datumStr || null;
+        const el = document.getElementById('ereignisListe');
+        if (!el) return;
+        if (!sb || !angezeigterNutzerId || !datumStr) { el.innerHTML = ''; return; }
+
+        el.innerHTML = '<p class="auth-hinweis">Lädt …</p>';
+        try {
+            const { data, error } = await sb.from('ereignisse')
+                .select('id, titel, foto_pfad, erstellt_am')
+                .eq('user_id', angezeigterNutzerId).eq('datum', datumStr)
+                .order('erstellt_am', { ascending: true });
+            if (error) throw error;
+
+            ereignisListeAktuell = data || [];
+            if (!ereignisListeAktuell.length) {
+                el.innerHTML = '<p class="auth-hinweis">Noch keine Ereignisse für diesen Tag.</p>';
+                return;
+            }
+
+            const zeilen = await Promise.all(ereignisListeAktuell.map(async (e) => {
+                try {
+                    const { data: sig } = await sb.storage.from('ereignis-fotos').createSignedUrl(e.foto_pfad, 3600);
+                    e._url = (sig && sig.signedUrl) || '';
+                } catch (_e) { e._url = ''; }
+                const zeit = e.erstellt_am
+                    ? new Date(e.erstellt_am).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+                    : '';
+                return `<div class="ereignis-eintrag">
+                    <img src="${e._url}" alt="" class="ereignis-miniatur" onclick="ereignisDetailOeffnen('${e.id}')">
+                    <span class="ereignis-info" onclick="ereignisDetailOeffnen('${e.id}')">
+                        <b>${sicher(e.titel || 'Ereignis')}</b>
+                        <small>${zeit}</small>
+                    </span>
+                    <button class="icon-btn" onclick="ereignisLoeschen('${e.id}')">${ICONS.trash}</button>
+                </div>`;
+            }));
+            el.innerHTML = zeilen.join('');
+        } catch (e) {
+            el.innerHTML = '<p class="auth-hinweis">Ereignisse konnten nicht geladen werden.</p>';
+            console.log('Ereignisse laden fehlgeschlagen:', e);
+        }
+    }
+
+    function ereignisDetailOeffnen(id) {
+        const e = ereignisListeAktuell.find(x => x.id === id);
+        if (!e) return;
+        document.getElementById('ereignisDetailBild').src = e._url || '';
+        document.getElementById('ereignisDetailTitel').innerText = e.titel || 'Ereignis';
+        document.getElementById('ereignisDetailOverlay').style.display = 'flex';
+    }
+
+    function ereignisDetailSchliessen(ev) {
+        if (ev && ev.target !== document.getElementById('ereignisDetailOverlay')) return;
+        document.getElementById('ereignisDetailOverlay').style.display = 'none';
+    }
+
+    async function ereignisLoeschen(id) {
+        const e = ereignisListeAktuell.find(x => x.id === id);
+        if (!e) return;
+        if (!confirm('Dieses Ereignis wirklich löschen?')) return;
+        try {
+            await sb.storage.from('ereignis-fotos').remove([e.foto_pfad]);
+            const { error } = await sb.from('ereignisse').delete().eq('id', id);
+            if (error) throw error;
+            await ereignisseAnzeigen(ereignisAktuellesDatum);
+            await ereignisTageLaden();
+        } catch (err) {
+            alert('Löschen fehlgeschlagen: ' + (err.message || err));
+        }
+    }
+
+    // "Ereignis hinzufügen": im Browser öffnet der Datei-Dialog direkt die
+    // Kamera, in der nativen App fragt Capacitors Camera-Plugin per
+    // Kamera/Galerie-Wahl-Overlay (gleicher Weg wie beim Dienstzettel).
+    function ereignisFotoButton() {
+        if (!ereignisAktuellesDatum) return;
+        if (!capacitorAktiv()) { document.getElementById('ereignisBild').click(); return; }
+        fotoWahlZiel = 'ereignis';
+        document.getElementById('dzWahlTitel').innerText = 'Ereignis hinzufügen';
+        document.getElementById('dzWahlOverlay').style.display = 'flex';
+    }
+
+    function ereignisDateiVerarbeiten(input) {
+        if (!input.files || !input.files[0]) return;
+        ereignisFotoAusgewaehlt(input.files[0]);
+        input.value = '';
+    }
+
+    // Foto ist gewählt (Kamera oder Galerie) - vor dem Speichern noch einen
+    // optionalen Titel abfragen.
+    function ereignisFotoAusgewaehlt(blob) {
+        ereignisAusstehendesFoto = blob;
+        document.getElementById('ereignisTitelBild').src = URL.createObjectURL(blob);
+        document.getElementById('ereignisTitelEingabe').value = '';
+        document.getElementById('ereignisTitelOverlay').style.display = 'flex';
+    }
+
+    function ereignisTitelAbbrechen() {
+        ereignisAusstehendesFoto = null;
+        document.getElementById('ereignisTitelOverlay').style.display = 'none';
+    }
+
+    async function ereignisTitelSpeichern() {
+        if (!ereignisAusstehendesFoto || !ereignisAktuellesDatum || !aktuellerNutzer) return;
+        const titel = document.getElementById('ereignisTitelEingabe').value.trim();
+        const blob = ereignisAusstehendesFoto;
+        document.getElementById('ereignisTitelOverlay').style.display = 'none';
+        ereignisAusstehendesFoto = null;
+
+        try {
+            const pfad = `${aktuellerNutzer.id}/${ereignisAktuellesDatum}/${Date.now()}.jpg`;
+            const { error: uploadError } = await sb.storage.from('ereignis-fotos')
+                .upload(pfad, blob, { contentType: blob.type || 'image/jpeg' });
+            if (uploadError) throw uploadError;
+
+            const { error: insertError } = await sb.from('ereignisse').insert({
+                user_id: aktuellerNutzer.id, datum: ereignisAktuellesDatum,
+                titel: titel || null, foto_pfad: pfad
+            });
+            if (insertError) throw insertError;
+
+            await ereignisseAnzeigen(ereignisAktuellesDatum);
+            await ereignisTageLaden();
+        } catch (e) {
+            alert('Ereignis konnte nicht gespeichert werden: ' + (e.message || e));
+        }
+    }
+
+    // ============================================================
     //  AKTUELLE FAHRT — großformatige Ansicht für den Fahrtbericht bei
     //  jeder Wende: zeigt Soll-Ankunft/-Abfahrt am Punkt, an dem der
     //  Fahrer gerade ist oder der als nächstes kommt. Aktualisiert sich
@@ -3415,6 +3572,7 @@
         fehlermeldungAktivesModell = modellSchluessel;
         if (!capacitorAktiv()) { document.getElementById('fmBild').click(); return; }
         fotoWahlZiel = 'fehlermeldung';
+        document.getElementById('dzWahlTitel').innerText = 'Meldung fotografieren';
         document.getElementById('dzWahlOverlay').style.display = 'flex';
     }
 
@@ -3487,18 +3645,22 @@
         if (!capacitorAktiv()) return true;
         ev.preventDefault();
         fotoWahlZiel = 'dienstzettel';
+        document.getElementById('dzWahlTitel').innerText = 'Dienstzettel hinzufügen';
         document.getElementById('dzWahlOverlay').style.display = 'flex';
         return false;
     }
 
-    // ereignis nur gesetzt, wenn per Klick auf den Hintergrund ausgelöst (wie hilfeSchliessen).
-    // fotoWahlZiel steuert, wohin das Ergebnis geht ('dienstzettel' oder 'fehlermeldung').
-    async function dienstzettelWahl(wahl, ereignis) {
-        if (ereignis && ereignis.target !== document.getElementById('dzWahlOverlay')) return;
+    // klickEreignis nur gesetzt, wenn per Klick auf den Hintergrund ausgelöst (wie hilfeSchliessen).
+    // fotoWahlZiel steuert, wohin das Ergebnis geht ('dienstzettel', 'fehlermeldung' oder 'ereignis').
+    async function dienstzettelWahl(wahl, klickEreignis) {
+        if (klickEreignis && klickEreignis.target !== document.getElementById('dzWahlOverlay')) return;
         document.getElementById('dzWahlOverlay').style.display = 'none';
         if (wahl === 'abbrechen') return;
         if (wahl === 'galerie') {
-            document.getElementById(fotoWahlZiel === 'fehlermeldung' ? 'fmBild' : 'dienstplanBild').click();
+            const zielId = fotoWahlZiel === 'fehlermeldung' ? 'fmBild'
+                : fotoWahlZiel === 'ereignis' ? 'ereignisBild'
+                : 'dienstplanBild';
+            document.getElementById(zielId).click();
             return;
         }
 
@@ -3509,6 +3671,8 @@
             const blob = await antwort.blob();
             if (fotoWahlZiel === 'fehlermeldung') {
                 fehlermeldungAnalysieren(blob);
+            } else if (fotoWahlZiel === 'ereignis') {
+                ereignisFotoAusgewaehlt(blob);
             } else {
                 document.getElementById('stapelBox').style.display = 'none';
                 starteAutomatischeAnalyse(blob);
@@ -3983,8 +4147,8 @@
     // Symbol je Wechsel-Art
     function wechselSymbol(art) {
         const a = (art || '').toLowerCase();
-        if (a.startsWith('überg') || a.startsWith('uberg') || a.startsWith('übg')) return ICONS.handoverOut;
-        if (a.startsWith('übern') || a.startsWith('ubern')) return ICONS.handoverIn;
+        if (a.startsWith('überg') || a.startsWith('uberg') || a.startsWith('ueberg') || a.startsWith('übg')) return ICONS.handoverOut;
+        if (a.startsWith('übern') || a.startsWith('ubern') || a.startsWith('uebern')) return ICONS.handoverIn;
         if (a.startsWith('aussetz')) return ICONS.stop;
         if (a.startsWith('einsetz')) return ICONS.busStop;
         if (a.startsWith('ankunft')) return ICONS.arrowDown;
@@ -4009,8 +4173,9 @@
 
         const farbKlasse = (art) => {
             const a = (art || '').toLowerCase();
-            if (a.startsWith('übern') || a.startsWith('ubern') ||
-                a.startsWith('überg') || a.startsWith('uberg') || a.startsWith('übg')) return 'verlauf-gruen';
+            if (a.startsWith('übern') || a.startsWith('ubern') || a.startsWith('uebern') ||
+                a.startsWith('überg') || a.startsWith('uberg') || a.startsWith('ueberg') ||
+                a.startsWith('übg')) return 'verlauf-gruen';
             if (a.startsWith('aussetz') || a.startsWith('einsetz')) return 'verlauf-rot';
             if (a.startsWith('pause')) return 'verlauf-pause';
             return '';
@@ -4045,19 +4210,72 @@
             });
         }
 
+        // Faellt ein Wechsel-Eintrag zeitlich und oertlich genau mit dem
+        // Dienstbeginn zusammen (Dienst startet direkt durch Uebernahme
+        // eines fremden Wagens), reicht "Dienstbeginn" allein - der sonst
+        // fast identische Uebernahme-Punkt entfaellt.
+        const istBeginnUebernahme = (w) => {
+            const art = (w.art || '').toLowerCase();
+            return (art.startsWith('übern') || art.startsWith('ubern') || art.startsWith('uebern')) &&
+                w.zeit === d.beginn && w.ort_kuerzel && w.ort_kuerzel === d.beginn_ort_kuerzel;
+        };
+
         (d.wechsel || []).forEach(w => {
+            if (d.beginn && istBeginnUebernahme(w)) return;
+
+            // Beim Aussetzen interessiert, von wo aus ausgesetzt wurde - das
+            // steht nicht im Wechsel-Eintrag selbst, sondern in der
+            // passenden "A"-Fahrt (gleiche Endhaltestelle/Uhrzeit).
+            let unten = fahrtInfo(w.linie, w.umlauf, w.nach, w.nach_kuerzel, w.abfahrt);
+            if ((w.art || '').toLowerCase().startsWith('aussetz')) {
+                const passendeFahrt = (d.fahrten || []).find(f =>
+                    (f.typ || '').toLowerCase() === 'a' &&
+                    (f.nach_kuerzel === w.ort_kuerzel || f.bis_zeit === w.zeit));
+                if (passendeFahrt && (passendeFahrt.von || passendeFahrt.von_kuerzel)) {
+                    const teile = [];
+                    const l = passendeFahrt.linie || w.linie;
+                    const u = passendeFahrt.umlauf || w.umlauf;
+                    if (l) teile.push('Linie ' + l);
+                    if (u) teile.push('Umlauf ' + u);
+                    unten = teile.join(' · ') + (teile.length ? ' · ' : '') +
+                        `von ${ortText(passendeFahrt.von, passendeFahrt.von_kuerzel)}`;
+                }
+            }
+
             punkte.push({
                 zeit: w.zeit, sort: sortWert(w.zeit),
                 schluessel: `${(w.art || '').toLowerCase()}|${w.zeit}`,
                 symbol: wechselSymbol(w.art), titel: w.art || 'Wechsel',
                 haupt: `${w.zeit || ''} · ${ortText(w.ort, w.ort_kuerzel)}` +
                        (w.von_dienst ? ` (Dienst ${w.von_dienst})` : ''),
-                unten: fahrtInfo(w.linie, w.umlauf, w.nach, w.nach_kuerzel, w.abfahrt),
+                unten,
                 klasse: farbKlasse(w.art)
             });
         });
 
+        // Bezahlter und unbezahlter Teil derselben Unterbrechung sind zwei
+        // aufeinanderfolgende Pausen-Einträge (gleicher Ort, direkt
+        // aneinander) - zu einer einzigen Pause-Zeile zusammenfassen. Nur
+        // der erste "davor"- und der letzte "danach"-Punkt sind eigene
+        // Ereignisse, der Übergang zwischen den Teilen nicht.
+        const pausenZusammengefasst = [];
         (d.pausen || []).forEach(p => {
+            const letzte = pausenZusammengefasst[pausenZusammengefasst.length - 1];
+            const gleicherOrt = letzte && (letzte.ort_kuerzel || letzte.ort) === (p.ort_kuerzel || p.ort);
+            if (letzte && gleicherOrt && letzte.bis === p.von) {
+                letzte.bis = p.bis;
+                letzte.danach_art = p.danach_art;
+                letzte.danach_linie = p.danach_linie;
+                letzte.danach_umlauf = p.danach_umlauf;
+                letzte.danach_nach = p.danach_nach;
+                letzte.danach_nach_kuerzel = p.danach_nach_kuerzel;
+                letzte.danach_abfahrt = p.danach_abfahrt;
+            } else {
+                pausenZusammengefasst.push({ ...p });
+            }
+        });
+
+        pausenZusammengefasst.forEach(p => {
             if (p.davor_art) {
                 punkte.push({
                     zeit: p.davor_zeit, sort: sortWert(p.davor_zeit),
@@ -4144,14 +4362,15 @@
         inhalt.innerHTML = html;
         box.style.display = html ? 'block' : 'none';
 
+        const dat = document.getElementById('datum').value;
         const titelEl = document.getElementById('verlaufTitel');
         if (titelEl) {
-            const dat = document.getElementById('datum').value;
             const nr = document.getElementById('dienstnummer').value.trim();
             titelEl.innerText = 'Dienstverlauf' +
                 (nr ? ' · ' + nr : '') +
                 (dat ? ' · ' + dat.split('-').reverse().join('.') : '');
         }
+        ereignisseAnzeigen(dat);
     }
 
     // Nimmt "15:37", "00:29+", "9:05" und macht daraus "15:37" / "00:29" / "09:05"
@@ -4865,6 +5084,14 @@
                 mMehrMin += sch.mehrarbeitMinuten || 0;
                 mMehrEuro += sch.mehrarbeitEuro || 0;
                 mZuschlaege += sch.zuschlagSumme || 0;
+            }
+
+            if (ereignisTage.has(currentDatumStr)) {
+                const markerSpan = document.createElement('div');
+                markerSpan.className = 'ereignis-marker';
+                markerSpan.innerText = '*';
+                markerSpan.title = 'Ereignis vorhanden';
+                dayCell.appendChild(markerSpan);
             }
 
             dayCell.onclick = () => klickKalenderTag(currentDatumStr);
