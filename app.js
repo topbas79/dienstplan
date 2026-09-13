@@ -1591,25 +1591,23 @@
                         <text x="122" y="161" font-size="9" fill="var(--text-soft)" text-anchor="middle">unbezahlt</text>`)
                 },
                 {
-                    text: '<b>Sechste</b><br>Name kommt von § 4 Arbeitszeitgesetz: Ab mehr als 6 Std. Arbeitszeit müssen mind. 30 Min. Pause genommen werden – die App erlaubt, sie in mehrere Teile von je mind. 15 Min. aufzuteilen. Typisch bei Busdiensten mit mehreren Wendezeiten statt einer langen Pause. Bei jedem Teil trägst du ein, wie viele Minuten davon unbezahlt sind.',
+                    text: '<b>Sechste</b><br>Sechstel-Regelung: Deine Wendezeiten zusammen müssen mindestens ein Sechstel deiner reinen Fahrzeit ergeben (z. B. bei 6 Std. Fahrzeit mind. 1 Std. Wendezeit). Einzelne Unterbrechungen unter 8 Minuten zählen dabei nicht mit, dazu kommen pauschal 2 Minuten Nacharbeit. Die einzelnen Wendezeiten aus deinem Dienstzettel trägst du hier ein.',
                     bild: handyRahmen(`
-                        <text x="100" y="32" font-size="8" fill="var(--text-faint)" text-anchor="middle">nach 6 Std. Arbeitszeit (§ 4 ArbZG)</text>
+                        <text x="100" y="30" font-size="8" fill="var(--text-faint)" text-anchor="middle">Wendezeiten ≥ 1/6 der Fahrzeit</text>
                         <g class="hf" style="animation-delay:.2s">
-                            <rect x="40" y="44" width="120" height="34" rx="6" fill="var(--card)"/>
-                            <text x="47" y="58" font-size="10" fill="var(--text)">13:45 – 13:51</text>
-                            <text x="153" y="58" font-size="9" fill="var(--text-soft)" text-anchor="end">6 Min.</text>
-                            <text x="47" y="71" font-size="9" fill="var(--text-soft)">davon unbezahlt</text></g>
-                        <g class="hf" style="animation-delay:.6s">
-                            <rect x="40" y="84" width="120" height="34" rx="6" fill="var(--card)"/>
-                            <text x="47" y="98" font-size="10" fill="var(--text)">16:06 – 16:10</text>
-                            <text x="153" y="98" font-size="9" fill="var(--text-soft)" text-anchor="end">4 Min.</text>
-                            <text x="47" y="111" font-size="9" fill="var(--text-soft)">davon unbezahlt</text></g>
-                        <g class="hf" style="animation-delay:1s">
-                            <rect x="40" y="124" width="120" height="34" rx="6" fill="var(--card)"/>
-                            <text x="47" y="138" font-size="10" fill="var(--text)">18:35 – 18:42</text>
-                            <text x="153" y="138" font-size="9" fill="var(--text-soft)" text-anchor="end">7 Min.</text>
-                            <text x="47" y="151" font-size="9" fill="var(--text-soft)">davon unbezahlt</text></g>
-                        <text x="100" y="180" font-size="10" fill="var(--primary)" text-anchor="middle">zusammen 17 Min.</text>`)
+                            <rect x="40" y="40" width="120" height="26" rx="6" fill="var(--card)"/>
+                            <text x="47" y="57" font-size="10" fill="var(--text)">12 Min.</text>
+                            <text x="153" y="57" font-size="9" fill="#16a34a" text-anchor="end">zählt</text></g>
+                        <g class="hf" style="animation-delay:.5s">
+                            <rect x="40" y="70" width="120" height="26" rx="6" fill="var(--card)"/>
+                            <text x="47" y="87" font-size="10" fill="var(--text-soft)">6 Min.</text>
+                            <text x="153" y="87" font-size="9" fill="var(--text-faint)" text-anchor="end">zu kurz</text></g>
+                        <g class="hf" style="animation-delay:.8s">
+                            <rect x="40" y="100" width="120" height="26" rx="6" fill="var(--card)"/>
+                            <text x="47" y="117" font-size="10" fill="var(--text)">18 Min.</text>
+                            <text x="153" y="117" font-size="9" fill="#16a34a" text-anchor="end">zählt</text></g>
+                        <text x="100" y="146" font-size="10" fill="var(--primary)" text-anchor="middle">zählt: 30 Min. Wendezeit</text>
+                        <text x="100" y="162" font-size="9" fill="var(--text-soft)" text-anchor="middle">+ 2 Min. Nacharbeit pauschal</text>`)
                 },
                 {
                     text: '<b>Reserve</b><br>Reservedienst = Bereitschaft ohne feste Fahrten, deshalb gibt es keine geplante Pause. Die gesamte Zeit ist bezahlt, die App blendet die Pausenliste dann aus.',
