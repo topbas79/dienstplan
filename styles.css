@@ -686,6 +686,8 @@
             color: #b45309;
         }
         body.dark .pause-info { color: #fcd34d; }
+        .pause-info.ok { background: rgba(22,163,74,.15); color: #16a34a; }
+        body.dark .pause-info.ok { color: #6ee7b7; }
         .pause-check {
             display: flex; align-items: center; gap: 6px;
             font-size: .8rem; font-weight: 500; margin-top: 8px; margin-bottom: 0;

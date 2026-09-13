@@ -1352,9 +1352,56 @@
         return dauer;
     }
 
+    // Prueft eine kurze Unterbrechung laut Dienstzettel (NB, Ruest und/oder UeWegZ)
+    // vor einer Pause: reichte die erste kurze Zeile allein schon nicht fuer die
+    // 8-Minuten-Mindestdauer, muss die tatsaechlich eingetragene Pause danach
+    // (bzw. deren bezahlter+unbezahlter Anteil zusammen) mind. 8 Minuten haben -
+    // wichtig, wenn sich durch Verspaetung die echte Pausenzeit verschiebt.
+    const AUSSETZEN_KURZ_TYPEN = ['NB', 'Ruest', 'UeWegZ'];
+    function aussetzenPruefung(index) {
+        if (!aktuelleDetails || !aktuelleDetails.pausen) return null;
+        const alle = aktuelleDetails.pausen;
+        const meta = alle[index];
+        if (!meta || !meta.davor_zeit) return null;
+        // BEZPAU/UNBPAU-Splits derselben Unterbrechung teilen sich denselben
+        // davor_zeit - nur beim ersten Eintrag der Gruppe pruefen.
+        if (index > 0 && alle[index - 1] && alle[index - 1].davor_zeit === meta.davor_zeit) return null;
+
+        const fahrten = aktuelleDetails.fahrten || [];
+        const startIndex = fahrten.findIndex(f => AUSSETZEN_KURZ_TYPEN.includes(f.typ) && f.von_zeit === meta.davor_zeit);
+        if (startIndex === -1) return null;
+
+        const start = fahrten[startIndex];
+        const startMin = minutenZwischen(start.von_zeit, start.bis_zeit);
+        if (startMin >= 8) return null;
+
+        const next = fahrten[startIndex + 1];
+        const hatNext = next && AUSSETZEN_KURZ_TYPEN.includes(next.typ) && next.von_zeit === start.bis_zeit;
+        const teile = [`${start.typ} ${startMin} Min.`];
+        if (hatNext) teile.push(`${next.typ} ${minutenZwischen(next.von_zeit, next.bis_zeit)} Min.`);
+
+        // Alle direkt folgenden Pausen-Eintraege mit demselben davor_zeit
+        // zusammenzaehlen (z. B. bezahlter + unbezahlter Anteil derselben Pause).
+        // Die tatsaechlichen (evtl. wegen Verspaetung angepassten) Zeiten stehen
+        // in pausenEintraege, nicht mehr in den urspruenglichen Zettel-Daten.
+        let gesamtDauer = 0, j = index;
+        while (j < alle.length && alle[j].davor_zeit === meta.davor_zeit) {
+            const eintrag = pausenEintraege[j];
+            if (eintrag) gesamtDauer += minutenZwischen(eintrag.von, eintrag.bis);
+            j++;
+        }
+
+        return { teile, gesamtDauer };
+    }
+
     function pausenRendern() {
         const el = document.getElementById('pausenListe');
         if (!el) return;
+
+        const regel = document.getElementById('pausenregel').value;
+        const istSechste = regel === 'sechste';
+        const sechsteHinweis = document.getElementById('sechsteHinweis');
+        if (sechsteHinweis) sechsteHinweis.style.display = istSechste ? 'block' : 'none';
 
         if (!pausenEintraege.length) {
             el.innerHTML = '<p class="auth-hinweis" style="margin:0;">Keine Pause eingetragen.</p>';
@@ -1368,6 +1415,11 @@
             const unbezahlt = Number(p.unbezahlt) || 0;
             const wirklichUnbezahlt = Math.max(0, unbezahlt - gearbeitet);
             const istBezahlt = p.art === 'BEZPAU';
+            const aussetzen = istSechste ? aussetzenPruefung(i) : null;
+            const metaVorher = aktuelleDetails && aktuelleDetails.pausen && aktuelleDetails.pausen[i - 1];
+            const metaHier = aktuelleDetails && aktuelleDetails.pausen && aktuelleDetails.pausen[i];
+            const istFortsetzung = i > 0 && metaVorher && metaHier && metaVorher.davor_zeit && metaVorher.davor_zeit === metaHier.davor_zeit;
+            const zuKurz = istSechste && !aussetzen && !istFortsetzung && dauer > 0 && dauer < 10;
 
             return `
             <div class="pause-karte ${gearbeitet > 0 ? 'ausgefallen' : ''}">
@@ -1392,6 +1444,12 @@
                 </div>
                 ${gearbeitet > 0 ? `<div class="pause-info">
                     ${gearbeitet} Min. zählen als Mehrarbeit · ${wirklichUnbezahlt} Min. bleiben unbezahlt
+                </div>` : ''}
+                ${zuKurz ? `<div class="pause-info">
+                    Nur ${dauer} Min. – bei „Sechste" sollten hier mind. 10 Min. stehen (8 Min. + 2 Min. Nacharbeit).
+                </div>` : ''}
+                ${aussetzen ? `<div class="pause-info ${aussetzen.gesamtDauer >= 8 ? 'ok' : ''}">
+                    Laut Dienstzettel: ${aussetzen.teile.join(' + ')}, danach mind. 8 Min. Pause nötig. Eingetragen: ${aussetzen.gesamtDauer} Min. ${aussetzen.gesamtDauer >= 8 ? '✓ erfüllt' : '– es fehlen ' + (8 - aussetzen.gesamtDauer) + ' Min.'}
                 </div>` : ''}
             </div>`;
         }).join('');
@@ -1608,6 +1666,17 @@
                             <text x="153" y="117" font-size="9" fill="#16a34a" text-anchor="end">zählt</text></g>
                         <text x="100" y="146" font-size="10" fill="var(--primary)" text-anchor="middle">zählt: 30 Min. Wendezeit</text>
                         <text x="100" y="162" font-size="9" fill="var(--text-soft)" text-anchor="middle">+ 2 Min. Nacharbeit pauschal</text>`)
+                },
+                {
+                    text: '<b>Wichtig bei „Sechste"</b><br>Steht auf dem Dienstzettel eine Zeile explizit als „Pause" (nicht nur „Wenden"), muss dort mindestens 10 Minuten stehen: die 8 Minuten Mindestdauer plus die 2 Minuten Nacharbeit. Steht dort weniger, lohnt sich ein Blick, ob wirklich alles korrekt eingetragen ist.',
+                    bild: handyRahmen(`
+                        <rect x="40" y="50" width="120" height="46" rx="6" fill="var(--card)" stroke="#f59e0b" stroke-width="1"/>
+                        <text x="47" y="66" font-size="9" fill="var(--text-soft)">Pause</text>
+                        <text x="47" y="82" font-size="12" fill="#b45309">10 Min.</text>
+                        <text x="100" y="112" font-size="9" fill="var(--text-soft)" text-anchor="middle">8 Min. Mindestdauer</text>
+                        <text x="100" y="126" font-size="9" fill="var(--text-soft)" text-anchor="middle">+ 2 Min. Nacharbeit</text>
+                        <text x="100" y="150" font-size="10" fill="#b45309" text-anchor="middle">= mind. 10 Min.</text>
+                        <text x="100" y="172" font-size="9" fill="var(--text-soft)" text-anchor="middle">gilt nur für Zeilen „Pause"</text>`)
                 },
                 {
                     text: '<b>Reserve</b><br>Reservedienst = Bereitschaft ohne feste Fahrten, deshalb gibt es keine geplante Pause. Die gesamte Zeit ist bezahlt, die App blendet die Pausenliste dann aus.',
