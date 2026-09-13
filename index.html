@@ -380,8 +380,57 @@
             <span><i style="background:#dcfce7; border:1px solid #10b981;"></i> Schicht erfasst</span>
             <span><i style="background:#fee2e2;"></i> Feiertag (+135%)</span>
             <span><i style="background:#fef3c7;"></i> Sondertag (+40%)</span>
+            <span><i style="background:#ede9fe; border:1px solid #8b5cf6;"></i> Krank</span>
+            <span><i style="background:#e0f2fe; border:1px solid #0284c7;"></i> Urlaub</span>
         </div>
-        <p style="font-size:0.78rem; color:var(--text-soft); margin:10px 0 0 0;">Tippe auf einen Tag, um die Schicht anzusehen oder zu bearbeiten (öffnet "Erfassen").</p>
+        <p style="font-size:0.78rem; color:var(--text-soft); margin:10px 0 0 0;">Tippe auf einen Tag: bei einem freien Tag kannst du zwischen Dienst erfassen, Krank melden und Urlaub eintragen wählen.</p>
+    </div>
+</div>
+
+<div id="kalenderWahlOverlay" onclick="if(event.target===this) kalenderWahlSchliessen()">
+    <div class="hilfe-fenster" style="max-width:340px;">
+        <div class="hilfe-kopf">
+            <span id="kalenderWahlDatum">Datum</span>
+            <button class="icon-btn" onclick="kalenderWahlSchliessen()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+            </button>
+        </div>
+        <div style="padding:14px 16px 16px 16px;">
+            <button onclick="kalenderWahlDienst()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M4 8.5a2 2 0 0 1 2-2h1.2l1-1.5h7.6l1 1.5H19a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8.5Z"></path><circle cx="12" cy="13" r="3.1"></circle></svg>Dienst erfassen</button>
+            <button class="btn-secondary" onclick="kalenderWahlKrank()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M19 8.5V6a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v2.5"></path><path d="M3.5 12a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3v6.5a1.5 1.5 0 0 1-1.5 1.5h-14A1.5 1.5 0 0 1 3.5 18.5Z"></path><path d="M12 12v5M9.5 14.5h5"></path></svg>Als krank melden</button>
+            <button class="btn-secondary" onclick="kalenderWahlUrlaub()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M12 21s7-6.2 7-11.7A7 7 0 0 0 5 9.3C5 14.8 12 21 12 21Z"></path><circle cx="12" cy="9.3" r="2.4"></circle></svg>Urlaub eintragen</button>
+        </div>
+    </div>
+</div>
+
+<div id="krankOverlay" onclick="if(event.target===this) krankFormularSchliessen()">
+    <div class="hilfe-fenster" style="max-width:400px;">
+        <div class="hilfe-kopf">
+            <span id="krankTitel">Krank melden</span>
+            <button class="icon-btn" onclick="krankFormularSchliessen()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+            </button>
+        </div>
+        <div class="hilfe-inhalt">
+            <p class="auth-hinweis" id="krankHinweis" style="margin-top:0;">Krankheitsaufschlag nach § 14 Abs. 1 i. V. m. § 6 Abs. 3 TV-N Berlin: Durchschnitt deiner Zuschläge der letzten drei Monate × ausgefallene Stunden.</p>
+            <div class="row">
+                <div class="form-group">
+                    <label for="krankVon">Von</label>
+                    <input type="date" id="krankVon" oninput="krankBerechnen()">
+                </div>
+                <div class="form-group">
+                    <label for="krankBis">Bis</label>
+                    <input type="date" id="krankBis" oninput="krankBerechnen()">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="krankStunden">Ausgefallene Stunden pro Tag</label>
+                <input type="number" id="krankStunden" step="0.25" min="0" oninput="krankBerechnen()">
+            </div>
+            <div id="krankErgebnis"></div>
+            <button onclick="krankSpeichern()" style="margin-top:14px;">Speichern</button>
+            <button class="btn-danger" id="krankLoeschenBtn" style="display:none;" onclick="krankLoeschen()">Diesen Tag löschen</button>
+        </div>
     </div>
 </div>
 
@@ -411,6 +460,8 @@
             <div class="zeilen-liste-zeile"><span>Feiertagszuschlag</span><span id="mFeiertag" class="zeile-wert">–</span></div>
             <div class="zeilen-liste-zeile"><span>Sonderzuschlag</span><span id="mSonder" class="zeile-wert">–</span></div>
             <div class="zeilen-liste-zeile"><span>Mehrarbeit (Zeitkonto)</span><span id="mMehrarbeit" class="zeile-wert">–</span></div>
+            <div class="zeilen-liste-zeile"><span>Krankheitsaufschlag</span><span id="mKrankheitsaufschlag" class="zeile-wert">–</span></div>
+            <div class="zeilen-liste-zeile"><span>Urlaubsaufschlag</span><span id="mUrlaubsaufschlag" class="zeile-wert">–</span></div>
             <div class="zeilen-liste-zeile" style="border-bottom:none;"><span>Feste Bezüge</span><span id="mFest" class="zeile-wert">–</span></div>
         </div>
     </div>
@@ -423,6 +474,8 @@
         <div style="background:var(--card); border:1px solid var(--border); border-radius:20px; padding:2px 18px;">
             <div class="zeilen-liste-zeile"><span>Anzahl Schichten</span><span id="jSchichten" class="highlight klickbar" onclick="listeOeffnen(aktuellesDatumAnzeige.getFullYear())" title="Alle Dienste anzeigen">0</span></div>
             <div class="zeilen-liste-zeile"><span>Zeitkonto (Mehrarbeit)</span><span id="jZeitkonto" class="zeile-wert">–</span></div>
+            <div class="zeilen-liste-zeile"><span>Krankheitsaufschlag</span><span id="jKrankheitsaufschlag" class="zeile-wert">–</span></div>
+            <div class="zeilen-liste-zeile"><span>Urlaubsaufschlag</span><span id="jUrlaubsaufschlag" class="zeile-wert">–</span></div>
             <div class="zeilen-liste-zeile" style="border-bottom:none; padding:13px 0; font-size:.98rem;"><span style="font-weight:700; color:var(--text);">Jahres-Brutto</span><span id="jGesamt" style="font-weight:800;">–</span></div>
         </div>
         <p class="auth-hinweis" style="margin:10px 4px 0 4px;">Tippe auf die Anzahl der Schichten, um alle Dienste aufzulisten und als PDF zu speichern.</p>

@@ -293,6 +293,10 @@
         .cal-day.today { outline: 2px solid var(--primary); outline-offset: -2px; }
         .cal-day.mehrarbeit-tag { background: #fef3c7; border-color: #d97706; color: #92400e; }
         body.dark .cal-day.mehrarbeit-tag { background: #78350f; border-color: #f59e0b; color: #fde68a; }
+        .cal-day.krank-tag { background: #ede9fe; border-color: #8b5cf6; color: #5b21b6; }
+        body.dark .cal-day.krank-tag { background: #3b0764; border-color: #a78bfa; color: #ddd6fe; }
+        .cal-day.urlaub-tag { background: #e0f2fe; border-color: #0284c7; color: #075985; }
+        body.dark .cal-day.urlaub-tag { background: #0c4a6e; border-color: #38bdf8; color: #bae6fd; }
 
         /* Farbige Markierung im Dienstverlauf */
         .verlauf-zeile { border-left: 4px solid transparent; padding-left: 8px; }
@@ -497,7 +501,7 @@
             min-height: 0 !important; width: auto !important;
             text-decoration: underline; cursor: pointer;
         }
-        #hilfeOverlay, #dzWahlOverlay, #fmDetailOverlay, #ereignisTitelOverlay, #ereignisDetailOverlay, #erfassenAktionenOverlay {
+        #hilfeOverlay, #dzWahlOverlay, #fmDetailOverlay, #ereignisTitelOverlay, #ereignisDetailOverlay, #erfassenAktionenOverlay, #kalenderWahlOverlay, #krankOverlay {
             display: none; position: fixed; inset: 0; z-index: 200;
             background: rgba(0,0,0,.6); align-items: center; justify-content: center;
             padding: 16px;
