@@ -387,6 +387,11 @@
 <!-- SEITE 3: Statistik -->
 <div class="page" id="page-statistik">
     <div style="max-width:650px; margin:0 auto 20px auto;">
+        <div class="calendar-header" style="margin-bottom:14px;">
+            <button onclick="wechselMonat(-1)">◀</button>
+            <h3 id="statistikMonthTitle" style="margin:0;">Monat Jahr</h3>
+            <button onclick="wechselMonat(1)">▶</button>
+        </div>
         <div style="background:linear-gradient(160deg,#12141c,#1f2333); border-radius:20px; padding:22px 22px 20px 22px; color:#ffffff;">
             <div style="font-size:.72rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; opacity:.6;">Geschätztes Monats-Brutto</div>
             <div style="font-size:2rem; font-weight:800; letter-spacing:-0.02em; color:#FFD100; margin:4px 0 14px 0;" id="mGesamt">–</div>

@@ -1553,7 +1553,30 @@
                         <text x="100" y="150" font-size="10" fill="var(--text-soft)" text-anchor="middle">Kopfbereich des Zettels</text>`)
                 },
                 {
-                    text: '<b>B30</b><br>Eine Pause, davon sind genau 30 Minuten unbezahlt – und zwar die letzten 30. Der Rest der Pause zählt als bezahlte Zeit.',
+                    text: '<b>Pause manuell eintragen</b><br>Mit „+ Pause hinzufügen" legst du eine neue Pause an. Trage Von/Bis ein und wie viele Minuten davon unbezahlt sind – der Rest der Pause zählt automatisch als bezahlte Zeit.',
+                    bild: handyRahmen(`
+                        <rect x="40" y="40" width="120" height="58" rx="6" fill="var(--card)"/>
+                        <rect x="46" y="46" width="52" height="16" rx="4" fill="rgba(239,68,68,.18)"/>
+                        <text x="72" y="57" font-size="8" fill="#dc2626" text-anchor="middle">Unbezahlt</text>
+                        <text x="47" y="76" font-size="9" fill="var(--text)">19:50 bis 20:20</text>
+                        <text x="47" y="90" font-size="9" fill="var(--text-soft)">davon unbezahlt: 30 Min.</text>
+                        <rect x="40" y="108" width="120" height="24" rx="6" fill="var(--total-bg)" class="h-pulsieren"/>
+                        <text x="100" y="124" font-size="10" fill="var(--primary)" text-anchor="middle">+ Pause hinzufügen</text>
+                        <text x="100" y="160" font-size="9" fill="var(--text-soft)" text-anchor="middle">manuell angelegt = immer unbezahlt</text>`)
+                },
+                {
+                    text: '<b>„Bezahlt"-Markierung</b><br>Erkennt die KI beim Scannen eine bereits bezahlte Pause auf dem Dienstzettel, markiert die App sie automatisch grün als „Bezahlt". Das lässt sich nicht manuell umschalten – nur gescannte Pausen können bezahlt sein.',
+                    bild: handyRahmen(`
+                        <rect x="40" y="50" width="120" height="58" rx="6" fill="var(--card)"/>
+                        <rect x="46" y="56" width="44" height="16" rx="4" fill="rgba(22,163,74,.2)"/>
+                        <text x="68" y="67" font-size="8" fill="#16a34a" text-anchor="middle">Bezahlt</text>
+                        <text x="47" y="86" font-size="9" fill="var(--text)">13:20 bis 13:35</text>
+                        <text x="47" y="100" font-size="9" fill="var(--text-soft)">aus dem Dienstzettel erkannt</text>
+                        <text x="100" y="146" font-size="9" fill="var(--text-soft)" text-anchor="middle">zählt komplett als</text>
+                        <text x="100" y="160" font-size="9" fill="var(--text-soft)" text-anchor="middle">bezahlte Arbeitszeit</text>`)
+                },
+                {
+                    text: '<b>B30</b><br>Die häufigste Regel: eine zusammenhängende Pause, davon sind genau 30 Minuten unbezahlt – und zwar die letzten 30. Der Rest der Pause zählt als bezahlte Zeit.',
                     bild: handyRahmen(`
                         <text x="100" y="46" font-size="10" fill="var(--text-soft)" text-anchor="middle">Pause 20:09 – 20:39</text>
                         <rect x="40" y="56" width="120" height="26" rx="5" fill="var(--card)"/>
@@ -1568,8 +1591,9 @@
                         <text x="122" y="161" font-size="9" fill="var(--text-soft)" text-anchor="middle">unbezahlt</text>`)
                 },
                 {
-                    text: '<b>Sechste</b><br>Mehrere Pausen über den Dienst verteilt. Bei jeder trägst du ein, wie viele Minuten davon unbezahlt sind.',
+                    text: '<b>Sechste</b><br>Name kommt von § 4 Arbeitszeitgesetz: Ab mehr als 6 Std. Arbeitszeit müssen mind. 30 Min. Pause genommen werden – die App erlaubt, sie in mehrere Teile von je mind. 15 Min. aufzuteilen. Typisch bei Busdiensten mit mehreren Wendezeiten statt einer langen Pause. Bei jedem Teil trägst du ein, wie viele Minuten davon unbezahlt sind.',
                     bild: handyRahmen(`
+                        <text x="100" y="32" font-size="8" fill="var(--text-faint)" text-anchor="middle">nach 6 Std. Arbeitszeit (§ 4 ArbZG)</text>
                         <g class="hf" style="animation-delay:.2s">
                             <rect x="40" y="44" width="120" height="34" rx="6" fill="var(--card)"/>
                             <text x="47" y="58" font-size="10" fill="var(--text)">13:45 – 13:51</text>
@@ -1588,7 +1612,7 @@
                         <text x="100" y="180" font-size="10" fill="var(--primary)" text-anchor="middle">zusammen 17 Min.</text>`)
                 },
                 {
-                    text: '<b>Reserve</b><br>Bei Reservediensten ist die gesamte Zeit bezahlt. Die App blendet die Pausenliste dann aus.',
+                    text: '<b>Reserve</b><br>Reservedienst = Bereitschaft ohne feste Fahrten, deshalb gibt es keine geplante Pause. Die gesamte Zeit ist bezahlt, die App blendet die Pausenliste dann aus.',
                     bild: handyRahmen(`
                         <rect x="40" y="50" width="120" height="30" rx="6" fill="var(--card)"/>
                         <text x="47" y="63" font-size="9" fill="var(--text-soft)">Pausenregel</text>
@@ -4785,6 +4809,9 @@
         const hinweis = document.getElementById('mehrarbeitHinweis');
         const art = document.getElementById('feiertagsArt');
         if (hinweis && art) hinweis.style.display = art.value.startsWith('mehrarbeit') ? 'block' : 'none';
+        // Faerbt das Dropdown gelb (wie die anderen Buttons) und bei einer
+        // getroffenen Auswahl gruen, damit man die aktive Regelung sofort sieht.
+        if (art) art.classList.toggle('hat-auswahl', art.value !== 'normal');
     }
 
     // Vergleich mit den Kopfwerten des Dienstzettels
@@ -5074,6 +5101,8 @@
 
         const monatsNamen = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
         document.getElementById('calendarMonthTitle').innerText = `${monatsNamen[monat]} ${jahr}`;
+        const statTitel = document.getElementById('statistikMonthTitle');
+        if (statTitel) statTitel.innerText = `${monatsNamen[monat]} ${jahr}`;
 
         const tageKurz = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
         tageKurz.forEach(t => {

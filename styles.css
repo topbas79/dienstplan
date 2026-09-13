@@ -134,6 +134,19 @@
         #statusText:empty { margin-top: 0; }
         #endeTatsaechlichZeigen { margin-top: -8px; }
 
+        #feiertagsArt {
+            background-color: #FFD100;
+            color: #0a0a0a;
+            font-weight: bold;
+            border: none;
+            padding: 13px;
+            border-radius: 14px;
+        }
+        #feiertagsArt.hat-auswahl {
+            background-color: var(--success);
+            color: #ffffff;
+        }
+
         #cropModal {
             display: none;
             margin-bottom: 20px;
