@@ -1397,10 +1397,14 @@
 
         const next = fahrten[startIndex + 1];
         const hatNext = next && AUSSETZEN_KURZ_TYPEN.includes(next.typ) && next.von_zeit === start.bis_zeit;
+        const nextMin = hatNext ? minutenZwischen(next.von_zeit, next.bis_zeit) : 0;
         const teile = [`${start.typ} ${startMin} Min.`];
-        if (hatNext) teile.push(`${next.typ} ${minutenZwischen(next.von_zeit, next.bis_zeit)} Min.`);
+        if (hatNext) teile.push(`${next.typ} ${nextMin} Min.`);
 
-        return { teile };
+        // NB/Ruest/UeWegZ zaehlen mit in die noetige Pause hinein: sie sind Teil
+        // der Unterbrechung und werden zur tatsaechlich eingetragenen Pause dazu-
+        // gerechnet, statt nur als Kontext danebenzustehen.
+        return { teile, kurzMin: startMin + nextMin };
     }
 
     function pausenRendern() {
@@ -1461,9 +1465,13 @@
                 ${zuKurz ? `<div class="pause-info">
                     Nur ${effektiveDauer} Min. wirksam${gearbeitet > 0 ? ` (${dauer} – ${gearbeitet} gearbeitet)` : ''} – bei „Sechste" sollten hier mind. 10 Min. stehen (8 Min. + 2 Min. Nacharbeit).
                 </div>` : ''}
-                ${aussetzen ? `<div class="pause-info ${effektiveDauer >= 8 ? 'ok' : ''}">
-                    Laut Dienstzettel: ${aussetzen.teile.join(' + ')}, danach mind. 8 Min. Pause nötig. Eingetragen: ${dauer} Min.${gearbeitet > 0 ? ` – ${gearbeitet} Min. gearbeitet = ${effektiveDauer} Min. wirksam` : ''} ${effektiveDauer >= 8 ? '✓ erfüllt' : '– es fehlen ' + (8 - effektiveDauer) + ' Min.'}
-                </div>` : ''}
+                ${aussetzen ? (() => {
+                    const erforderlich = aussetzen.kurzMin + 8;
+                    const gesamt = aussetzen.kurzMin + effektiveDauer;
+                    return `<div class="pause-info ${gesamt >= erforderlich ? 'ok' : ''}">
+                        Laut Dienstzettel: ${aussetzen.teile.join(' + ')} + Pause ${effektiveDauer} Min.${gearbeitet > 0 ? ` (${dauer} – ${gearbeitet} gearbeitet)` : ''} = ${gesamt} Min. (nötig: ${erforderlich} Min.) ${gesamt >= erforderlich ? '✓ erfüllt' : '– es fehlen ' + (erforderlich - gesamt) + ' Min.'}
+                    </div>`;
+                })() : ''}
             </div>`;
         }).join('');
 
