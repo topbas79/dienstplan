@@ -297,6 +297,8 @@
         body.dark .cal-day.krank-tag { background: #3b0764; border-color: #a78bfa; color: #ddd6fe; }
         .cal-day.urlaub-tag { background: #e0f2fe; border-color: #0284c7; color: #075985; }
         body.dark .cal-day.urlaub-tag { background: #0c4a6e; border-color: #38bdf8; color: #bae6fd; }
+        .cal-day.frei-tag { background: #f1f5f9; border-color: #94a3b8; color: #475569; }
+        body.dark .cal-day.frei-tag { background: #334155; border-color: #94a3b8; color: #e2e8f0; }
 
         /* Farbige Markierung im Dienstverlauf */
         .verlauf-zeile { border-left: 4px solid transparent; padding-left: 8px; }

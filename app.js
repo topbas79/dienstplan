@@ -5265,7 +5265,7 @@
                     label.innerText = info.label;
                     dayCell.appendChild(label);
                     if (sch.typ === 'krank') mKrankheitsaufschlag += sch.aufschlagEuro || 0;
-                    else mUrlaubsaufschlag += sch.aufschlagEuro || 0;
+                    else if (sch.typ === 'urlaub') mUrlaubsaufschlag += sch.aufschlagEuro || 0;
                 } else {
                     const euroSpan = document.createElement('div');
                     euroSpan.className = 'euro';
@@ -5315,8 +5315,8 @@
         setzeM('mSonder', euroText(mSonder));
         setzeM('mMehrarbeit', mMehrMin ? `${zeitText(mMehrMin)} → ${euroText(mMehrEuro)}` : '–');
         setzeM('mZuschlaege', euroText(mZuschlaege));
-        setzeM('mKrankheitsaufschlag', mKrankheitsaufschlag ? euroText(mKrankheitsaufschlag) : '–');
-        setzeM('mUrlaubsaufschlag', mUrlaubsaufschlag ? euroText(mUrlaubsaufschlag) : '–');
+        setzeM('mKrankheitsaufschlag', euroText(mKrankheitsaufschlag));
+        setzeM('mUrlaubsaufschlag', euroText(mUrlaubsaufschlag));
         setzeM('mFest', euroText(festeBezuege));
         setzeM('mGesamt', euroText(festeBezuege + mZuschlaege + mKrankheitsaufschlag + mUrlaubsaufschlag));
 
@@ -5334,6 +5334,7 @@
             const sch = gespeicherteSchichten[key];
             if (sch.typ === 'krank') { jKrankheitsaufschlag += sch.aufschlagEuro || 0; return; }
             if (sch.typ === 'urlaub') { jUrlaubsaufschlag += sch.aufschlagEuro || 0; return; }
+            if (sch.typ) return;
             jCount++;
             jZuschlaege += sch.zuschlagSumme || 0;
             jMehrMin += sch.mehrarbeitMinuten || 0;
@@ -5347,9 +5348,9 @@
         const s3 = document.getElementById('jZeitkonto');
         if (s3) s3.innerText = jMehrMin ? zeitText(jMehrMin) : '–';
         const s4 = document.getElementById('jKrankheitsaufschlag');
-        if (s4) s4.innerText = jKrankheitsaufschlag ? euroText(jKrankheitsaufschlag) : '–';
+        if (s4) s4.innerText = euroText(jKrankheitsaufschlag);
         const s5 = document.getElementById('jUrlaubsaufschlag');
-        if (s5) s5.innerText = jUrlaubsaufschlag ? euroText(jUrlaubsaufschlag) : '–';
+        if (s5) s5.innerText = euroText(jUrlaubsaufschlag);
     }
 
     // ---------- Krankheitsaufschlag (§ 14 Abs. 1 i.V.m. § 6 Abs. 3 TV-N Berlin) ----------
@@ -5390,6 +5391,11 @@
         urlaub: {
             titel: 'Urlaub eintragen', label: 'Urlaub', cssKlasse: 'urlaub-tag',
             hinweis: 'Aufschlag nach § 15 Abs. 1 i. V. m. § 6 Abs. 3 TV-N Berlin: Durchschnitt deiner Zuschläge der letzten drei Monate × ausgefallene Stunden.'
+        },
+        frei: {
+            titel: 'Freien Tag eintragen', label: 'Frei', cssKlasse: 'frei-tag',
+            hinweis: 'Nur eine Markierung für deine Übersicht – kein Zuschlag, keine Berechnung.',
+            keineBerechnung: true
         }
     };
     let krankAktuellTyp = 'krank';
@@ -5427,6 +5433,11 @@
         kalenderWahlSchliessen();
         krankFormularOeffnen(datumStr, 'urlaub');
     }
+    function kalenderWahlFrei() {
+        const datumStr = kalenderWahlDatum;
+        kalenderWahlSchliessen();
+        krankFormularOeffnen(datumStr, 'frei');
+    }
 
     function krankFormularOeffnen(datumStr, typ) {
         const bestehend = gespeicherteSchichten[datumStr];
@@ -5437,6 +5448,7 @@
         document.getElementById('krankVon').value = datumStr;
         document.getElementById('krankBis').value = datumStr;
         document.getElementById('krankStunden').value = (bestehend && bestehend.ausgefallenStunden) || (ein.wochenstunden / 5).toFixed(2);
+        document.getElementById('krankStundenBereich').style.display = info.keineBerechnung ? 'none' : 'block';
         document.getElementById('krankLoeschenBtn').style.display = bestehend ? 'block' : 'none';
         document.getElementById('krankOverlay').style.display = 'flex';
         krankBerechnen();
@@ -5454,6 +5466,12 @@
 
         const dVon = new Date(von), dBis = new Date(bis);
         const tage = Math.round((dBis - dVon) / 86400000) + 1;
+
+        if (SONDERTAG_INFO[krankAktuellTyp].keineBerechnung) {
+            box.innerHTML = `<div class="pause-info ok">${tage} Tag${tage === 1 ? '' : 'e'} als „Frei" markiert.</div>`;
+            return;
+        }
+
         const ref = zuschlagsDurchschnittBerechnen(von);
         const gesamt = stundenProTag * tage * ref.satz;
 
@@ -5472,23 +5490,35 @@
         if (!nurEigeneDatenPruefen()) return;
         const von = document.getElementById('krankVon').value;
         const bis = document.getElementById('krankBis').value;
-        const stundenProTag = parseFloat(document.getElementById('krankStunden').value) || 0;
-        if (!von || !bis || von > bis || stundenProTag <= 0) {
-            alert('Bitte Von-/Bis-Datum und Stunden pro Tag prüfen.');
+        const info = SONDERTAG_INFO[krankAktuellTyp];
+        const keineBerechnung = info.keineBerechnung;
+        const stundenProTag = keineBerechnung ? 0 : (parseFloat(document.getElementById('krankStunden').value) || 0);
+        if (!von || !bis || von > bis || (!keineBerechnung && stundenProTag <= 0)) {
+            alert('Bitte Von-/Bis-Datum' + (keineBerechnung ? '' : ' und Stunden pro Tag') + ' prüfen.');
             return;
         }
 
-        const ref = zuschlagsDurchschnittBerechnen(von);
+        let ref = { satz: 0, monate: [] };
+        if (!keineBerechnung) {
+            ref = zuschlagsDurchschnittBerechnen(von);
+            if (!ref.anzahl) {
+                const weiter = confirm(`Für die Referenzmonate (${ref.monate.join(', ')}) sind keine Dienste in der App gespeichert. Der Zuschlagssatz kann nicht berechnet werden und würde mit 0 €/Std. gespeichert.\n\nTrotzdem speichern?`);
+                if (!weiter) return;
+            }
+        }
+
         const dVon = new Date(von), dBis = new Date(bis);
         const tage = Math.round((dBis - dVon) / 86400000) + 1;
         const pad = (n) => n < 10 ? '0' + n : n;
 
-        const info = SONDERTAG_INFO[krankAktuellTyp];
         try {
             for (let i = 0; i < tage; i++) {
                 const d = new Date(dVon.getTime() + i * 86400000);
                 const tagStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-                await schichtSpeichern({
+                await schichtSpeichern(keineBerechnung ? {
+                    typ: krankAktuellTyp,
+                    datumStr: tagStr
+                } : {
                     typ: krankAktuellTyp,
                     datumStr: tagStr,
                     ausgefallenStunden: stundenProTag,
@@ -5499,7 +5529,8 @@
             }
             renderCalendar();
             krankFormularSchliessen();
-            alert(`✅ ${tage} ${info.label}-Tag${tage === 1 ? '' : 'e'} gespeichert (Gesamt: ${euroText(stundenProTag * tage * ref.satz)}).`);
+            const zusatz = keineBerechnung ? '' : ` (Gesamt: ${euroText(stundenProTag * tage * ref.satz)})`;
+            alert(`✅ ${tage} ${info.label}-Tag${tage === 1 ? '' : 'e'} gespeichert${zusatz}.`);
         } catch (e) {
             alert('❌ Speichern fehlgeschlagen: ' + (e.message || e));
         }
