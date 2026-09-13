@@ -12,6 +12,7 @@ import org.json.JSONObject;
 public class WidgetDaten {
     private static final String PREFS = "aktuelle_fahrt_widget";
     private static final String SCHLUESSEL_PUNKTE = "punkte_json";
+    private static final String SCHLUESSEL_UEBERSICHT = "uebersicht_text";
     private static final String SCHLUESSEL_MANUELL_PREFIX = "manueller_index_";
 
     public static void punkteSpeichern(Context ctx, String punkteJson) {
@@ -27,6 +28,18 @@ public class WidgetDaten {
         } catch (JSONException e) {
             return new JSONArray();
         }
+    }
+
+    // Kurzuebersicht (letzte/naechste Dienste) fuer Tage ohne aktuellen Dienst
+    // (frei/krank/Urlaub) - fertig formatierter Text aus app.js, damit die
+    // Datumsformatierung (deutsche Schreibweise) nicht doppelt gepflegt wird.
+    public static void uebersichtSpeichern(Context ctx, String text) {
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                .putString(SCHLUESSEL_UEBERSICHT, text == null ? "" : text).apply();
+    }
+
+    public static String uebersichtLaden(Context ctx) {
+        return ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(SCHLUESSEL_UEBERSICHT, "");
     }
 
     // Letzter Punkt, dessen Zeit schon erreicht ist - spiegelt exakt

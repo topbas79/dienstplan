@@ -3859,6 +3859,28 @@
     // Wende-/Pausenwechsel auf den neuen aktuellen Punkt umschaltet -
     // unabhängig davon, ob die "Aktuelle Fahrt"-Seite in der App gerade
     // offen ist (wird bei jeder Änderung des heutigen Dienstes aufgerufen).
+    // Baut den Kurzuebersicht-Text (letzte/naechste 3 Dienste) fuers Widget,
+    // wenn heute kein eigener Dienst ansteht (frei/krank/Urlaub/nichts erfasst).
+    function widgetUebersichtText() {
+        const heuteStr = heutigesDatumStr();
+        const formatiere = (k) => {
+            const s = gespeicherteSchichten[k];
+            const [, m, t] = k.split('-');
+            return `${t}.${m}. ${s.startStr || '–'}–${s.endeStr || '–'}`;
+        };
+        const tage = Object.keys(gespeicherteSchichten)
+            .filter(k => !gespeicherteSchichten[k].typ)
+            .sort();
+        const letzte = tage.filter(k => k < heuteStr).slice(-3).reverse();
+        const naechste = tage.filter(k => k > heuteStr).slice(0, 3);
+        if (!letzte.length && !naechste.length) return '';
+
+        const teile = [];
+        if (letzte.length) teile.push('Zuletzt:\n' + letzte.map(formatiere).join('\n'));
+        if (naechste.length) teile.push('Nächste:\n' + naechste.map(formatiere).join('\n'));
+        return teile.join('\n\n');
+    }
+
     async function aktuelleFahrtWidgetSyncHeute() {
         if (!capacitorAktiv()) return;
         const WB = window.Capacitor.Plugins.WidgetBridge;
@@ -3866,7 +3888,11 @@
         const heuteStr = heutigesDatumStr();
         const sch = gespeicherteSchichten[heuteStr];
         if (!sch || sch.typ) {
-            try { await WB.leeren(); } catch (e) { console.log('Widget leeren fehlgeschlagen:', e); }
+            try {
+                const text = widgetUebersichtText();
+                if (text) await WB.uebersichtSpeichern({ text });
+                else await WB.leeren();
+            } catch (e) { console.log('Widget leeren fehlgeschlagen:', e); }
             return;
         }
         const punkte = aktuelleFahrtPunkteBauen(sch.details || null);

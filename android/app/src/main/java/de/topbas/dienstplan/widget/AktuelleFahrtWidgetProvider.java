@@ -45,6 +45,9 @@ public class AktuelleFahrtWidgetProvider extends AppWidgetProvider {
         if (gesamt == 0) {
             views.setViewVisibility(R.id.karte, View.GONE);
             views.setViewVisibility(R.id.leer_text, View.VISIBLE);
+            String uebersicht = WidgetDaten.uebersichtLaden(context);
+            views.setTextViewText(R.id.leer_text, uebersicht.isEmpty()
+                    ? "Kein Dienst für heute gespeichert" : uebersicht);
             appWidgetManager.updateAppWidget(appWidgetId, views);
             return;
         }

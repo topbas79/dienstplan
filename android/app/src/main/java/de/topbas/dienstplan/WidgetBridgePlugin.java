@@ -32,6 +32,18 @@ public class WidgetBridgePlugin extends Plugin {
         String punkteJson = call.getString("punkteJson", "[]");
         Context ctx = getContext().getApplicationContext();
         WidgetDaten.punkteSpeichern(ctx, punkteJson);
+        WidgetDaten.uebersichtSpeichern(ctx, "");
+        AktuelleFahrtWidgetProvider.alleAktualisieren(ctx, true);
+        call.resolve();
+    }
+
+    // Kurzuebersicht (letzte/naechste Dienste) fuer Tage ohne aktuellen Dienst.
+    @PluginMethod
+    public void uebersichtSpeichern(PluginCall call) {
+        String text = call.getString("text", "");
+        Context ctx = getContext().getApplicationContext();
+        WidgetDaten.punkteSpeichern(ctx, "[]");
+        WidgetDaten.uebersichtSpeichern(ctx, text);
         AktuelleFahrtWidgetProvider.alleAktualisieren(ctx, true);
         call.resolve();
     }
@@ -68,6 +80,7 @@ public class WidgetBridgePlugin extends Plugin {
     public void leeren(PluginCall call) {
         Context ctx = getContext().getApplicationContext();
         WidgetDaten.punkteSpeichern(ctx, "[]");
+        WidgetDaten.uebersichtSpeichern(ctx, "");
         AktuelleFahrtWidgetProvider.alleAktualisieren(ctx, true);
         AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
         if (am != null) alteAlarmeVerwerfen(ctx, am);
