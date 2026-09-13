@@ -1354,10 +1354,13 @@
         const p = pausenEintraege[i];
         if (feld === 'unbezahlt' || feld === 'gearbeitet') {
             p[feld] = Math.max(0, Number(wert) || 0);
-            // Nicht mehr arbeiten als unbezahlte Minuten vorhanden sind
             const dauer = minutenZwischen(p.von, p.bis);
             if (dauer) p.unbezahlt = Math.min(p.unbezahlt, dauer);
-            p.gearbeitet = Math.min(Number(p.gearbeitet) || 0, p.unbezahlt || 0);
+            // "Gearbeitet" ist unabhaengig von bezahlt/unbezahlt: es zaehlt fuer
+            // die Sechstel-Gueltigkeitspruefung (effektive Pause = Dauer minus
+            // gearbeitet), nicht mehr nur fuer die Mehrarbeit-Umrechnung. Fuer
+            // die Bezahlung selbst bleibt es dort weiterhin auf "unbezahlt" gedeckelt.
+            if (dauer) p.gearbeitet = Math.min(Number(p.gearbeitet) || 0, dauer);
         } else {
             p[feld] = wert;
         }
@@ -1420,11 +1423,16 @@
             const gearbeitet = Number(p.gearbeitet) || 0;
             const unbezahlt = Number(p.unbezahlt) || 0;
             const wirklichUnbezahlt = Math.max(0, unbezahlt - gearbeitet);
+            // Wurde in der Pause gearbeitet, ist sie unabhaengig von bezahlt/
+            // unbezahlt entsprechend kuerzer wirksam - das zaehlt fuer die
+            // Sechstel-Gueltigkeitspruefung (nicht fuer die Mehrarbeit-Bezahlung,
+            // die bleibt auf "unbezahlt" begrenzt, siehe wirklichUnbezahlt oben).
+            const effektiveDauer = Math.max(0, dauer - gearbeitet);
             const marke = unbezahlt <= 0 ? { text: 'Bezahlt', farbe: 'gruen' }
                 : (dauer > 0 && unbezahlt >= dauer) ? { text: 'Unbezahlt', farbe: 'rot' }
                 : { text: 'Teilweise bezahlt', farbe: 'gelb' };
             const aussetzen = istSechste ? aussetzenPruefung(p) : null;
-            const zuKurz = istSechste && !aussetzen && dauer > 0 && dauer < 10;
+            const zuKurz = istSechste && !aussetzen && effektiveDauer > 0 && effektiveDauer < 10;
 
             return `
             <div class="pause-karte ${gearbeitet > 0 ? 'ausgefallen' : ''}">
@@ -1443,18 +1451,18 @@
                 </div>
                 <div class="pause-zeilen" style="margin-top:6px;">
                     <span style="font-size:.8rem; white-space:nowrap;">davon gearbeitet</span>
-                    <input type="number" min="0" max="${unbezahlt}" step="1" value="${gearbeitet}"
+                    <input type="number" min="0" max="${dauer}" step="1" value="${gearbeitet}"
                            onchange="pauseGeaendert(${i},'gearbeitet',this.value); pausenRendern();" style="max-width:80px;">
                     <span style="font-size:.8rem;">Min.</span>
                 </div>
                 ${gearbeitet > 0 ? `<div class="pause-info">
-                    ${gearbeitet} Min. zählen als Mehrarbeit · ${wirklichUnbezahlt} Min. bleiben unbezahlt
+                    ${gearbeitet} Min. gearbeitet · davon ${Math.min(gearbeitet, unbezahlt)} Min. als Mehrarbeit · ${wirklichUnbezahlt} Min. bleiben unbezahlt
                 </div>` : ''}
                 ${zuKurz ? `<div class="pause-info">
-                    Nur ${dauer} Min. – bei „Sechste" sollten hier mind. 10 Min. stehen (8 Min. + 2 Min. Nacharbeit).
+                    Nur ${effektiveDauer} Min. wirksam${gearbeitet > 0 ? ` (${dauer} – ${gearbeitet} gearbeitet)` : ''} – bei „Sechste" sollten hier mind. 10 Min. stehen (8 Min. + 2 Min. Nacharbeit).
                 </div>` : ''}
-                ${aussetzen ? `<div class="pause-info ${dauer >= 8 ? 'ok' : ''}">
-                    Laut Dienstzettel: ${aussetzen.teile.join(' + ')}, danach mind. 8 Min. Pause nötig. Eingetragen: ${dauer} Min. ${dauer >= 8 ? '✓ erfüllt' : '– es fehlen ' + (8 - dauer) + ' Min.'}
+                ${aussetzen ? `<div class="pause-info ${effektiveDauer >= 8 ? 'ok' : ''}">
+                    Laut Dienstzettel: ${aussetzen.teile.join(' + ')}, danach mind. 8 Min. Pause nötig. Eingetragen: ${dauer} Min.${gearbeitet > 0 ? ` – ${gearbeitet} Min. gearbeitet = ${effektiveDauer} Min. wirksam` : ''} ${effektiveDauer >= 8 ? '✓ erfüllt' : '– es fehlen ' + (8 - effektiveDauer) + ' Min.'}
                 </div>` : ''}
             </div>`;
         }).join('');
