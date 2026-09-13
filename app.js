@@ -1319,6 +1319,27 @@
         pausenRendern();
     }
 
+    // Fasst direkt aneinandergrenzende Pausen (gleiche bis/von-Grenze - z. B. der
+    // bezahlte und der unbezahlte Anteil derselben Unterbrechung laut Dienstzettel)
+    // zu einem Eintrag zusammen, damit man sie als eine durchgehende Pause sieht
+    // und bearbeitet. Die "unbezahlt"-Minuten liegen laut Berechnung immer am Ende
+    // des Zeitfensters, daher ist die Summe rechnerisch identisch zu den Einzelteilen.
+    function pausenZusammenfassen(liste) {
+        const ergebnis = [];
+        (liste || []).forEach(p => {
+            const letzte = ergebnis[ergebnis.length - 1];
+            if (letzte && letzte.bis === p.von) {
+                letzte.bis = p.bis;
+                letzte.unbezahlt = (Number(letzte.unbezahlt) || 0) + (Number(p.unbezahlt) || 0);
+                letzte.gearbeitet = (Number(letzte.gearbeitet) || 0) + (Number(p.gearbeitet) || 0);
+                if (letzte.art !== p.art) letzte.art = 'GEMISCHT';
+            } else {
+                ergebnis.push({ ...p });
+            }
+        });
+        return ergebnis;
+    }
+
     function pauseHinzufuegen() {
         pausenEintraege.push({ von: '', bis: '', unbezahlt: 30, gearbeitet: 0, art: 'UNBPAU' });
         pausenRendern();
@@ -1355,20 +1376,16 @@
     // Prueft eine kurze Unterbrechung laut Dienstzettel (NB, Ruest und/oder UeWegZ)
     // vor einer Pause: reichte die erste kurze Zeile allein schon nicht fuer die
     // 8-Minuten-Mindestdauer, muss die tatsaechlich eingetragene Pause danach
-    // (bzw. deren bezahlter+unbezahlter Anteil zusammen) mind. 8 Minuten haben -
-    // wichtig, wenn sich durch Verspaetung die echte Pausenzeit verschiebt.
+    // mind. 8 Minuten haben - wichtig, wenn sich durch Verspaetung die echte
+    // Pausenzeit verschiebt. "p.davorZeit" wird beim Anlegen des Pausen-Eintrags
+    // gespeichert (siehe felderSetzen/klickKalenderTag) und bleibt so auch nach
+    // Bearbeiten der Zeiten oder Zusammenfassen mehrerer Zettel-Zeilen erhalten.
     const AUSSETZEN_KURZ_TYPEN = ['NB', 'Ruest', 'UeWegZ'];
-    function aussetzenPruefung(index) {
-        if (!aktuelleDetails || !aktuelleDetails.pausen) return null;
-        const alle = aktuelleDetails.pausen;
-        const meta = alle[index];
-        if (!meta || !meta.davor_zeit) return null;
-        // BEZPAU/UNBPAU-Splits derselben Unterbrechung teilen sich denselben
-        // davor_zeit - nur beim ersten Eintrag der Gruppe pruefen.
-        if (index > 0 && alle[index - 1] && alle[index - 1].davor_zeit === meta.davor_zeit) return null;
+    function aussetzenPruefung(p) {
+        if (!p || !p.davorZeit || !aktuelleDetails) return null;
 
         const fahrten = aktuelleDetails.fahrten || [];
-        const startIndex = fahrten.findIndex(f => AUSSETZEN_KURZ_TYPEN.includes(f.typ) && f.von_zeit === meta.davor_zeit);
+        const startIndex = fahrten.findIndex(f => AUSSETZEN_KURZ_TYPEN.includes(f.typ) && f.von_zeit === p.davorZeit);
         if (startIndex === -1) return null;
 
         const start = fahrten[startIndex];
@@ -1380,18 +1397,7 @@
         const teile = [`${start.typ} ${startMin} Min.`];
         if (hatNext) teile.push(`${next.typ} ${minutenZwischen(next.von_zeit, next.bis_zeit)} Min.`);
 
-        // Alle direkt folgenden Pausen-Eintraege mit demselben davor_zeit
-        // zusammenzaehlen (z. B. bezahlter + unbezahlter Anteil derselben Pause).
-        // Die tatsaechlichen (evtl. wegen Verspaetung angepassten) Zeiten stehen
-        // in pausenEintraege, nicht mehr in den urspruenglichen Zettel-Daten.
-        let gesamtDauer = 0, j = index;
-        while (j < alle.length && alle[j].davor_zeit === meta.davor_zeit) {
-            const eintrag = pausenEintraege[j];
-            if (eintrag) gesamtDauer += minutenZwischen(eintrag.von, eintrag.bis);
-            j++;
-        }
-
-        return { teile, gesamtDauer };
+        return { teile };
     }
 
     function pausenRendern() {
@@ -1414,16 +1420,15 @@
             const gearbeitet = Number(p.gearbeitet) || 0;
             const unbezahlt = Number(p.unbezahlt) || 0;
             const wirklichUnbezahlt = Math.max(0, unbezahlt - gearbeitet);
-            const istBezahlt = p.art === 'BEZPAU';
-            const aussetzen = istSechste ? aussetzenPruefung(i) : null;
-            const metaVorher = aktuelleDetails && aktuelleDetails.pausen && aktuelleDetails.pausen[i - 1];
-            const metaHier = aktuelleDetails && aktuelleDetails.pausen && aktuelleDetails.pausen[i];
-            const istFortsetzung = i > 0 && metaVorher && metaHier && metaVorher.davor_zeit && metaVorher.davor_zeit === metaHier.davor_zeit;
-            const zuKurz = istSechste && !aussetzen && !istFortsetzung && dauer > 0 && dauer < 10;
+            const marke = unbezahlt <= 0 ? { text: 'Bezahlt', farbe: 'gruen' }
+                : (dauer > 0 && unbezahlt >= dauer) ? { text: 'Unbezahlt', farbe: 'rot' }
+                : { text: 'Teilweise bezahlt', farbe: 'gelb' };
+            const aussetzen = istSechste ? aussetzenPruefung(p) : null;
+            const zuKurz = istSechste && !aussetzen && dauer > 0 && dauer < 10;
 
             return `
             <div class="pause-karte ${gearbeitet > 0 ? 'ausgefallen' : ''}">
-                <span class="dienst-marke ${istBezahlt ? 'gruen' : 'rot'}" style="display:inline-block; margin-bottom:6px;">${istBezahlt ? 'Bezahlt' : 'Unbezahlt'}</span>
+                <span class="dienst-marke ${marke.farbe}" style="display:inline-block; margin-bottom:6px;">${marke.text}</span>
                 <div class="pause-zeilen">
                     <input type="time" value="${p.von}" onchange="pauseGeaendert(${i},'von',this.value); pausenRendern();">
                     <span>bis</span>
@@ -1448,8 +1453,8 @@
                 ${zuKurz ? `<div class="pause-info">
                     Nur ${dauer} Min. – bei „Sechste" sollten hier mind. 10 Min. stehen (8 Min. + 2 Min. Nacharbeit).
                 </div>` : ''}
-                ${aussetzen ? `<div class="pause-info ${aussetzen.gesamtDauer >= 8 ? 'ok' : ''}">
-                    Laut Dienstzettel: ${aussetzen.teile.join(' + ')}, danach mind. 8 Min. Pause nötig. Eingetragen: ${aussetzen.gesamtDauer} Min. ${aussetzen.gesamtDauer >= 8 ? '✓ erfüllt' : '– es fehlen ' + (8 - aussetzen.gesamtDauer) + ' Min.'}
+                ${aussetzen ? `<div class="pause-info ${dauer >= 8 ? 'ok' : ''}">
+                    Laut Dienstzettel: ${aussetzen.teile.join(' + ')}, danach mind. 8 Min. Pause nötig. Eingetragen: ${dauer} Min. ${dauer >= 8 ? '✓ erfüllt' : '– es fehlen ' + (8 - dauer) + ' Min.'}
                 </div>` : ''}
             </div>`;
         }).join('');
@@ -4521,15 +4526,26 @@
             gefunden.push('Pausenregel');
         }
 
+        if (ergebnis.dienstnummer) {
+            document.getElementById('dienstnummer').value = ergebnis.dienstnummer;
+        }
+        // Vor dem Rendern der Pausen setzen, damit aussetzenPruefung() bereits
+        // die richtigen Fahrten-Daten zur Verfuegung hat.
+        detailsMitHaltestellen(ergebnis);
+        detailsAnzeigen(ergebnis);
+        if (aktuelleDetails && ergebnis.kontrolle) aktuelleDetails.kontrolle = ergebnis.kontrolle;
+        haltestellenLernen(ergebnis);
+
         // Pausen aus dem Dienstzettel in die Liste uebernehmen (bezahlt UND unbezahlt)
-        pausenEintraege = (ergebnis.pausen || [])
+        pausenEintraege = pausenZusammenfassen((ergebnis.pausen || [])
             .filter(p => p.von && p.bis)
             .map(p => ({
                 von: p.von, bis: p.bis,
                 unbezahlt: Number(p.unbezahlt_minuten) || 0,
                 gearbeitet: 0,
-                art: String(p.art || '').toUpperCase() === 'BEZPAU' ? 'BEZPAU' : 'UNBPAU'
-            }));
+                art: String(p.art || '').toUpperCase() === 'BEZPAU' ? 'BEZPAU' : 'UNBPAU',
+                davorZeit: p.davor_zeit || null
+            })));
 
         if (!pausenEintraege.length && Number(ergebnis.pause_minuten) > 0) {
             document.getElementById('pause').value = Number(ergebnis.pause_minuten);
@@ -4537,14 +4553,6 @@
         pausenregelGeaendert();
         if (pausenEintraege.length) gefunden.push('Pausen');
         if (gefunden.includes('Datum')) feiertagPruefen();
-
-        if (ergebnis.dienstnummer) {
-            document.getElementById('dienstnummer').value = ergebnis.dienstnummer;
-        }
-        detailsMitHaltestellen(ergebnis);
-        detailsAnzeigen(ergebnis);
-        if (aktuelleDetails && ergebnis.kontrolle) aktuelleDetails.kontrolle = ergebnis.kontrolle;
-        haltestellenLernen(ergebnis);
 
         return gefunden;
     }
@@ -5324,7 +5332,10 @@
             }
             document.getElementById('feiertagsArt').value = feiertagsArtWert;
             document.getElementById('pausenregel').value = sch.pausenregel || 'B30';
-            pausenEintraege = (sch.pausen || []).map(p => ({
+            // Vor dem Rendern der Pausen setzen, damit aussetzenPruefung() bereits
+            // die richtigen Fahrten-Daten fuer diesen Tag zur Verfuegung hat.
+            detailsAnzeigen(sch.details || null);
+            pausenEintraege = pausenZusammenfassen((sch.pausen || []).map((p, idx) => ({
                 von: p.von || '', bis: p.bis || '',
                 unbezahlt: Number(p.unbezahlt) || 0,
                 // Aeltere Eintraege kannten nur "ausgefallen" (alles gearbeitet)
@@ -5332,10 +5343,13 @@
                     ? (Number(p.gearbeitet) || 0)
                     : (p.ausgefallen ? (Number(p.unbezahlt) || 0) : 0),
                 // Aeltere gespeicherte Dienste kannten nur unbezahlte Pausen
-                art: p.art === 'BEZPAU' ? 'BEZPAU' : 'UNBPAU'
-            }));
+                art: p.art === 'BEZPAU' ? 'BEZPAU' : 'UNBPAU',
+                // Aeltere gespeicherte Dienste kennen davorZeit noch nicht direkt -
+                // dann anhand des (noch unzusammengefassten) Index aus den
+                // urspruenglichen Zettel-Daten nachschlagen.
+                davorZeit: p.davorZeit || (sch.details && sch.details.pausen && sch.details.pausen[idx] && sch.details.pausen[idx].davor_zeit) || null
+            })));
             pausenregelGeaendert();
-            detailsAnzeigen(sch.details || null);
             berechneSchicht();
         } else {
             document.getElementById('feiertagsArt').value = 'normal';

@@ -374,8 +374,10 @@
         }
         .dienst-marke.gruen { background: #dcfce7; color: #15803d; }
         .dienst-marke.rot { background: #fee2e2; color: #b91c1c; }
+        .dienst-marke.gelb { background: #fef3c7; color: #b45309; }
         body.dark .dienst-marke.gruen { background: #14532d; color: #86efac; }
         body.dark .dienst-marke.rot { background: #450a0a; color: #fca5a5; }
+        body.dark .dienst-marke.gelb { background: #3a2a0a; color: #fcd34d; }
         .klickbar { cursor: pointer; text-decoration: underline; }
 
         /* ---------- Chat ---------- */
