@@ -19,7 +19,9 @@ public class WidgetNavReceiver extends BroadcastReceiver {
         int richtung = intent.getIntExtra(EXTRA_RICHTUNG, 0);
         if (appWidgetId == -1 || richtung == 0) return;
 
-        JSONArray punkte = WidgetDaten.punkteLaden(context);
+        JSONArray tage = WidgetDaten.tageLaden(context);
+        int tagIndex = WidgetDaten.aktuellerTagIndex(context, appWidgetId, tage.length());
+        JSONArray punkte = WidgetDaten.punkteFuerTag(tage, tagIndex);
         if (punkte.length() == 0) return;
 
         Integer manuell = WidgetDaten.manuellerIndexLaden(context, appWidgetId);

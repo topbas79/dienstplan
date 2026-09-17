@@ -12,14 +12,16 @@ import de.topbas.dienstplan.R;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-// Zeigt den aktuellen/naechsten Wende- oder Pausenpunkt des heutigen
-// Dienstes (wie die "Aktuelle Fahrt"-Ansicht in der App). Bewusst OHNE
-// StackView/RemoteViewsService gebaut: der wischbare Kartenstapel wird von
-// manchen Launchern (u. a. getestet auf Samsung One UI) nicht zuverlaessig
-// unterstuetzt und zeigte dort alle Punkte nebeneinander statt gestapelt.
-// Stattdessen genau wie in der App selbst: feste Karte mit "‹ Zurück" /
-// "Weiter ›"-Tastern, die per PendingIntent einen Index-Wechsel ausloesen
-// (siehe WidgetNavReceiver).
+// Zeigt den aktuellen/naechsten Wende- oder Pausenpunkt eines Dienstes (wie
+// die "Aktuelle Fahrt"-Ansicht in der App) - standardmaessig des heutigen,
+// per Pfeile oben lassen sich aber auch die letzten/naechsten gespeicherten
+// Dienste durchblaettern. Bewusst OHNE StackView/RemoteViewsService gebaut:
+// der wischbare Kartenstapel wird von manchen Launchern (u. a. getestet auf
+// Samsung One UI) nicht zuverlaessig unterstuetzt und zeigte dort alle
+// Punkte nebeneinander statt gestapelt. Stattdessen genau wie in der App
+// selbst: feste Karte mit Taster-Navigation per PendingIntent (siehe
+// WidgetNavReceiver fuer Punkte innerhalb eines Tages, WidgetTagNavReceiver
+// fuer den Tageswechsel).
 public class AktuelleFahrtWidgetProvider extends AppWidgetProvider {
 
     @Override
@@ -33,21 +35,52 @@ public class AktuelleFahrtWidgetProvider extends AppWidgetProvider {
     public void onDeleted(Context context, int[] appWidgetIds) {
         for (int id : appWidgetIds) {
             WidgetDaten.manuellerIndexLoeschen(context, id);
+            WidgetDaten.manuellerTagIndexLoeschen(context, id);
         }
     }
 
     public static void aktualisieren(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_aktuelle_fahrt);
 
-        JSONArray punkte = WidgetDaten.punkteLaden(context);
+        JSONArray tage = WidgetDaten.tageLaden(context);
+        int tageGesamt = tage.length();
+
+        if (tageGesamt == 0) {
+            views.setViewVisibility(R.id.tag_nav, View.GONE);
+            views.setViewVisibility(R.id.karte, View.GONE);
+            views.setViewVisibility(R.id.leer_text, View.VISIBLE);
+            views.setTextViewText(R.id.leer_text, "Kein Dienst gespeichert");
+            appWidgetManager.updateAppWidget(appWidgetId, views);
+            return;
+        }
+
+        int tagIndex = WidgetDaten.aktuellerTagIndex(context, appWidgetId, tageGesamt);
+        JSONObject tag = tage.optJSONObject(tagIndex);
+        JSONArray punkte = WidgetDaten.punkteFuerTag(tage, tagIndex);
         int gesamt = punkte.length();
+
+        // Tag-Kopfzeile (Dienstnummer + Datum) und Pfeile zum Blaettern
+        // durch die gespeicherten Tage - immer sichtbar, unabhaengig davon
+        // ob der gewaehlte Tag Fahrtdaten hat.
+        views.setViewVisibility(R.id.tag_nav, View.VISIBLE);
+        String dienstnummer = tag != null ? tag.optString("dienstnummer", "") : "";
+        String datumKurz = tag != null ? tag.optString("datumKurz", "") : "";
+        StringBuilder kopf = new StringBuilder();
+        if (!dienstnummer.isEmpty()) kopf.append("Dienst ").append(dienstnummer);
+        if (!datumKurz.isEmpty()) {
+            if (kopf.length() > 0) kopf.append(" · ");
+            kopf.append(datumKurz);
+        }
+        views.setTextViewText(R.id.tag_kopf, kopf.toString());
+        views.setOnClickPendingIntent(R.id.tag_zurueck, tagNavPendingIntent(context, appWidgetId, -1));
+        views.setOnClickPendingIntent(R.id.tag_weiter, tagNavPendingIntent(context, appWidgetId, 1));
+        views.setViewVisibility(R.id.tag_zurueck, tagIndex > 0 ? View.VISIBLE : View.INVISIBLE);
+        views.setViewVisibility(R.id.tag_weiter, tagIndex < tageGesamt - 1 ? View.VISIBLE : View.INVISIBLE);
 
         if (gesamt == 0) {
             views.setViewVisibility(R.id.karte, View.GONE);
             views.setViewVisibility(R.id.leer_text, View.VISIBLE);
-            String uebersicht = WidgetDaten.uebersichtLaden(context);
-            views.setTextViewText(R.id.leer_text, uebersicht.isEmpty()
-                    ? "Kein Dienst für heute gespeichert" : uebersicht);
+            views.setTextViewText(R.id.leer_text, "Keine Fahrtdaten für diesen Tag");
             appWidgetManager.updateAppWidget(appWidgetId, views);
             return;
         }
@@ -107,11 +140,22 @@ public class AktuelleFahrtWidgetProvider extends AppWidgetProvider {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
+    private static PendingIntent tagNavPendingIntent(Context context, int appWidgetId, int richtung) {
+        Intent intent = new Intent(context, WidgetTagNavReceiver.class)
+                .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+                .putExtra(WidgetTagNavReceiver.EXTRA_RICHTUNG, richtung);
+        // Eigener Request-Code-Bereich (+5/+6), damit er nicht mit den
+        // Punkt-Navigations-PendingIntents (+1/+2) desselben Widgets kollidiert.
+        int requestCode = appWidgetId * 10 + (richtung < 0 ? 5 : 6);
+        return PendingIntent.getBroadcast(context, requestCode, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
     // Von aussen (Bridge-Plugin, Alarm-Empfaenger) aufgerufen, um alle
     // platzierten Instanzen dieses Widgets auf den Stand zu bringen.
     // resetManuell=true (neue Daten oder echter Wende-/Pausenwechsel)
-    // springt alle Instanzen wieder auf den automatisch aktuellen Punkt,
-    // so wie "Jetzt" in der App.
+    // springt alle Instanzen wieder auf den heutigen Tag und den
+    // automatisch aktuellen Punkt, so wie "Jetzt" in der App.
     public static void alleAktualisieren(Context context, boolean resetManuell) {
         if (resetManuell) WidgetDaten.alleManuellenIndicesLoeschen(context);
         AppWidgetManager mgr = AppWidgetManager.getInstance(context);

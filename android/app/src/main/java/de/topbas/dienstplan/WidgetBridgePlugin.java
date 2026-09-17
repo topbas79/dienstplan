@@ -27,23 +27,15 @@ public class WidgetBridgePlugin extends Plugin {
     private static final int ALARM_REQUEST_BASIS = 91000;
     private static final int ALARM_MAX_ANZAHL = 32;
 
+    // Speichert die letzten/naechsten gespeicherten Dienste (jeweils mit
+    // ihren Fahrtpunkten) fuers Widget, plus den Index des heutigen Tages
+    // darin - damit sich per Pfeile oben zwischen Tagen blaettern laesst.
     @PluginMethod
-    public void datenSpeichern(PluginCall call) {
-        String punkteJson = call.getString("punkteJson", "[]");
+    public void tageSpeichern(PluginCall call) {
+        String tageJson = call.getString("tageJson", "[]");
+        int heuteIndex = call.getInt("heuteIndex", -1);
         Context ctx = getContext().getApplicationContext();
-        WidgetDaten.punkteSpeichern(ctx, punkteJson);
-        WidgetDaten.uebersichtSpeichern(ctx, "");
-        AktuelleFahrtWidgetProvider.alleAktualisieren(ctx, true);
-        call.resolve();
-    }
-
-    // Kurzuebersicht (letzte/naechste Dienste) fuer Tage ohne aktuellen Dienst.
-    @PluginMethod
-    public void uebersichtSpeichern(PluginCall call) {
-        String text = call.getString("text", "");
-        Context ctx = getContext().getApplicationContext();
-        WidgetDaten.punkteSpeichern(ctx, "[]");
-        WidgetDaten.uebersichtSpeichern(ctx, text);
+        WidgetDaten.tageSpeichern(ctx, tageJson, heuteIndex);
         AktuelleFahrtWidgetProvider.alleAktualisieren(ctx, true);
         call.resolve();
     }
@@ -79,8 +71,7 @@ public class WidgetBridgePlugin extends Plugin {
     @PluginMethod
     public void leeren(PluginCall call) {
         Context ctx = getContext().getApplicationContext();
-        WidgetDaten.punkteSpeichern(ctx, "[]");
-        WidgetDaten.uebersichtSpeichern(ctx, "");
+        WidgetDaten.tageSpeichern(ctx, "[]", -1);
         AktuelleFahrtWidgetProvider.alleAktualisieren(ctx, true);
         AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
         if (am != null) alteAlarmeVerwerfen(ctx, am);

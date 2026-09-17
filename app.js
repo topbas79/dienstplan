@@ -3859,50 +3859,17 @@
     // Wende-/Pausenwechsel auf den neuen aktuellen Punkt umschaltet -
     // unabhängig davon, ob die "Aktuelle Fahrt"-Seite in der App gerade
     // offen ist (wird bei jeder Änderung des heutigen Dienstes aufgerufen).
-    // Baut den Kurzuebersicht-Text (letzte/naechste 3 Dienste) fuers Widget,
-    // wenn heute kein eigener Dienst ansteht (frei/krank/Urlaub/nichts erfasst).
-    function widgetUebersichtText() {
-        const heuteStr = heutigesDatumStr();
-        const formatiere = (k) => {
-            const s = gespeicherteSchichten[k];
-            const [, m, t] = k.split('-');
-            return `${t}.${m}. ${s.startStr || '–'}–${s.endeStr || '–'}`;
-        };
-        const tage = Object.keys(gespeicherteSchichten)
-            .filter(k => !gespeicherteSchichten[k].typ)
-            .sort();
-        const letzte = tage.filter(k => k < heuteStr).slice(-3).reverse();
-        const naechste = tage.filter(k => k > heuteStr).slice(0, 3);
-        if (!letzte.length && !naechste.length) return '';
-
-        const teile = [];
-        if (letzte.length) teile.push('Zuletzt:\n' + letzte.map(formatiere).join('\n'));
-        if (naechste.length) teile.push('Nächste:\n' + naechste.map(formatiere).join('\n'));
-        return teile.join('\n\n');
-    }
-
-    async function aktuelleFahrtWidgetSyncHeute() {
-        if (!capacitorAktiv()) return;
-        const WB = window.Capacitor.Plugins.WidgetBridge;
-        if (!WB) return;
-        const heuteStr = heutigesDatumStr();
-        const sch = gespeicherteSchichten[heuteStr];
-        if (!sch || sch.typ) {
-            try {
-                const text = widgetUebersichtText();
-                if (text) await WB.uebersichtSpeichern({ text });
-                else await WB.leeren();
-            } catch (e) { console.log('Widget leeren fehlgeschlagen:', e); }
-            return;
-        }
+    // Baut die Fahrtpunkte-Liste (wie in der "Aktuelle Fahrt"-Ansicht) fuer
+    // einen einzelnen gespeicherten Tag auf, im fuers Widget passenden Format.
+    function widgetPunkteFuerTag(datumStr, sch) {
         const punkte = aktuelleFahrtPunkteBauen(sch.details || null);
         // Dienstnummer auf jeder Übernahme (kann mehrfach am Tag vorkommen)
         // und auf der ersten Wende zeigen - dort steht sie auch auf dem
         // Fahrtbericht.
         const dienstnummer = sch.details && sch.details.dienstnummer;
         const ersteWendeIndex = punkte.findIndex(p => p.label === 'Wenden');
-        const daten = punkte.map((p, i) => {
-            const zeitpunkt = aktuelleFahrtAlsDatum(heuteStr, p.sort);
+        return punkte.map((p, i) => {
+            const zeitpunkt = aktuelleFahrtAlsDatum(datumStr, p.sort);
             const folgeTeile = [];
             if (p.folgeLinie) folgeTeile.push('Linie ' + p.folgeLinie);
             if (p.folgeUmlauf) folgeTeile.push('Umlauf ' + p.folgeUmlauf);
@@ -3919,10 +3886,50 @@
                 zeitMs: zeitpunkt ? zeitpunkt.getTime() : null
             };
         }).filter(p => p.zeitMs !== null);
+    }
+
+    // Baut die letzten 3 + heute (falls ein eigener Dienst ansteht) + die
+    // naechsten 3 gespeicherten Dienste fuers Widget auf, damit sich dort
+    // per Pfeile durchblaettern laesst.
+    function widgetTageBauen() {
+        const heuteStr = heutigesDatumStr();
+        const alleTage = Object.keys(gespeicherteSchichten)
+            .filter(k => !gespeicherteSchichten[k].typ)
+            .sort();
+        const vor = alleTage.filter(k => k < heuteStr).slice(-3);
+        const nach = alleTage.filter(k => k > heuteStr).slice(0, 3);
+        const heuteDabei = alleTage.includes(heuteStr);
+        const tage = [...vor, ...(heuteDabei ? [heuteStr] : []), ...nach];
+
+        return tage.map(datumStr => {
+            const sch = gespeicherteSchichten[datumStr];
+            const [, m, t] = datumStr.split('-');
+            return {
+                datumStr,
+                datumKurz: `${t}.${m}.`,
+                dienstnummer: (sch.details && sch.details.dienstnummer) || sch.dienstnummer || '',
+                punkte: widgetPunkteFuerTag(datumStr, sch)
+            };
+        });
+    }
+
+    async function aktuelleFahrtWidgetSyncHeute() {
+        if (!capacitorAktiv()) return;
+        const WB = window.Capacitor.Plugins.WidgetBridge;
+        if (!WB) return;
+        const heuteStr = heutigesDatumStr();
+        const tage = widgetTageBauen();
+        if (!tage.length) {
+            try { await WB.leeren(); } catch (e) { console.log('Widget leeren fehlgeschlagen:', e); }
+            return;
+        }
+        const heuteIndex = tage.findIndex(t => t.datumStr === heuteStr);
 
         try {
-            await WB.datenSpeichern({ punkteJson: JSON.stringify(daten) });
-            await WB.updatesPlanen({ zeitenMs: daten.map(p => p.zeitMs) });
+            await WB.tageSpeichern({ tageJson: JSON.stringify(tage), heuteIndex });
+            if (heuteIndex !== -1) {
+                await WB.updatesPlanen({ zeitenMs: tage[heuteIndex].punkte.map(p => p.zeitMs) });
+            }
         } catch (e) { console.log('Widget-Sync fehlgeschlagen:', e); }
     }
 

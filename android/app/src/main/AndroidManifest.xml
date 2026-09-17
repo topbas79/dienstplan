@@ -45,6 +45,9 @@
         <receiver
             android:name=".widget.WidgetNavReceiver"
             android:exported="false" />
+        <receiver
+            android:name=".widget.WidgetTagNavReceiver"
+            android:exported="false" />
     </application>
 
     <!-- Permissions -->
