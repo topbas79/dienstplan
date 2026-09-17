@@ -744,7 +744,12 @@
     function listeZeilen() {
         const pad = (n) => n < 10 ? '0' + n : n;
         const praefix = `${listeDatum.getFullYear()}-${pad(listeDatum.getMonth() + 1)}`;
+        return listeZeilenFuerPraefix(praefix);
+    }
 
+    // Wie listeZeilen(), aber für einen beliebigen Datums-Präfix - mit dem
+    // ganzen Jahr ("2026") statt Jahr-Monat für den Jahres-Export.
+    function listeZeilenFuerPraefix(praefix) {
         return Object.keys(gespeicherteSchichten)
             .filter(k => k.startsWith(praefix) && !gespeicherteSchichten[k].typ)
             .sort()
@@ -1121,6 +1126,75 @@
 
         const pad = (n) => n < 10 ? '0' + n : n;
         dateiSpeichernOderTeilen(`Verpflegungsmehraufwand_${listeDatum.getFullYear()}-${pad(listeDatum.getMonth() + 1)}.pdf`, doc.output('blob'));
+    }
+
+    // Wie listeAlsPdfVerpflegung(), aber über das ganze Jahr von listeDatum
+    // statt nur den aktuell angezeigten Monat - für den Steuerberater am
+    // Jahresende, eine PDF statt zwölf einzelner Monats-Exporte.
+    function listeAlsPdfVerpflegungJahr() {
+        const jahr = listeDatum.getFullYear();
+        const zeilen = listeZeilenFuerPraefix(String(jahr)).filter(z => z.abwesenheitMinuten > VERPFLEGUNGSPAUSCHALE_SCHWELLE_MIN);
+        if (!zeilen.length) {
+            alert(`Für ${jahr} gibt es keine Dienste über 8 Stunden.`);
+            return;
+        }
+        if (!window.jspdf) {
+            alert('PDF-Bibliothek konnte nicht geladen werden. Bitte mit Internetverbindung erneut versuchen.');
+            return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const name = (aktuellesProfil && (aktuellesProfil.anzeigename || aktuellesProfil.email)) || '';
+        const satzText = VERPFLEGUNGSPAUSCHALE_EURO.toFixed(2).replace('.', ',') + ' €';
+
+        doc.setFontSize(15);
+        doc.text(`Verpflegungsmehraufwand ${jahr}`, 14, 16);
+        let y = 22;
+        if (name) {
+            doc.setFontSize(10);
+            doc.setTextColor(110);
+            doc.text(name, 14, y);
+            doc.setTextColor(0);
+            y += 6;
+        }
+        doc.setFontSize(9);
+        doc.setTextColor(110);
+        doc.text(`Abwesenheit jeweils mehr als 8 Stunden — Pauschale ${satzText} pro Tag`, 14, y);
+        y += 5;
+        const fahrzeitHinweis = zeilen.some(z => z.fahrzeitAbweichend)
+            ? `Abwesenheit einschließlich Anfahrt und Rückfahrt, pauschal ${ein.fahrzeitMin} Minuten je Richtung ` +
+              `(für einzelne Orte abweichend laut Wegstreckenbuch hinterlegt).`
+            : `Abwesenheit einschließlich Anfahrt und Rückfahrt, pauschal ${ein.fahrzeitMin} Minuten je Richtung.`;
+        doc.text(fahrzeitHinweis, 14, y);
+        doc.setTextColor(0);
+
+        const kopf = [['Datum', 'Dienst', 'Beginn', 'Ende', 'Dauer', 'Abwesenheit', 'Pauschale']];
+        const koerper = zeilen.map(z => [
+            z.datumKurz, z.dienst, z.beginnZeit, z.endeZeit,
+            stundenMinutenKurz(z.dauerMinuten), stundenMinutenKurz(z.abwesenheitMinuten), satzText
+        ]);
+
+        doc.autoTable({
+            head: kopf,
+            body: koerper,
+            startY: y + 6,
+            styles: { fontSize: 9, cellPadding: 2.5 },
+            headStyles: { fillColor: [37, 99, 235], textColor: 255 },
+            alternateRowStyles: { fillColor: [246, 248, 252] },
+            columnStyles: { 5: { halign: 'right' }, 6: { halign: 'right' } },
+            didDrawPage: (daten) => {
+                const fussY = daten.cursor.y + 8;
+                doc.setFontSize(10);
+                doc.text(
+                    `${zeilen.length} Tage × ${satzText} = ` +
+                    `${(zeilen.length * VERPFLEGUNGSPAUSCHALE_EURO).toFixed(2).replace('.', ',')} €`,
+                    14, fussY
+                );
+            }
+        });
+
+        dateiSpeichernOderTeilen(`Verpflegungsmehraufwand_${jahr}.pdf`, doc.output('blob'));
     }
 
     function wegZeilen() {
@@ -4051,6 +4125,13 @@
     }
     function schliesseErfassenAktionen() {
         document.getElementById('erfassenAktionenOverlay').style.display = 'none';
+    }
+
+    function oeffneListeAktionen() {
+        document.getElementById('listeAktionenOverlay').style.display = 'flex';
+    }
+    function schliesseListeAktionen() {
+        document.getElementById('listeAktionenOverlay').style.display = 'none';
     }
 
     // ---------- Automatische Dienstzettel-Analyse (positionsbasiert) ----------

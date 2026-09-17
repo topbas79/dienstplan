@@ -724,17 +724,38 @@
 <!-- SEITE: Dienstliste (aus der Jahresübersicht) -->
 <div class="page" id="page-liste">
     <div class="container">
+        <div class="erfassen-kopf">
+            <div class="erfassen-kopf-spacer"></div>
+            <h2 style="font-size:1.15rem;">Dienstliste</h2>
+            <button class="icon-btn" onclick="oeffneListeAktionen()" title="Exportieren">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12 20 4l-6 16-3-7-7-3Z"></path></svg>
+            </button>
+        </div>
         <div class="calendar-header">
             <button onclick="listeMonatWechseln(-1)">◀</button>
             <h3 id="listeTitel" style="margin:0;">Monat Jahr</h3>
             <button onclick="listeMonatWechseln(1)">▶</button>
         </div>
         <div id="listeInhalt"></div>
-        <button class="btn-gcal" onclick="listeAlsPdf()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M7 3.5h7l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 19V5A1.5 1.5 0 0 1 7 3.5Z"></path><path d="M14 3.5V8h4"></path><path d="M8.5 12.5h7M8.5 15.5h7M8.5 9.5h2"></path></svg>Diesen Monat als PDF herunterladen</button>
-        <button class="btn-save" onclick="listeAlsPdfVerpflegung()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M7 3v6.5a2 2 0 0 0 4 0V3"></path><path d="M9 9.5V21"></path><path d="M16 3c-1.7 0-3 1.9-3 5s1.3 5 3 5"></path><path d="M16 3v18"></path></svg>Verpflegungsmehraufwand als PDF</button>
-        <button class="btn-save" onclick="listeAlsPdfWeg()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M9 3 5 21"></path><path d="M15 3l4 18"></path><path d="M11 9.5h2"></path><path d="M10.2 14.5h3.6"></path></svg>Fahrtkosten (Weg) als PDF</button>
         <button class="btn-secondary" onclick="wegstreckenOeffnen()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M12 21s7-6.2 7-11.7A7 7 0 0 0 5 9.3C5 14.8 12 21 12 21Z"></path><circle cx="12" cy="9.3" r="2.4"></circle></svg>Wegstrecken pflegen</button>
         <button class="btn-secondary" onclick="wechselSeite('statistik')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M15 5.5 8.5 12 15 18.5"></path></svg>Zurück zur Statistik</button>
+    </div>
+</div>
+
+<div id="listeAktionenOverlay" onclick="if(event.target===this) schliesseListeAktionen()">
+    <div class="hilfe-fenster" style="max-width:360px;">
+        <div class="hilfe-kopf">
+            <span>Exportieren</span>
+            <button class="icon-btn" onclick="schliesseListeAktionen()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+            </button>
+        </div>
+        <div style="padding:14px 16px 16px 16px;">
+            <button class="btn-gcal" onclick="schliesseListeAktionen(); listeAlsPdf();"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M7 3.5h7l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 19V5A1.5 1.5 0 0 1 7 3.5Z"></path><path d="M14 3.5V8h4"></path><path d="M8.5 12.5h7M8.5 15.5h7M8.5 9.5h2"></path></svg>Diesen Monat als PDF herunterladen</button>
+            <button class="btn-save" onclick="schliesseListeAktionen(); listeAlsPdfVerpflegung();"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M7 3v6.5a2 2 0 0 0 4 0V3"></path><path d="M9 9.5V21"></path><path d="M16 3c-1.7 0-3 1.9-3 5s1.3 5 3 5"></path><path d="M16 3v18"></path></svg>Verpflegungsmehraufwand als PDF</button>
+            <button class="btn-save" onclick="schliesseListeAktionen(); listeAlsPdfVerpflegungJahr();"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M7 3v6.5a2 2 0 0 0 4 0V3"></path><path d="M9 9.5V21"></path><path d="M16 3c-1.7 0-3 1.9-3 5s1.3 5 3 5"></path><path d="M16 3v18"></path></svg>Verpflegungsmehraufwand Jahr als PDF</button>
+            <button class="btn-save" onclick="schliesseListeAktionen(); listeAlsPdfWeg();"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M9 3 5 21"></path><path d="M15 3l4 18"></path><path d="M11 9.5h2"></path><path d="M10.2 14.5h3.6"></path></svg>Fahrtkosten (Weg) als PDF</button>
+        </div>
     </div>
 </div>
 
