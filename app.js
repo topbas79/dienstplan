@@ -4604,15 +4604,26 @@
 
         const alleFahrten = fahrtenMitAbgeleitetenWenden(d.fahrten, d.beginn, d.pausen);
         if (alleFahrten.length) {
-            const reihen = alleFahrten.map(f =>
-                `<div class="result-item" style="font-size:.82rem;">
-                    <span class="label">${f.von_zeit || ''} ${ortText(f.von, f.von_kuerzel)}${f.typ ? ' <small style="opacity:.6;">' + f.typ + '</small>' : ''}</span>
-                    <span style="text-align:right;">${fahrtInfo(f.linie, f.umlauf, f.nach, f.nach_kuerzel, null)}</span>
-                 </div>`).join('');
+            const reihen = alleFahrten.map(f => {
+                const standzeit = !f.linie;   // Wenden/Rüst/NB/ÜwegZ ohne Linie
+                const zielGleich = !f.nach_kuerzel || f.nach_kuerzel === f.von_kuerzel;
+                const zeitText = (f.bis_zeit && f.bis_zeit !== f.von_zeit)
+                    ? `${f.von_zeit || ''}–${f.bis_zeit}` : (f.von_zeit || '');
+                const linieText = [f.linie ? 'Linie ' + f.linie : '', (f.umlauf || f.umlauf === 0) ? 'Umlauf ' + f.umlauf : '']
+                    .filter(Boolean).join(' · ');
+                return `<div class="vf-zeile ${standzeit ? 'vf-stand' : ''}">
+                    <div class="vf-zeit">${zeitText}</div>
+                    <div class="vf-info">
+                        <span class="vf-ort">${ortText(f.von, f.von_kuerzel)}${zielGleich ? '' : ' → ' + ortText(f.nach, f.nach_kuerzel)}</span>
+                        ${f.typ && f.typ !== 'L' ? `<span class="vf-typ">${f.typ}</span>` : ''}
+                        ${linieText ? `<div class="vf-linie">${linieText}</div>` : ''}
+                    </div>
+                 </div>`;
+            }).join('');
             html += `<details style="margin-top:14px;">
                         <summary style="cursor:pointer; font-weight:600; font-size:.85rem; display:flex; align-items:center; gap:6px;">
                             ${ICONS.bus} Alle Fahrten (${alleFahrten.length})
-                        </summary>${reihen}</details>`;
+                        </summary><div class="vf-liste">${reihen}</div></details>`;
         }
 
         inhalt.innerHTML = html;

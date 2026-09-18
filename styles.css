@@ -321,6 +321,42 @@
             border-left-color: #9333ea;
             background: rgba(147, 51, 234, .10);
         }
+
+        /* "Alle Fahrten"-Liste im Dienstverlauf */
+        .vf-liste { margin-top: 4px; }
+        .vf-zeile {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            padding: 7px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: .82rem;
+        }
+        .vf-zeile:last-child { border-bottom: none; }
+        .vf-zeit {
+            flex: none;
+            width: 72px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+        .vf-info { flex: 1; min-width: 0; }
+        .vf-ort { font-weight: 600; }
+        .vf-typ {
+            display: inline-block;
+            margin-left: 6px;
+            padding: 1px 6px;
+            border-radius: 6px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            font-size: .68rem;
+            font-weight: 600;
+            opacity: .75;
+            vertical-align: middle;
+        }
+        .vf-linie { margin-top: 1px; opacity: .7; }
+        .vf-zeile.vf-stand { opacity: .68; }
+        .vf-zeile.vf-stand .vf-zeit { font-weight: 500; }
+        .vf-zeile.vf-stand .vf-ort { font-weight: 500; }
         .cal-day.feiertag { background: #fee2e2; color: #b91c1c; }
         .cal-day.sondertag { background: #fef3c7; color: #b45309; }
         body.dark .cal-day.feiertag { background: #450a0a; color: #fca5a5; }
