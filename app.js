@@ -249,6 +249,7 @@
         angezeigterNutzerId = aktuellerNutzer.id;
         angezeigterNutzerName = null;
         setzeAppSichtbarkeit('app');
+        scanKontingentAktualisieren();
         await schichtenLaden();
         if (istAdmin) adminDatenLaden();
 
@@ -383,6 +384,11 @@
             const el = document.getElementById('nutzerListe');
             if (!nutzer || !nutzer.length) { el.innerHTML = '<p class="auth-hinweis">Keine Nutzer.</p>'; return; }
 
+            // Verbrauchte Scans je Nutzer (insgesamt) für die Anzeige neben dem Limit
+            const scanAnzahl = {};
+            const { data: scanZeilen } = await sb.from('scans').select('user_id');
+            (scanZeilen || []).forEach(z => { scanAnzahl[z.user_id] = (scanAnzahl[z.user_id] || 0) + 1; });
+
             el.innerHTML = nutzer.map(n => {
                 const istIch = n.id === aktuellerNutzer.id;
                 const name = (n.anzeigename || n.email || '').replace(/'/g, "\\'");
@@ -401,8 +407,16 @@
                     ((n.hilfe_bis && new Date(n.hilfe_bis) > new Date())
                       ? '<span class="badge frei">Hilfe freigegeben</span>' : '');
 
-                const zweiteZeile = n.betriebshof
-                    ? `<br><small style="opacity:.75;">${n.betriebshof}</small>` : '';
+                const zweiteZeile = (n.betriebshof
+                    ? `<br><small style="opacity:.75;">${n.betriebshof}</small>` : '') +
+                    `<br><small style="opacity:.75;">Scans: ${scanAnzahl[n.id] || 0} von ${n.scan_limit === null || n.scan_limit === undefined ? 'unbegrenzt' : n.scan_limit}</small>` +
+                    ((istIch || entfernt) ? '' : `
+                    <div style="display:flex; gap:6px; align-items:center; margin-top:6px;">
+                        <input type="number" min="0" inputmode="numeric" id="scanLimit_${n.id}" placeholder="unbegrenzt"
+                               value="${n.scan_limit === null || n.scan_limit === undefined ? '' : n.scan_limit}"
+                               style="width:96px; padding:6px 8px; margin:0;">
+                        <button class="btn-secondary stapel-btn" style="margin:0;" onclick="scanLimitSetzen('${n.id}','${name}')">Limit setzen</button>
+                    </div>`);
 
                 let knoepfe = '';
                 if (!istIch) {
@@ -427,6 +441,30 @@
                 </div>`;
             }).join('');
         } catch (e) { console.error(e); }
+    }
+
+    // Leeres Feld = unbegrenzt. Geprüft und gespeichert wird serverseitig (nur Admin).
+    async function scanLimitSetzen(id, name) {
+        const feld = document.getElementById('scanLimit_' + id);
+        if (!feld) return;
+        const text = feld.value.trim();
+        let neu = null;
+        if (text !== '') {
+            neu = Number(text);
+            if (!Number.isInteger(neu) || neu < 0) {
+                zeigeMeldung('adminMeldung', 'Bitte eine ganze Zahl ab 0 eingeben (leer = unbegrenzt).', 'fehler');
+                return;
+            }
+        }
+        try {
+            const { data, error } = await sb.rpc('scan_limit_setzen', { ziel_id: id, neues_limit: neu });
+            if (error) throw error;
+            if (data !== 'OK') { zeigeMeldung('adminMeldung', data, 'fehler'); return; }
+            zeigeMeldung('adminMeldung', `${name}: ${neu === null ? 'unbegrenzt' : neu + ' Scans'} eingestellt.`, 'ok');
+            adminDatenLaden();
+        } catch (e) {
+            zeigeMeldung('adminMeldung', 'Fehler: ' + (e.message || e), 'fehler');
+        }
     }
 
     // ---------- Nutzer entfernen / wiederherstellen ----------
@@ -4363,14 +4401,45 @@
             body: { bild_base64: base64, medien_typ: medienTyp }
         });
 
-        // Nutzung mitzaehlen (stoert die Erkennung nicht, wenn es fehlschlaegt)
-        const erfolgreich = !error && !(data && data.fehler);
-        sb.from('scans').insert({ user_id: aktuellerNutzer.id, erfolg: erfolgreich })
-          .then(() => {}, () => {});
+        // Gezählt wird ausschließlich auf dem Server (scan_reservieren) - hier nur die Anzeige auffrischen.
+        scanKontingentAktualisieren();
 
         if (error) throw error;
-        if (data && data.fehler) throw new Error(data.fehler);
+        if (data && data.fehler) {
+            const fehler = new Error(data.fehler);
+            fehler.limitErreicht = !!data.limit_erreicht;
+            throw fehler;
+        }
         return data;
+    }
+
+    // Zeigt Testern unter dem Upload-Button, wie viele Scans noch übrig sind.
+    // Admins und Nutzer ohne Limit sehen nichts.
+    async function scanKontingentAktualisieren() {
+        const el = document.getElementById('scanKontingent');
+        if (!el) return;
+        el.style.display = 'none';
+        if (!sb || !aktuellerNutzer) return;
+        try {
+            const { data: profil, error: profilFehler } = await sb
+                .from('profile').select('scan_limit').eq('id', aktuellerNutzer.id).single();
+            if (profilFehler) throw profilFehler;
+            if (aktuellesProfil) aktuellesProfil.scan_limit = profil.scan_limit;
+            const limit = profil.scan_limit;
+            if (limit === null || limit === undefined) return;
+
+            const { count, error } = await sb
+                .from('scans').select('id', { count: 'exact', head: true }).eq('user_id', aktuellerNutzer.id);
+            if (error) throw error;
+
+            const rest = Math.max(0, limit - (count || 0));
+            el.innerText = rest > 0
+                ? `Noch ${rest} von ${limit} Test-Scans übrig`
+                : `Test-Kontingent (${limit} Scans) aufgebraucht – die lokale Erkennung bleibt nutzbar`;
+            el.style.display = 'block';
+        } catch (e) {
+            console.log('Scan-Kontingent konnte nicht geladen werden:', e);
+        }
     }
 
     // Merkt sich die von der KI gelesenen Dienstdetails zur aktuellen Schicht
@@ -4736,7 +4805,9 @@
                 statusEl.innerText = "⚠️ KI konnte nicht alles lesen – versuche lokale Erkennung...";
             } catch (fehler) {
                 console.warn('KI-Erkennung fehlgeschlagen, nutze lokale Erkennung:', fehler);
-                statusEl.innerText = "ℹ️ KI nicht erreichbar – nutze lokale Erkennung...";
+                statusEl.innerText = (fehler && fehler.limitErreicht)
+                    ? "ℹ️ Dein Test-Kontingent ist aufgebraucht – nutze lokale Erkennung..."
+                    : "ℹ️ KI nicht erreichbar – nutze lokale Erkennung...";
             }
 
             // 2. Versuch: lokale Erkennung (Tesseract), falls die KI nichts liefert
