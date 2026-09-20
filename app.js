@@ -4332,7 +4332,7 @@
                 const ergebnis = istPdfDatei(stapel[i].datei)
                     ? await DienstzettelPdf.pdfDateiZuErgebnis(stapel[i].datei)
                     : await kiErkennung(await dateiAlsDataUrl(stapel[i].datei));
-                if (!ergebnis.datum || !ergebnis.beginn || !ergebnis.ende) {
+                if (!ergebnis.abwesenheit && (!ergebnis.datum || !ergebnis.beginn || !ergebnis.ende)) {
                     throw new Error('Datum oder Zeiten nicht erkannt');
                 }
                 stapel[i].ergebnis = ergebnis;
@@ -4344,7 +4344,7 @@
             stapelRendern();
         }
 
-        const fertige = stapel.filter(s => s.status === 'fertig').length;
+        const fertige = stapel.filter(s => s.status === 'fertig' && !s.ergebnis.abwesenheit).length;
         document.getElementById('stapelSpeichern').style.display = fertige ? 'block' : 'none';
         input.value = '';
     }
@@ -4366,14 +4366,16 @@
             if (s.status === 'liest') text = 'wird gelesen...';
             else if (s.status === 'fertig') {
                 const e = s.ergebnis;
-                text = `${e.datum.split('-').reverse().join('.')}` +
-                       `${e.dienstnummer ? ' · ' + e.dienstnummer : ''} · ${e.beginn}–${e.ende}`;
+                text = e.abwesenheit
+                    ? pdfAbwesenheitText(e)
+                    : `${e.datum.split('-').reverse().join('.')}` +
+                      `${e.dienstnummer ? ' · ' + e.dienstnummer : ''} · ${e.beginn}–${e.ende}`;
             } else if (s.status === 'fehler') text = s.fehler;
 
             return `<div class="result-item">
                 <span class="label">${symbol} ${text}</span>
                 ${s.status === 'fertig'
-                    ? `<button class="btn-secondary stapel-btn" onclick="stapelUebernehmen(${i})">Öffnen</button>` : ''}
+                    ? `<button class="btn-secondary stapel-btn" onclick="stapelUebernehmen(${i})">${s.ergebnis.abwesenheit ? 'Eintragen' : 'Öffnen'}</button>` : ''}
             </div>`;
         }).join('');
     }
@@ -4382,6 +4384,7 @@
     function stapelUebernehmen(i) {
         const e = stapel[i].ergebnis;
         if (!e) return;
+        if (e.abwesenheit) { pdfAbwesenheitOeffnen(e); return; }
         felderSetzen(e);
         if (e.kontrolle && aktuelleDetails) aktuelleDetails.kontrolle = e.kontrolle;
         berechneSchicht();
@@ -4391,7 +4394,8 @@
     // Alle erkannten Dienste berechnen und in die Datenbank schreiben
     async function stapelAlleSpeichern() {
         if (!nurEigeneDatenPruefen()) return;
-        const fertige = stapel.filter(s => s.status === 'fertig');
+        // Urlaub/Krank aus PDFs werden nicht mitgespeichert: dort werden die Stunden im Fenster bestaetigt ("Eintragen")
+        const fertige = stapel.filter(s => s.status === 'fertig' && !s.ergebnis.abwesenheit);
         if (!fertige.length) return;
 
         const knopf = document.getElementById('stapelSpeichern');
@@ -4808,6 +4812,34 @@
         return gefunden;
     }
 
+    function datumKurz(datumStr) { return datumStr.split('-').reverse().join('.'); }
+
+    // Abwesenheits-PDF (Urlaub/Krank): das vorhandene Urlaubs-/Krank-Fenster mit dem Zeitraum oeffnen,
+    // dort bestaetigt man die Stunden und speichert. Gespeichert wird nichts von allein.
+    function pdfAbwesenheitOeffnen(e) {
+        const von = new Date(e.von), bis = new Date(e.bis);
+        const mitDienst = [];
+        for (let d = new Date(von), n = 0; d <= bis && n < 62; d.setDate(d.getDate() + 1), n++) {
+            const tagStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            const sch = gespeicherteSchichten[tagStr];
+            if (sch && !sch.typ) mitDienst.push(datumKurz(tagStr));
+        }
+        if (mitDienst.length && !confirm(`Am ${mitDienst.join(', ')} ist bereits ein Dienst gespeichert. Speicherst du den ${SONDERTAG_INFO[e.typ].label}, wird dieser Dienst ersetzt.\n\nTrotzdem öffnen?`)) {
+            return false;
+        }
+        krankFormularOeffnen(e.von, e.typ);
+        if (e.bis && e.bis !== e.von) {
+            document.getElementById('krankBis').value = e.bis;
+            krankBerechnen();
+        }
+        return true;
+    }
+
+    function pdfAbwesenheitText(e) {
+        const zeitraum = e.bis && e.bis !== e.von ? `vom ${datumKurz(e.von)} bis ${datumKurz(e.bis)}` : `am ${datumKurz(e.von)}`;
+        return `${SONDERTAG_INFO[e.typ].label} ${zeitraum}`;
+    }
+
     // PDF-Dienstzettel: Text direkt aus der Datei lesen - keine KI, keine Kosten, kein Scan-Kontingent.
     async function starteAnalysePdf(file) {
         const statusEl = document.getElementById('statusText');
@@ -4818,6 +4850,14 @@
         statusEl.innerText = "📄 PDF wird gelesen...";
         try {
             const ergebnis = await DienstzettelPdf.pdfDateiZuErgebnis(file);
+            if (ergebnis.abwesenheit) {
+                const geoeffnet = pdfAbwesenheitOeffnen(ergebnis);
+                statusEl.style.color = geoeffnet ? "#047857" : "#d97706";
+                statusEl.innerText = geoeffnet
+                    ? `✅ ${pdfAbwesenheitText(ergebnis)} aus dem PDF erkannt. Bitte im Fenster die Stunden prüfen und speichern.`
+                    : `${pdfAbwesenheitText(ergebnis)} erkannt, aber nicht übernommen.`;
+                return;
+            }
             const gefunden = felderSetzen(ergebnis);
             const dienst = ergebnis.dienstnummer ? ` (Dienst ${ergebnis.dienstnummer})` : '';
             if (ergebnis.sicher === false) {

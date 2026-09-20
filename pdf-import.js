@@ -161,9 +161,37 @@
         };
     }
 
+    // ---------- Abwesenheits-Bescheinigung ("Abwesenheit für: Name, Nr. / UM, Urlaub / am 13.06.2026") ----------
+    // Kein Dienst, sondern ein Urlaubs- oder Krankheitstag. Liefert die Art und den Zeitraum;
+    // die App oeffnet dazu das vorhandene Urlaubs-/Krank-Fenster, in dem die Stunden bestaetigt werden.
+    const ABWESENHEIT_KOPF = /^Abwesenheit\s+f(?:ü|ue)r\b/i;
+    function abwesenheitAusElementen(seiten) {
+        const texte = [];
+        seiten.forEach(s => s.items.forEach(i => {
+            const t = String(i.s).replace(/[-]/g, '').trim();
+            if (t) texte.push(t);
+        }));
+        if (!texte.some(t => ABWESENHEIT_KOPF.test(t))) return null;
+
+        const inhalt = texte.filter(t => !ABWESENHEIT_KOPF.test(t)).join(' ');
+        const daten = Array.from(inhalt.matchAll(/(\d{2})\.(\d{2})\.(\d{4})/g)).map(m => `${m[3]}-${m[2]}-${m[1]}`).sort();
+        const bezeichnung = inhalt.replace(/(\d{2})\.(\d{2})\.(\d{4})/g, '').replace(/\b(am|vom|bis)\b/gi, '').replace(/\s+/g, ' ').trim();
+        if (!daten.length) throw new Error('In der Abwesenheits-Bescheinigung wurde kein Datum gefunden.');
+        let typ = null;
+        if (/urlaub/i.test(inhalt)) typ = 'urlaub';
+        else if (/krank/i.test(inhalt)) typ = 'krank';
+        if (!typ) {
+            throw new Error(`Abwesenheit „${bezeichnung}“ erkannt, aber die Art ist unbekannt. Bitte im Kalender manuell eintragen.`);
+        }
+        return { abwesenheit: true, typ, bezeichnung, datum: daten[0], von: daten[0], bis: daten[daten.length - 1], quelle: 'pdf' };
+    }
+
     // ---------- Hauptfunktion ----------
     // seiten: [{ items: [{ s, x, y, w }] }]  (Text-Elemente mit Position, wie pdf.js sie liefert)
     function dienstzettelAusPdfElementen(seiten) {
+        const abwesenheit = abwesenheitAusElementen(seiten);
+        if (abwesenheit) return abwesenheit;
+
         const zeichen = seiten.reduce((n, s) => n + s.items.reduce((m, i) => m + String(i.s).trim().length, 0), 0);
         if (zeichen < 50) {
             throw new Error('In diesem PDF steckt kein Text (vermutlich ein eingescanntes Bild). Bitte den Dienstzettel als Foto hochladen.');
