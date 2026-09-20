@@ -508,7 +508,11 @@
 
     // ---------- KI-Nutzung / Kostenübersicht ----------
     let scanDatum = new Date();
-    const KOSTEN_JE_SCAN = 0.012;   // grobe Schätzung in Euro
+    // Preise von claude-sonnet-4-6 (US-Dollar je Million Tokens) - bei Modellwechsel anpassen.
+    const PREIS_EINGABE_USD_PRO_MIO = 3;
+    const PREIS_AUSGABE_USD_PRO_MIO = 15;
+    // Ersatzwert je Scan, solange noch nichts gemessen wurde (Schätzung, kein Messwert)
+    const KOSTEN_JE_SCAN_USD_SCHAETZUNG = 0.06;
     const APP_ADRESSE = 'https://topbas79.github.io/dienstplan';
 
     function scansMonatWechseln(delta) {
@@ -528,7 +532,7 @@
 
         try {
             const { data, error } = await sb.from('scans')
-                .select('user_id, erfolg').gte('erstellt_am', von).lt('erstellt_am', bis);
+                .select('user_id, erfolg, eingabe_tokens, ausgabe_tokens').gte('erstellt_am', von).lt('erstellt_am', bis);
             if (error) throw error;
 
             if (!data || !data.length) {
@@ -557,11 +561,30 @@
                         `</span>
                     </div>`).join('');
 
+            // Kosten: Scans mit gemessenen Tokens exakt, alle anderen mit dem gemessenen Durchschnitt
+            // (oder dem Schätzwert, solange noch nichts gemessen wurde).
+            let gemessenUsd = 0, gemessenAnzahl = 0;
+            data.forEach(z => {
+                if (z.eingabe_tokens == null || z.ausgabe_tokens == null) return;
+                gemessenUsd += z.eingabe_tokens / 1e6 * PREIS_EINGABE_USD_PRO_MIO +
+                               z.ausgabe_tokens / 1e6 * PREIS_AUSGABE_USD_PRO_MIO;
+                gemessenAnzahl++;
+            });
+            const ohneMessung = data.length - gemessenAnzahl;
+            const durchschnittUsd = gemessenAnzahl ? gemessenUsd / gemessenAnzahl : KOSTEN_JE_SCAN_USD_SCHAETZUNG;
+            const gesamtUsd = gemessenUsd + ohneMessung * durchschnittUsd;
+            const usdText = (b, stellen) => b.toFixed(stellen).replace('.', ',') + ' $';
+            const kostenHinweis = gemessenAnzahl
+                ? `Gemessen an ${gemessenAnzahl} Scans: Ø ${usdText(durchschnittUsd, 3)} je Scan` +
+                  (ohneMessung ? `. ${ohneMessung} ohne Messung (geschätzt mit dem Durchschnitt).` : '.')
+                : `Noch keine gemessenen Scans – alle Kosten geschätzt mit ${usdText(durchschnittUsd, 3)} je Scan.`;
+
             el.innerHTML = zeilen + `
                 <div class="total-box">
                     <span>${data.length} Scans gesamt</span>
-                    <span>ca. ${euroText(data.length * KOSTEN_JE_SCAN)}</span>
-                </div>`;
+                    <span>ca. ${usdText(gesamtUsd, 2)}</span>
+                </div>
+                <p class="auth-hinweis" style="margin-top:8px;">${kostenHinweis}</p>`;
         } catch (e) {
             el.innerHTML = '<p class="auth-hinweis">Nutzungsdaten konnten nicht geladen werden.</p>';
             console.error(e);
@@ -4280,6 +4303,10 @@
     // ============================================================
     let stapel = [];   // {datei, name, status, ergebnis, fehler}
 
+    function istPdfDatei(datei) {
+        return !!datei && (datei.type === 'application/pdf' || /\.pdf$/i.test(datei.name || ''));
+    }
+
     async function dateienVerarbeiten(input) {
         if (!input.files || !input.files.length) return;
         const dateien = Array.from(input.files);
@@ -4287,7 +4314,9 @@
         // Einzelne Datei: bisheriger Ablauf mit Formular-Befuellung
         if (dateien.length === 1) {
             document.getElementById('stapelBox').style.display = 'none';
-            return starteAutomatischeAnalyse(dateien[0]);
+            const einzeln = dateien[0];
+            input.value = '';   // damit dieselbe Datei erneut gewaehlt werden kann
+            return starteAutomatischeAnalyse(einzeln);
         }
 
         stapel = dateien.map(d => ({ datei: d, name: d.name, status: 'wartet', ergebnis: null, fehler: null }));
@@ -4299,8 +4328,10 @@
             stapel[i].status = 'liest';
             stapelRendern();
             try {
-                const dataUrl = await dateiAlsDataUrl(stapel[i].datei);
-                const ergebnis = await kiErkennung(dataUrl);
+                // PDFs werden direkt aus dem Text gelesen (ohne KI, ohne Kontingent), Fotos gehen an die KI
+                const ergebnis = istPdfDatei(stapel[i].datei)
+                    ? await DienstzettelPdf.pdfDateiZuErgebnis(stapel[i].datei)
+                    : await kiErkennung(await dateiAlsDataUrl(stapel[i].datei));
                 if (!ergebnis.datum || !ergebnis.beginn || !ergebnis.ende) {
                     throw new Error('Datum oder Zeiten nicht erkannt');
                 }
@@ -4774,8 +4805,35 @@
         return gefunden;
     }
 
+    // PDF-Dienstzettel: Text direkt aus der Datei lesen - keine KI, keine Kosten, kein Scan-Kontingent.
+    async function starteAnalysePdf(file) {
+        const statusEl = document.getElementById('statusText');
+        const btnKorrigieren = document.getElementById('btnManuellKorrigieren');
+        letztesHochgeladenesBild = null;
+        btnKorrigieren.style.display = 'none';
+        statusEl.style.color = "#2563eb";
+        statusEl.innerText = "📄 PDF wird gelesen...";
+        try {
+            const ergebnis = await DienstzettelPdf.pdfDateiZuErgebnis(file);
+            const gefunden = felderSetzen(ergebnis);
+            const dienst = ergebnis.dienstnummer ? ` (Dienst ${ergebnis.dienstnummer})` : '';
+            if (ergebnis.sicher === false) {
+                statusEl.style.color = "#d97706";
+                statusEl.innerText = `⚠️ PDF gelesen${dienst}, aber nicht alles passt zusammen: ${ergebnis.pruefhinweise.join(' ')} Bitte die Werte genau prüfen.`;
+            } else {
+                statusEl.style.color = "#047857";
+                statusEl.innerText = `✅ Aus dem PDF gelesen (ohne KI, kostenlos): ${gefunden.join(', ')}${dienst}. Bitte prüfen und auf "Berechnen" tippen.`;
+            }
+        } catch (e) {
+            console.warn('PDF-Import fehlgeschlagen:', e);
+            statusEl.style.color = "#b91c1c";
+            statusEl.innerText = '❌ ' + (e && e.message ? e.message : 'Das PDF konnte nicht gelesen werden.');
+        }
+    }
+
     async function starteAutomatischeAnalyse(file) {
         if (!file) return;
+        if (istPdfDatei(file)) return starteAnalysePdf(file);
         const statusEl = document.getElementById('statusText');
         const btnKorrigieren = document.getElementById('btnManuellKorrigieren');
 

@@ -238,6 +238,8 @@
         <div class="upload-box">
             <label class="upload-label" for="dienstplanBild" onclick="return dienstzettelLabelKlick(event)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M4 8.5a2 2 0 0 1 2-2h1.2l1-1.5h7.6l1 1.5H19a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8.5Z"></path><circle cx="12" cy="13" r="3.1"></circle></svg>Dienstzettel auswählen</label>
             <input type="file" id="dienstplanBild" accept="image/*" multiple onchange="dateienVerarbeiten(this)">
+            <input type="file" id="dienstplanPdf" accept="application/pdf,.pdf" multiple style="display:none;" onchange="dateienVerarbeiten(this)">
+            <button class="btn-secondary" onclick="document.getElementById('dienstplanPdf').click()" title="Liest den Text direkt aus dem PDF - ohne KI, ohne Scan-Kontingent"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M7 3.5h7l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 19V5A1.5 1.5 0 0 1 7 3.5Z"></path><path d="M14 3.5V8h4"></path><path d="M8.5 12.5h7M8.5 15.5h7M8.5 9.5h2"></path></svg>PDF-Dienstzettel importieren</button>
             <div id="statusText"></div>
             <div id="scanKontingent" class="auth-hinweis" style="display:none; text-align:center; margin:6px 0 0 0;"></div>
             <button class="hilfe-knopf" onclick="hilfeOeffnen('upload')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:3px;"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6"></path><path d="M12 7.5h.01"></path></svg>Wie funktioniert das?</button>
@@ -1077,6 +1079,7 @@
 </div>
 
 
+<script src="./pdf-import.js"></script>
 <script src="./app.js"></script>
 
 </body>

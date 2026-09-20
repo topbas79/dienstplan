@@ -1,9 +1,12 @@
-const CACHE_NAME = 'dienstplan-cache-v88';
+const CACHE_NAME = 'dienstplan-cache-v90';
 const URLS_TO_CACHE = [
   './',
   './index.html',
   './styles.css',
   './app.js',
+  './pdf-import.js',
+  './vendor/pdfjs/pdf.min.js',
+  './vendor/pdfjs/pdf.worker.min.js',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
