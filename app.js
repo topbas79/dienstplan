@@ -3830,6 +3830,7 @@
             const { data, error } = await sb.functions.invoke('fehlermeldung-lesen', {
                 body: { bild_base64: base64, medien_typ: medienTyp, busmodell: modellSchluessel }
             });
+            scanKontingentAktualisieren();   // zählt zum selben Kontingent wie der Dienstzettel-Scan
             if (error) throw error;
             if (data && data.fehler) throw new Error(data.fehler);
             status.innerText = '';
