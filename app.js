@@ -4772,6 +4772,9 @@
             else if (regel.includes('sechst')) auswahl.value = 'sechste';
             else if (regel.includes('res')) auswahl.value = 'reserve';
             gefunden.push('Pausenregel');
+        } else if (ergebnis.quelle === 'pdf') {
+            // Nennt das PDF keine Pausenregel, nicht die Auswahl vom vorherigen Dienst mitnehmen (Standard: B30)
+            document.getElementById('pausenregel').value = 'B30';
         }
 
         if (ergebnis.dienstnummer) {

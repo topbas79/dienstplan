@@ -50,12 +50,16 @@
         }
         return null;
     }
+    const KOPF_LABELS = ['Datum', 'Dienstnummer', 'Beginn', 'Ende', 'Dienstdauer', 'Betriebshof', 'Bezahlte Zeit', 'Pausenregel',
+        'Unbezahlte Pausenzeit', 'Pausenzeit', 'Nachtminuten', 'Samstagsminuten', 'Sonntagsminuten', 'Feiertagsminuten', 'Kommentar'];
     function kopfWert(items, label) {
         const l = findeLabel(items, label);
         if (!l) return '';
+        // Der Wert steht direkt unter der Beschriftung. Ist er leer, darf nicht die naechste Beschriftung darunter gelesen werden.
         const darunter = items.filter(i => i.y < l.y - 2 && l.y - i.y <= 30 && Math.abs(i.x - l.x) <= 4)
             .sort((a, b) => b.y - a.y);
-        return darunter.length ? darunter[0].s : '';
+        const wert = darunter[0];
+        return wert && !KOPF_LABELS.includes(wert.s) ? wert.s : '';
     }
 
     // ---------- Tabellenkopf einer Seite -> Spaltenpositionen ----------
@@ -142,7 +146,7 @@
         const art = /nahme/i.test(kopf[1]) ? 'Uebernahme' : 'Uebergabe';
         const zeit = zeitText((/um\s+(\d{1,2}:\d{2})/i.exec(text) || [])[1]);
         const ort = /,\s*an\s+([A-Z0-9]+(?: [A-Z0-9]+)*?)(?=\s*\(|\s*,|\s*$)(?:\s*\(([^)]*)\))?/.exec(text);
-        const dienst = /\bDienst\s+([A-Z]{1,3}\s?\d+)/.exec(text);
+        const dienst = /\bDienst\s+([A-Z]{1,3}\s?\d+(?:\/\d+)?)/.exec(text);
         return {
             art, zeit, ort: ort && ort[2] ? ort[2].trim() : '', ort_kuerzel: ort ? ort[1].trim() : '',
             von_dienst: dienst ? dienst[1] : '', abfahrt: '', linie: '', umlauf: '', nach: '', nach_kuerzel: ''
