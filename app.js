@@ -592,7 +592,7 @@
 
         // Nutzerliste
         try {
-            const { data: nutzer } = await sb.from('profile').select('*').order('erstellt_am', { ascending: true });
+            const { data: nutzer } = await sb.from('profile').select('id, email, anzeigename, rolle, aktiv, erstellt_am, betriebshof, loeschen_am, hilfe_bis').order('erstellt_am', { ascending: true });
             const el = document.getElementById('nutzerListe');
             if (!nutzer || !nutzer.length) { el.innerHTML = '<p class="auth-hinweis">Keine Nutzer.</p>'; return; }
 
