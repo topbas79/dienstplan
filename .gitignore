@@ -9,3 +9,8 @@ android/captures/
 android/*.iml
 android/app/*.iml
 android/.idea/
+
+# Signierschluessel und Zugangsdaten fuer Release-Builds (niemals einchecken)
+android/keystore.properties
+*.jks
+*.keystore

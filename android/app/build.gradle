@@ -1,14 +1,31 @@
 apply plugin: 'com.android.application'
 
+// Signierdaten fuer Release-Builds: liegen in android/keystore.properties (steht in .gitignore, nie einchecken)
+def keystoreProps = new Properties()
+def keystoreDatei = rootProject.file('keystore.properties')
+if (keystoreDatei.exists()) {
+    keystoreDatei.withInputStream { keystoreProps.load(it) }
+}
+
 android {
     namespace = "de.topbas.dienstplan"
     compileSdk = rootProject.ext.compileSdkVersion
+    signingConfigs {
+        release {
+            if (keystoreDatei.exists()) {
+                storeFile file(keystoreProps['storeFile'])
+                storePassword keystoreProps['storePassword']
+                keyAlias keystoreProps['keyAlias']
+                keyPassword keystoreProps['keyPassword']
+            }
+        }
+    }
     defaultConfig {
         applicationId "de.topbas.dienstplan"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "1.1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -18,6 +35,9 @@ android {
     }
     buildTypes {
         release {
+            if (keystoreDatei.exists()) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
