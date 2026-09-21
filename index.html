@@ -14,19 +14,18 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Dienstplan">
 
-    <!-- jsPDF für den PDF-Export der Dienstliste -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <!-- Sicherheitsregel des Browsers: eigene Dateien + die Datenbank (Supabase); Daten dürfen nur dorthin gesendet werden.
+         cdn.jsdelivr.net und tessdata.projectnaptha.com nur für die Texterkennung des Admins (Notfall-Fallback). -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://cdn.jsdelivr.net https://tessdata.projectnaptha.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 
-    <!-- Supabase (Login, Nutzerverwaltung, Datenbank) -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-    <!-- Tesseract.js für OCR -->
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-
-    <!-- Cropper.js für den Bildzuschnitt -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css"/>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    <!-- Bibliotheken liegen lokal in vendor/libs (feste Versionen, laufen auch ohne Netz):
+         jsPDF 2.5.1 + AutoTable 3.8.2 (PDF-Export), supabase-js 2.116.0 (Login/Datenbank), Cropper.js 1.5.13 (Bildzuschnitt).
+         Tesseract.js 5.1.1 (Texterkennung) wird erst bei Bedarf geladen. -->
+    <script src="./vendor/libs/jspdf.umd.min.js"></script>
+    <script src="./vendor/libs/jspdf.plugin.autotable.min.js"></script>
+    <script src="./vendor/libs/supabase.min.js"></script>
+    <link rel="stylesheet" href="./vendor/libs/cropper.min.css"/>
+    <script src="./vendor/libs/cropper.min.js"></script>
 
     <link rel="stylesheet" href="./styles.css">
 </head>
@@ -43,18 +42,20 @@
         </div>
     </div>
     <div style="display:flex; gap:6px;">
-        <button class="icon-btn" onclick="toggleDarkMode()" id="darkModeBtn">
+        <button class="icon-btn" onclick="toggleDarkMode()" id="darkModeBtn" aria-label="Dunkelmodus umschalten">
             <svg class="icon-mond" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.2A8.5 8.5 0 1 1 9.8 4a7 7 0 0 0 10.2 10.2Z"></path></svg>
             <svg class="icon-sonne" style="display:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"></circle><path d="M12 3.5v2M12 18.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M3.5 12h2M18.5 12h2M4.6 19.4l1.4-1.4M18 6l1.4-1.4"></path></svg>
         </button>
-        <button class="icon-btn" onclick="abmelden()" id="logoutBtn" style="display:none;">
+        <button class="icon-btn" onclick="abmelden()" id="logoutBtn" style="display:none;" aria-label="Abmelden">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20.5H6a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2h3"></path><path d="M15.5 16.5 20.5 12l-5-4.5"></path><path d="M20 12H9.5"></path></svg>
         </button>
-        <button class="icon-btn" onclick="oeffneMehrPanel()" id="mehrBtn" style="display:none;">
+        <button class="icon-btn" onclick="oeffneMehrPanel()" id="mehrBtn" style="display:none;" aria-label="Mehr">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="1.5"></circle><circle cx="12" cy="12" r="1.5"></circle><circle cx="18" cy="12" r="1.5"></circle></svg>
         </button>
     </div>
 </div>
+
+<div id="offlineHinweis" class="offline-hinweis" role="status" style="display:none;"></div>
 
 <!-- SETUP: Supabase-Zugangsdaten (nur beim allerersten Start) -->
 <div id="setupScreen">
@@ -80,12 +81,12 @@
         <h2 id="authTitel">Anmelden</h2>
         <p class="auth-hinweis" id="authHinweis">Melde dich mit deiner E-Mail-Adresse an.</p>
 
-        <div class="form-group">
+        <div class="form-group" id="authEmailGruppe">
             <label for="authEmail">E-Mail</label>
             <input type="email" id="authEmail" autocomplete="email">
         </div>
         <div class="form-group">
-            <label for="authPasswort">Passwort</label>
+            <label for="authPasswort" id="authPasswortLabel">Passwort</label>
             <input type="password" id="authPasswort" autocomplete="current-password">
         </div>
         <div class="form-group" id="codeFeldGruppe" style="display:none;">
@@ -94,6 +95,7 @@
         </div>
 
         <button onclick="authAbsenden()" id="authButton">Anmelden</button>
+        <div class="auth-umschalter" onclick="passwortVergessen()" id="authVergessen">Passwort vergessen?</div>
         <div class="auth-umschalter" onclick="authModusWechseln()" id="authWechsel">Noch kein Konto? Mit Einladungscode registrieren</div>
         <div class="meldung" id="authMeldung"></div>
     </div>
@@ -215,7 +217,7 @@
     <div class="hilfe-fenster" onclick="event.stopPropagation()" style="max-width:320px;">
         <div class="hilfe-kopf">
             <span>Piktogramm</span>
-            <button class="icon-btn" onclick="fehlermeldungDetailSchliessen()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12"></path><path d="M18 6 6 18"></path></svg></button>
+            <button class="icon-btn" onclick="fehlermeldungDetailSchliessen()" aria-label="Schließen"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12"></path><path d="M18 6 6 18"></path></svg></button>
         </div>
         <div class="hilfe-inhalt" style="text-align:center;">
             <img id="fmDetailBild" src="" alt="" style="width:160px; border-radius:12px; margin-bottom:16px;">
@@ -230,20 +232,19 @@
         <div class="erfassen-kopf">
             <div class="erfassen-kopf-spacer"></div>
             <h2>Schicht erfassen</h2>
-            <button class="icon-btn" id="erfassenAktionenBtn" style="display:none;" onclick="oeffneErfassenAktionen()" title="Aktionen">
+            <button class="icon-btn" id="erfassenAktionenBtn" style="display:none;" onclick="oeffneErfassenAktionen()" title="Aktionen" aria-label="Aktionen">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12 20 4l-6 16-3-7-7-3Z"></path></svg>
             </button>
         </div>
 
         <div class="upload-box">
-            <label class="upload-label" for="dienstplanBild" onclick="return dienstzettelLabelKlick(event)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M4 8.5a2 2 0 0 1 2-2h1.2l1-1.5h7.6l1 1.5H19a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8.5Z"></path><circle cx="12" cy="13" r="3.1"></circle></svg>Dienstzettel auswählen</label>
+            <label class="upload-label nur-admin" for="dienstplanBild" onclick="return dienstzettelLabelKlick(event)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M4 8.5a2 2 0 0 1 2-2h1.2l1-1.5h7.6l1 1.5H19a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8.5Z"></path><circle cx="12" cy="13" r="3.1"></circle></svg>Dienstzettel auswählen</label>
             <input type="file" id="dienstplanBild" accept="image/*" multiple onchange="dateienVerarbeiten(this)">
             <input type="file" id="dienstplanPdf" accept="application/pdf,.pdf" multiple style="display:none;" onchange="dateienVerarbeiten(this)">
-            <button class="btn-secondary" onclick="document.getElementById('dienstplanPdf').click()" title="Liest den Text direkt aus dem PDF - ohne KI, ohne Scan-Kontingent"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M7 3.5h7l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 19V5A1.5 1.5 0 0 1 7 3.5Z"></path><path d="M14 3.5V8h4"></path><path d="M8.5 12.5h7M8.5 15.5h7M8.5 9.5h2"></path></svg>PDF-Dienstzettel importieren</button>
+            <button class="btn-secondary" id="btnPdfImport" onclick="document.getElementById('dienstplanPdf').click()" title="Liest den Text direkt aus dem PDF - ohne KI, ohne Kosten"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M7 3.5h7l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 19V5A1.5 1.5 0 0 1 7 3.5Z"></path><path d="M14 3.5V8h4"></path><path d="M8.5 12.5h7M8.5 15.5h7M8.5 9.5h2"></path></svg>PDF-Dienstzettel importieren</button>
             <div id="statusText"></div>
-            <div id="scanKontingent" class="auth-hinweis" style="display:none; text-align:center; margin:6px 0 0 0;"></div>
-            <button class="hilfe-knopf" onclick="hilfeOeffnen('upload')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:3px;"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6"></path><path d="M12 7.5h.01"></path></svg>Wie funktioniert das?</button>
-            <button class="btn-secondary" id="btnManuellKorrigieren" style="display:none;" onclick="oeffneCropperManuell()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M6 2v14a2 2 0 0 0 2 2h14"></path><path d="M18 22V8a2 2 0 0 0-2-2H2"></path></svg>Erkennung manuell korrigieren</button>
+                        <button class="hilfe-knopf" onclick="hilfeOeffnen('upload')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:3px;"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6"></path><path d="M12 7.5h.01"></path></svg>Wie funktioniert das?</button>
+            <button class="btn-secondary nur-admin" id="btnManuellKorrigieren" style="display:none;" onclick="oeffneCropperManuell()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M6 2v14a2 2 0 0 0 2 2h14"></path><path d="M18 22V8a2 2 0 0 0-2-2H2"></path></svg>Erkennung manuell korrigieren</button>
         </div>
 
         <div id="stapelBox" class="stat-card" style="display:none; margin-bottom:16px;">
@@ -252,7 +253,7 @@
             <button class="btn-save" id="stapelSpeichern" onclick="stapelAlleSpeichern()" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M12 3.5v11.5M8 11l4 4 4-4"></path><path d="M4.5 17.5v2A1.5 1.5 0 0 0 6 21h12a1.5 1.5 0 0 0 1.5-1.5v-2"></path></svg>Alle speichern</button>
         </div>
 
-        <div id="cropModal">
+        <div id="cropModal" class="nur-admin">
             <p style="margin-top:0; font-size:0.85rem; font-weight:bold; display:flex; align-items:center; gap:6px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2v14a2 2 0 0 0 2 2h14"></path><path d="M18 22V8a2 2 0 0 0-2-2H2"></path></svg>Markiere den Bereich mit Datum, Beginn und Ende:</p>
             <div class="img-container">
                 <img id="imageToCrop" src="" alt="Vorschau">
@@ -354,7 +355,7 @@
     <div class="hilfe-fenster" style="max-width:360px;">
         <div class="hilfe-kopf">
             <span>Aktionen</span>
-            <button class="icon-btn" onclick="schliesseErfassenAktionen()">
+            <button class="icon-btn" onclick="schliesseErfassenAktionen()" aria-label="Schließen">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"></path></svg>
             </button>
         </div>
@@ -395,7 +396,7 @@
     <div class="hilfe-fenster" style="max-width:340px;">
         <div class="hilfe-kopf">
             <span id="kalenderWahlDatum">Datum</span>
-            <button class="icon-btn" onclick="kalenderWahlSchliessen()">
+            <button class="icon-btn" onclick="kalenderWahlSchliessen()" aria-label="Schließen">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"></path></svg>
             </button>
         </div>
@@ -412,7 +413,7 @@
     <div class="hilfe-fenster" style="max-width:400px;">
         <div class="hilfe-kopf">
             <span id="krankTitel">Krank melden</span>
-            <button class="icon-btn" onclick="krankFormularSchliessen()">
+            <button class="icon-btn" onclick="krankFormularSchliessen()" aria-label="Schließen">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"></path></svg>
             </button>
         </div>
@@ -510,17 +511,17 @@
         <div class="row">
             <div class="form-group">
                 <label for="profVorname">Vorname</label>
-                <input type="text" id="profVorname" autocomplete="given-name">
+                <input type="text" id="profVorname" autocomplete="given-name" maxlength="40">
             </div>
             <div class="form-group">
                 <label for="profNachname">Nachname</label>
-                <input type="text" id="profNachname" autocomplete="family-name">
+                <input type="text" id="profNachname" autocomplete="family-name" maxlength="40">
             </div>
         </div>
 
         <div class="form-group">
             <label for="profBetriebshof">Betriebshof</label>
-            <input type="text" id="profBetriebshof" list="betriebshoefe" placeholder="z. B. Britz">
+            <input type="text" id="profBetriebshof" list="betriebshoefe" placeholder="z. B. Britz" maxlength="60">
             <datalist id="betriebshoefe">
                 <option value="Britz"></option>
                 <option value="Cicerostraße"></option>
@@ -730,7 +731,7 @@
         <div class="erfassen-kopf">
             <div class="erfassen-kopf-spacer"></div>
             <h2 style="font-size:1.15rem;">Dienstliste</h2>
-            <button class="icon-btn" onclick="oeffneListeAktionen()" title="Exportieren">
+            <button class="icon-btn" onclick="oeffneListeAktionen()" title="Exportieren" aria-label="Exportieren">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12 20 4l-6 16-3-7-7-3Z"></path></svg>
             </button>
         </div>
@@ -749,7 +750,7 @@
     <div class="hilfe-fenster" style="max-width:360px;">
         <div class="hilfe-kopf">
             <span>Exportieren</span>
-            <button class="icon-btn" onclick="schliesseListeAktionen()">
+            <button class="icon-btn" onclick="schliesseListeAktionen()" aria-label="Schließen">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"></path></svg>
             </button>
         </div>
@@ -793,7 +794,7 @@
     <div class="container">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
             <h2 style="margin:0;">Nachrichten</h2>
-            <button class="icon-btn" onclick="wechselSeite('kontakte')" title="Neues Gespräch"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20.5 4.6 17.2 15.8 6l3 3L7.6 20.2 4 20.5Z"></path><path d="M13.8 7.2l3 3"></path></svg></button>
+            <button class="icon-btn" onclick="wechselSeite('kontakte')" title="Neues Gespräch" aria-label="Neues Gespräch"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20.5 4.6 17.2 15.8 6l3 3L7.6 20.2 4 20.5Z"></path><path d="M13.8 7.2l3 3"></path></svg></button>
         </div>
         <div id="chatListe">Lade...</div>
         <button class="btn-secondary" id="btnGruppeNeu" style="display:none; margin-top:14px;"
@@ -817,7 +818,7 @@
         <h2>Neue Gruppe</h2>
         <div class="form-group">
             <label for="gruppeName">Name der Gruppe</label>
-            <input type="text" id="gruppeName" placeholder="z. B. Britz Frühschicht">
+            <input type="text" id="gruppeName" placeholder="z. B. Britz Frühschicht" maxlength="60">
         </div>
         <label>Mitglieder auswählen</label>
         <div id="gruppeMitglieder" style="margin-top:8px;">Lade...</div>
@@ -831,7 +832,7 @@
 <div class="page" id="page-chatraum">
     <div class="container chat-container">
         <div class="chat-kopf">
-            <button class="icon-btn" onclick="wechselSeite('chat')">‹</button>
+            <button class="icon-btn" onclick="wechselSeite('chat')" aria-label="Zurück zu den Gesprächen">‹</button>
             <div>
                 <div id="chatTitel" style="font-weight:600;">–</div>
                 <div id="chatUnter" class="auth-hinweis" style="margin:0;"></div>
@@ -839,7 +840,7 @@
         </div>
         <div id="chatVerlauf" class="chat-verlauf"></div>
         <div class="chat-eingabe">
-            <textarea id="chatText" rows="1" placeholder="Nachricht..." oninput="chatFeldAnpassen(this)"></textarea>
+            <textarea id="chatText" rows="1" maxlength="2000" placeholder="Nachricht..." oninput="chatFeldAnpassen(this)"></textarea>
             <button class="chat-senden" onclick="nachrichtSenden()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg></button>
         </div>
     </div>
@@ -851,14 +852,14 @@
     <div class="mehr-panel-kopf">
         <h2 style="margin:0;">Mehr</h2>
         <div style="display:flex; gap:6px;">
-            <button class="icon-btn" onclick="toggleDarkMode()" title="Dunkelmodus">
+            <button class="icon-btn" onclick="toggleDarkMode()" title="Dunkelmodus" aria-label="Dunkelmodus umschalten">
                 <svg class="icon-mond" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.2A8.5 8.5 0 1 1 9.8 4a7 7 0 0 0 10.2 10.2Z"></path></svg>
                 <svg class="icon-sonne" style="display:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"></circle><path d="M12 3.5v2M12 18.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M3.5 12h2M18.5 12h2M4.6 19.4l1.4-1.4M18 6l1.4-1.4"></path></svg>
             </button>
-            <button class="icon-btn" onclick="schliesseMehrPanel(); abmelden();" title="Abmelden">
+            <button class="icon-btn" onclick="schliesseMehrPanel(); abmelden();" title="Abmelden" aria-label="Abmelden">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20.5H6a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2h3"></path><path d="M15.5 16.5 20.5 12l-5-4.5"></path><path d="M20 12H9.5"></path></svg>
             </button>
-            <button class="icon-btn" onclick="schliesseMehrPanel()" title="Schließen">
+            <button class="icon-btn" onclick="schliesseMehrPanel()" title="Schließen" aria-label="Schließen">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"></path></svg>
             </button>
         </div>
@@ -961,11 +962,11 @@
         <div class="row">
             <div class="form-group">
                 <label for="hsKuerzel">Kürzel</label>
-                <input type="text" id="hsKuerzel" placeholder="z. B. UJTC03">
+                <input type="text" id="hsKuerzel" placeholder="z. B. UJTC03" maxlength="20">
             </div>
             <div class="form-group">
                 <label for="hsName">Voller Name</label>
-                <input type="text" id="hsName" placeholder="U Johannisthaler Chaussee">
+                <input type="text" id="hsName" placeholder="U Johannisthaler Chaussee" maxlength="100">
             </div>
         </div>
         <button onclick="haltestelleSpeichern()">Speichern</button>
@@ -1001,7 +1002,7 @@
     <div class="hilfe-fenster" onclick="event.stopPropagation()">
         <div class="hilfe-kopf">
             <span id="hilfeTitel">Hilfe</span>
-            <button class="icon-btn" onclick="hilfeSchliessen()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12"></path><path d="M18 6 6 18"></path></svg></button>
+            <button class="icon-btn" onclick="hilfeSchliessen()" aria-label="Schließen"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12"></path><path d="M18 6 6 18"></path></svg></button>
         </div>
         <div class="hilfe-inhalt" id="hilfeInhalt"></div>
         <div class="hilfe-fuss">
@@ -1017,7 +1018,7 @@
     <div class="hilfe-fenster" onclick="event.stopPropagation()" style="max-width:320px;">
         <div class="hilfe-kopf">
             <span id="dzWahlTitel">Dienstzettel hinzufügen</span>
-            <button class="icon-btn" onclick="dienstzettelWahl('abbrechen')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12"></path><path d="M18 6 6 18"></path></svg></button>
+            <button class="icon-btn" onclick="dienstzettelWahl('abbrechen')" aria-label="Schließen"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12"></path><path d="M18 6 6 18"></path></svg></button>
         </div>
         <div class="hilfe-inhalt" style="display:flex; flex-direction:column; gap:10px;">
             <button class="btn-secondary" style="width:100%;" onclick="dienstzettelWahl('kamera')">Kamera</button>
@@ -1034,13 +1035,13 @@
     <div class="hilfe-fenster" onclick="event.stopPropagation()" style="max-width:320px;">
         <div class="hilfe-kopf">
             <span>Ereignis speichern</span>
-            <button class="icon-btn" onclick="ereignisTitelAbbrechen()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12"></path><path d="M18 6 6 18"></path></svg></button>
+            <button class="icon-btn" onclick="ereignisTitelAbbrechen()" aria-label="Schließen"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12"></path><path d="M18 6 6 18"></path></svg></button>
         </div>
         <div class="hilfe-inhalt">
             <img id="ereignisTitelBild" src="" alt="" style="width:100%; border-radius:12px; margin-bottom:14px;">
             <div class="form-group">
                 <label for="ereignisTitelEingabe">Titel (optional)</label>
-                <input type="text" id="ereignisTitelEingabe" placeholder="z. B. Meldeformular, Mängelzettel">
+                <input type="text" id="ereignisTitelEingabe" placeholder="z. B. Meldeformular, Mängelzettel" maxlength="100">
             </div>
         </div>
         <div class="hilfe-fuss" style="justify-content:center; gap:10px;">
@@ -1055,7 +1056,7 @@
     <div class="hilfe-fenster" onclick="event.stopPropagation()" style="max-width:340px;">
         <div class="hilfe-kopf">
             <span id="ereignisDetailTitel">Ereignis</span>
-            <button class="icon-btn" onclick="ereignisDetailSchliessen()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12"></path><path d="M18 6 6 18"></path></svg></button>
+            <button class="icon-btn" onclick="ereignisDetailSchliessen()" aria-label="Schließen"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12"></path><path d="M18 6 6 18"></path></svg></button>
         </div>
         <div class="hilfe-inhalt" style="text-align:center;">
             <img id="ereignisDetailBild" src="" alt="" style="width:100%; border-radius:12px;">

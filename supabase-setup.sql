@@ -1,4 +1,13 @@
 -- ============================================================
+--  ACHTUNG - VERALTET (Stand August 2026)
+--  Dieses Skript bildet NICHT mehr die laufende Datenbank ab. Danach kamen u. a. hinzu:
+--  Chat, Hilfe-Freigabe, Haltestellen, Scans/Token-Messung, Ereignis-Fotos, Einstellungen im Profil,
+--  spaltenweise Rechte auf "profile", Laengengrenzen, Fehlversuch-Sperre beim Einladungscode.
+--  NICHT auf der bestehenden Datenbank ausfuehren (es wuerde Schutzregeln zuruecksetzen).
+--  Massgeblich ist der Stand in Supabase (Menue "Database > Migrations").
+-- ============================================================
+
+-- ============================================================
 --  DIENSTPLAN-APP – SUPABASE SETUP
 --  Einmalig im Supabase SQL-Editor ausführen (Kompletter Inhalt).
 -- ============================================================

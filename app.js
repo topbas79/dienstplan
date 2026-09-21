@@ -124,16 +124,82 @@
     // ---------- Anmelden / Registrieren ----------
     function authModusWechseln() {
         authModus = (authModus === 'login') ? 'registrieren' : 'login';
+        authOberflaecheAnpassen();
+        versteckeMeldung('authMeldung');
+    }
+
+    // Beschriftungen und Felder je nach Modus: 'login', 'registrieren' oder 'neuesPasswort' (nach dem Link aus der Reset-Mail)
+    function authOberflaecheAnpassen() {
         const istReg = authModus === 'registrieren';
-        document.getElementById('authTitel').innerText = istReg ? 'Registrieren' : 'Anmelden';
-        document.getElementById('authHinweis').innerText = istReg
-            ? 'Erstelle ein Konto. Du brauchst dafür einen Einladungscode vom Admin.'
-            : 'Melde dich mit deiner E-Mail-Adresse an.';
-        document.getElementById('authButton').innerText = istReg ? 'Konto erstellen' : 'Anmelden';
+        const istNeu = authModus === 'neuesPasswort';
+        document.getElementById('authTitel').innerText = istNeu ? 'Neues Passwort' : (istReg ? 'Registrieren' : 'Anmelden');
+        document.getElementById('authHinweis').innerText = istNeu
+            ? 'Vergib jetzt ein neues Passwort (mindestens 8 Zeichen).'
+            : (istReg
+                ? 'Erstelle ein Konto. Du brauchst dafür einen Einladungscode vom Admin. Das Passwort braucht mindestens 8 Zeichen.'
+                : 'Melde dich mit deiner E-Mail-Adresse an.');
+        document.getElementById('authButton').innerText = istNeu ? 'Passwort speichern' : (istReg ? 'Konto erstellen' : 'Anmelden');
         document.getElementById('authWechsel').innerText = istReg
             ? 'Ich habe schon ein Konto – anmelden'
             : 'Noch kein Konto? Mit Einladungscode registrieren';
+        document.getElementById('authWechsel').style.display = istNeu ? 'none' : '';
+        document.getElementById('authVergessen').style.display = (authModus === 'login') ? '' : 'none';
         document.getElementById('codeFeldGruppe').style.display = istReg ? 'block' : 'none';
+        document.getElementById('authEmailGruppe').style.display = istNeu ? 'none' : '';
+        document.getElementById('authPasswortLabel').innerText = istNeu ? 'Neues Passwort' : 'Passwort';
+        document.getElementById('authPasswort').setAttribute('autocomplete', (istReg || istNeu) ? 'new-password' : 'current-password');
+    }
+
+    // Verständliche deutsche Kurzfassung eines Fehlers (Details stehen in der Konsole, nicht auf dem Bildschirm)
+    function fehlerText(e) {
+        console.warn('Fehler:', e);
+        const t = String((e && (e.message || e.details)) || e || '');
+        if (istNetzwerkFehler(e)) return 'Keine Internetverbindung.';
+        if (/row-level security|permission denied|not allowed|forbidden/i.test(t)) return 'Dafür fehlt dir die Berechtigung.';
+        if (/violates check constraint|value too long|too large/i.test(t)) return 'Die Eingabe ist zu lang oder ungültig.';
+        if (/jwt|not authenticated|token/i.test(t)) return 'Bitte melde dich neu an.';
+        if (/duplicate key|already exists/i.test(t)) return 'Diesen Eintrag gibt es schon.';
+        return 'Das hat leider nicht geklappt. Bitte versuche es erneut.';
+    }
+
+    // Verständliche deutsche Meldungen statt der englischen Texte des Servers
+    function authFehlerText(e) {
+        const t = String((e && e.message) || e || '');
+        if (istNetzwerkFehler(e)) return 'Keine Internetverbindung. Bitte später erneut versuchen.';
+        if (/invalid login credentials/i.test(t)) return 'E-Mail oder Passwort ist falsch.';
+        if (/email not confirmed/i.test(t)) return 'Bitte bestätige zuerst deine E-Mail-Adresse (Link in der E-Mail).';
+        if (/already registered|already been registered/i.test(t)) return 'Für diese E-Mail gibt es schon ein Konto. Bitte melde dich an.';
+        if (/at least|too short|weak|pwned|compromised|easy to guess/i.test(t)) return 'Das Passwort ist zu schwach oder zu kurz (mindestens 8 Zeichen, nicht zu einfach).';
+        if (/rate limit|too many|security purposes/i.test(t)) return 'Zu viele Versuche. Bitte warte kurz und versuche es dann erneut.';
+        if (/invalid.*email|valid email/i.test(t)) return 'Bitte eine gültige E-Mail-Adresse eingeben.';
+        if (/same password|different from the old/i.test(t)) return 'Das neue Passwort muss sich vom alten unterscheiden.';
+        return 'Das hat leider nicht geklappt. Bitte versuche es erneut.';
+    }
+
+    // "Passwort vergessen": schickt einen Link per E-Mail (Supabase), der zur App zurückführt
+    async function passwortVergessen() {
+        const email = document.getElementById('authEmail').value.trim();
+        if (!email) {
+            zeigeMeldung('authMeldung', 'Bitte oben deine E-Mail-Adresse eingeben und dann erneut auf „Passwort vergessen?" tippen.', 'fehler');
+            return;
+        }
+        try {
+            const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: APP_ADRESSE + '/' });
+            if (error) throw error;
+            // Bewusst dieselbe Antwort, egal ob es das Konto gibt (verrät nichts über vorhandene Konten)
+            zeigeMeldung('authMeldung', 'Wenn es zu dieser E-Mail ein Konto gibt, wurde ein Link zum Zurücksetzen geschickt. Öffne ihn auf diesem Gerät.', 'ok');
+        } catch (e) {
+            zeigeMeldung('authMeldung', authFehlerText(e), 'fehler');
+        }
+    }
+
+    let passwortWiederherstellung = false;   // true, solange man über den Reset-Link in der App ist
+
+    function neuesPasswortZeigen() {
+        passwortWiederherstellung = true;
+        authModus = 'neuesPasswort';
+        setzeAppSichtbarkeit('login');
+        authOberflaecheAnpassen();
         versteckeMeldung('authMeldung');
     }
 
@@ -142,8 +208,36 @@
         const passwort = document.getElementById('authPasswort').value;
         const btn = document.getElementById('authButton');
 
+        if (authModus === 'neuesPasswort') {
+            if (passwort.length < 8) {
+                zeigeMeldung('authMeldung', 'Das Passwort braucht mindestens 8 Zeichen.', 'fehler');
+                return;
+            }
+            btn.disabled = true;
+            try {
+                const { error } = await sb.auth.updateUser({ password: passwort });
+                if (error) throw error;
+                document.getElementById('authPasswort').value = '';
+                passwortWiederherstellung = false;
+                authModus = 'login';
+                authOberflaecheAnpassen();
+                history.replaceState(null, '', location.pathname);
+                await nutzerLaden();
+            } catch (e) {
+                zeigeMeldung('authMeldung', authFehlerText(e), 'fehler');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = authModus === 'neuesPasswort' ? 'Passwort speichern' : 'Anmelden';
+            }
+            return;
+        }
+
         if (!email || !passwort) {
             zeigeMeldung('authMeldung', 'Bitte E-Mail und Passwort eingeben.', 'fehler');
+            return;
+        }
+        if (authModus === 'registrieren' && passwort.length < 8) {
+            zeigeMeldung('authMeldung', 'Das Passwort braucht mindestens 8 Zeichen.', 'fehler');
             return;
         }
 
@@ -161,8 +255,10 @@
                 if (error) throw error;
 
                 if (!data.session) {
+                    // Code merken: nach der E-Mail-Bestätigung wird er beim ersten Anmelden automatisch eingelöst
+                    try { localStorage.setItem('dienstplan_offener_code', code); } catch (_e) { /* ohne Speicher: Code später von Hand eingeben */ }
                     zeigeMeldung('authMeldung',
-                        'Konto erstellt. Bitte bestätige zuerst die E-Mail, die dir Supabase geschickt hat, und melde dich dann an.', 'ok');
+                        'Konto erstellt. Bitte bestätige jetzt die E-Mail, die dir geschickt wurde, und melde dich danach an. Dein Einladungscode wird dann automatisch eingelöst.', 'ok');
                     return;
                 }
                 // direkt eingeloggt -> Code sofort einlösen
@@ -178,7 +274,7 @@
                 await nutzerLaden();
             }
         } catch (e) {
-            zeigeMeldung('authMeldung', 'Fehler: ' + (e.message || e), 'fehler');
+            zeigeMeldung('authMeldung', authFehlerText(e), 'fehler');
         } finally {
             btn.disabled = false;
             btn.innerText = authModus === 'registrieren' ? 'Konto erstellen' : 'Anmelden';
@@ -188,6 +284,8 @@
     async function abmelden() {
         if (!confirm('Wirklich abmelden?')) return;
         await sb.auth.signOut();
+        await kvLeeren();
+        document.body.classList.remove('ist-admin');
         aktuellerNutzer = null;
         aktuellesProfil = null;
         gespeicherteSchichten = {};
@@ -205,14 +303,83 @@
             const { data, error } = await sb.rpc('einladung_einloesen', { code_eingabe: code });
             if (error) throw error;
             if (data === 'OK') {
+                try { localStorage.removeItem('dienstplan_offener_code'); } catch (_e) { /* egal */ }
                 zeigeMeldung('freischaltMeldung', 'Freigeschaltet! Einen Moment...', 'ok');
                 setTimeout(nutzerLaden, 800);
             } else {
                 zeigeMeldung('freischaltMeldung', data, 'fehler');
             }
         } catch (e) {
-            zeigeMeldung('freischaltMeldung', 'Fehler: ' + (e.message || e), 'fehler');
+            zeigeMeldung('freischaltMeldung', 'Fehler: ' + fehlerText(e), 'fehler');
         }
+    }
+
+    // ---------- Kleiner lokaler Zwischenspeicher (IndexedDB) für den Betrieb ohne Netz ----------
+    // Enthält nur die eigenen Daten dieses Geräts; wird beim Abmelden geleert.
+    const PROFIL_SPALTEN = 'id, email, anzeigename, rolle, aktiv, erstellt_am, vorname, nachname, betriebshof, profil_fertig, entfernt_am, loeschen_am, hilfe_bis';
+
+    function kvOeffnen() {
+        return new Promise((ok, fehler) => {
+            try {
+                const anfrage = indexedDB.open('dienstplan-cache', 1);
+                anfrage.onupgradeneeded = () => anfrage.result.createObjectStore('kv');
+                anfrage.onsuccess = () => ok(anfrage.result);
+                anfrage.onerror = () => fehler(anfrage.error);
+            } catch (e) { fehler(e); }
+        });
+    }
+    async function kvSpeichern(schluessel, wert) {
+        try {
+            const db = await kvOeffnen();
+            await new Promise((ok, fehler) => {
+                const t = db.transaction('kv', 'readwrite');
+                t.objectStore('kv').put({ wert, zeit: Date.now() }, schluessel);
+                t.oncomplete = ok; t.onerror = () => fehler(t.error);
+            });
+            db.close();
+        } catch (e) { console.warn('Zwischenspeicher nicht verfügbar:', e); }
+    }
+    async function kvLesenMitZeit(schluessel) {
+        try {
+            const db = await kvOeffnen();
+            const eintrag = await new Promise((ok, fehler) => {
+                const a = db.transaction('kv', 'readonly').objectStore('kv').get(schluessel);
+                a.onsuccess = () => ok(a.result); a.onerror = () => fehler(a.error);
+            });
+            db.close();
+            return eintrag || null;
+        } catch (e) { return null; }
+    }
+    async function kvLesen(schluessel) {
+        const e = await kvLesenMitZeit(schluessel);
+        return e ? e.wert : null;
+    }
+    async function kvLeeren() {
+        try {
+            const db = await kvOeffnen();
+            await new Promise((ok) => {
+                const t = db.transaction('kv', 'readwrite');
+                t.objectStore('kv').clear();
+                t.oncomplete = ok; t.onerror = ok;
+            });
+            db.close();
+        } catch (e) { /* nichts zu leeren */ }
+    }
+
+    function istNetzwerkFehler(e) {
+        const text = String((e && (e.message || e.details)) || e || '');
+        return (typeof navigator !== 'undefined' && navigator.onLine === false) ||
+            /failed to fetch|networkerror|network request|load failed|fetch failed|timeout|err_internet/i.test(text);
+    }
+
+    // Kleines Banner unter der Kopfzeile: "Kein Netz - gespeicherter Stand von ..." (null = ausblenden)
+    function offlineHinweisZeigen(zeit) {
+        const el = document.getElementById('offlineHinweis');
+        if (!el) return;
+        if (!zeit) { el.style.display = 'none'; return; }
+        const t = new Date(zeit);
+        el.innerText = `Kein Netz – gespeicherter Stand vom ${t.toLocaleDateString('de-DE')} ${t.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`;
+        el.style.display = 'block';
     }
 
     // ---------- Nutzer + Profil laden, App-Zustand bestimmen ----------
@@ -222,26 +389,55 @@
             setzeAppSichtbarkeit('login');
             return;
         }
+        if (passwortWiederherstellung) { neuesPasswortZeigen(); return; }
         aktuellerNutzer = session.user;
 
-        const { data: profil, error } = await sb
-            .from('profile').select('*').eq('id', aktuellerNutzer.id).single();
-
-        if (error || !profil) {
-            zeigeMeldung('authMeldung', 'Profil konnte nicht geladen werden. Wurde das SQL-Skript in Supabase ausgeführt?', 'fehler');
-            setzeAppSichtbarkeit('login');
-            return;
+        // Eigene Einstellungen/Wegstrecken kommen über eine Funktion (die Tabellenspalten sind für andere - auch den Admin - gesperrt)
+        let profil = null;
+        try {
+            const { data, error } = await sb
+                .from('profile').select(PROFIL_SPALTEN).eq('id', aktuellerNutzer.id).single();
+            if (error) throw error;
+            profil = data;
+            const { data: privat } = await sb.rpc('meine_profil_daten');
+            const zeile = Array.isArray(privat) ? privat[0] : privat;
+            if (zeile) { profil.einstellungen = zeile.einstellungen; profil.wegstrecken = zeile.wegstrecken; }
+            offlineHinweisZeigen(null);
+            kvSpeichern('profil_' + aktuellerNutzer.id, profil);
+        } catch (e) {
+            // Kein Netz (Funkloch, Tunnel): mit dem zuletzt gespeicherten Profil weitermachen
+            if (istNetzwerkFehler(e)) profil = await kvLesen('profil_' + aktuellerNutzer.id);
+            if (!profil) {
+                console.warn('Profil konnte nicht geladen werden:', e);
+                zeigeMeldung('authMeldung', istNetzwerkFehler(e)
+                    ? 'Keine Internetverbindung. Beim ersten Anmelden wird Netz gebraucht.'
+                    : 'Dein Profil konnte nicht geladen werden. Bitte später erneut versuchen.', 'fehler');
+                setzeAppSichtbarkeit('login');
+                return;
+            }
         }
         aktuellesProfil = profil;
         wegstreckenEinstellungenAusProfilUebernehmen(profil);
 
         const istAdmin = profil.rolle === 'admin';
+        // KI-Scan, Foto-Erkennung und Haltestellen-Pflege gibt es nur für den Admin (Elemente mit Klasse "nur-admin")
+        document.body.classList.toggle('ist-admin', istAdmin);
         document.getElementById('topbarUser').innerHTML =
-            (profil.anzeigename || profil.email) + (istAdmin ? '<span class="badge admin">Admin</span>' : '');
+            sicher(profil.anzeigename || profil.email) + (istAdmin ? '<span class="badge admin">Admin</span>' : '');
         const verwaltungGruppe = document.getElementById('mehrVerwaltungGruppe');
         if (verwaltungGruppe) verwaltungGruppe.style.display = istAdmin ? 'block' : 'none';
 
         if (!profil.aktiv) {
+            // Beim Registrieren gemerkten Einladungscode einmal automatisch einlösen
+            let offenerCode = null;
+            try { offenerCode = localStorage.getItem('dienstplan_offener_code'); } catch (_e) { /* egal */ }
+            if (offenerCode) {
+                try { localStorage.removeItem('dienstplan_offener_code'); } catch (_e) { /* egal */ }
+                try {
+                    const { data: ergebnis } = await sb.rpc('einladung_einloesen', { code_eingabe: offenerCode });
+                    if (ergebnis === 'OK') { await nutzerLaden(); return; }
+                } catch (e) { console.warn('Automatisches Einlösen fehlgeschlagen:', e); }
+            }
             setzeAppSichtbarkeit('freischalten');
             return;
         }
@@ -249,7 +445,6 @@
         angezeigterNutzerId = aktuellerNutzer.id;
         angezeigterNutzerName = null;
         setzeAppSichtbarkeit('app');
-        scanKontingentAktualisieren();
         await schichtenLaden();
         if (istAdmin) adminDatenLaden();
 
@@ -283,12 +478,29 @@
 
             gespeicherteSchichten = {};
             (data || []).forEach(zeile => { gespeicherteSchichten[zeile.datum] = zeile.daten; });
+            // Eigene Schichten für den Betrieb ohne Netz merken (fremde Daten im Hilfe-Modus nie)
+            if (aktuellerNutzer && angezeigterNutzerId === aktuellerNutzer.id) {
+                kvSpeichern('schichten_' + aktuellerNutzer.id, gespeicherteSchichten);
+                offlineHinweisZeigen(null);
+            }
             renderCalendar();
             aktuelleFahrtWidgetSyncHeute();
             ereignisTageLaden();
         } catch (e) {
             console.error('Laden fehlgeschlagen:', e);
-            alert('Schichten konnten nicht geladen werden: ' + (e.message || e));
+            const eigene = aktuellerNutzer && angezeigterNutzerId === aktuellerNutzer.id;
+            const zwischenspeicher = (eigene && istNetzwerkFehler(e))
+                ? await kvLesenMitZeit('schichten_' + aktuellerNutzer.id) : null;
+            if (zwischenspeicher) {
+                gespeicherteSchichten = zwischenspeicher.wert || {};
+                offlineHinweisZeigen(zwischenspeicher.zeit);
+                renderCalendar();
+                aktuelleFahrtWidgetSyncHeute();
+                return;
+            }
+            alert(istNetzwerkFehler(e)
+                ? 'Keine Internetverbindung. Die Schichten können gerade nicht geladen werden.'
+                : 'Schichten konnten nicht geladen werden. Bitte später erneut versuchen.');
         }
     }
 
@@ -342,7 +554,7 @@
             adminDatenLaden();
             einladungTeilen(code);
         } catch (e) {
-            zeigeMeldung('adminMeldung', 'Fehler: ' + (e.message || e), 'fehler');
+            zeigeMeldung('adminMeldung', 'Fehler: ' + fehlerText(e), 'fehler');
         }
     }
 
@@ -364,15 +576,15 @@
                 listeEl.innerHTML = codes.map(c => `
                     <div class="user-zeile">
                         <div style="flex:1;">
-                            <div class="code-box ${c.verwendet_von ? 'verwendet' : ''}">${c.code}</div>
+                            <div class="code-box ${c.verwendet_von ? 'verwendet' : ''}">${sicher(c.code)}</div>
                             <div class="auth-hinweis" style="margin:4px 0 0 0;">
                                 ${c.verwendet_von ? '✓ bereits verwendet' : 'noch frei'}
                             </div>
                         </div>
                         <div style="display:flex; flex-direction:column; gap:6px;">
                             ${c.verwendet_von ? '' :
-                              `<button class="btn-gcal stapel-btn" onclick="einladungTeilen('${c.code}')">${ICONS.share} Teilen</button>`}
-                            <button class="btn-danger stapel-btn" onclick="codeLoeschen('${c.code}')">${ICONS.trash}</button>
+                              `<button class="btn-gcal stapel-btn" data-code="${sicher(c.code)}" onclick="einladungTeilen(this.dataset.code)">${ICONS.share} Teilen</button>`}
+                            <button class="btn-danger stapel-btn" data-code="${sicher(c.code)}" onclick="codeLoeschen(this.dataset.code)">${ICONS.trash}</button>
                         </div>
                     </div>`).join('');
             }
@@ -384,14 +596,17 @@
             const el = document.getElementById('nutzerListe');
             if (!nutzer || !nutzer.length) { el.innerHTML = '<p class="auth-hinweis">Keine Nutzer.</p>'; return; }
 
-            // Verbrauchte Scans je Nutzer (insgesamt) für die Anzeige neben dem Limit
+            // Verbrauchte KI-Scans je Nutzer (insgesamt)
             const scanAnzahl = {};
             const { data: scanZeilen } = await sb.from('scans').select('user_id');
             (scanZeilen || []).forEach(z => { scanAnzahl[z.user_id] = (scanAnzahl[z.user_id] || 0) + 1; });
 
             el.innerHTML = nutzer.map(n => {
                 const istIch = n.id === aktuellerNutzer.id;
-                const name = (n.anzeigename || n.email || '').replace(/'/g, "\\'");
+                // Name nur über data-Attribute an die Klick-Funktionen geben (nie in den onclick-Text einbauen)
+                const nameRoh = n.anzeigename || n.email || '';
+                const name = sicher(nameRoh);
+                const daten = `data-id="${sicher(n.id)}" data-name="${name}"`;
                 const entfernt = !!n.loeschen_am;
 
                 let restTage = null;
@@ -408,63 +623,32 @@
                       ? '<span class="badge frei">Hilfe freigegeben</span>' : '');
 
                 const zweiteZeile = (n.betriebshof
-                    ? `<br><small style="opacity:.75;">${n.betriebshof}</small>` : '') +
-                    `<br><small style="opacity:.75;">Scans: ${scanAnzahl[n.id] || 0} von ${n.scan_limit === null || n.scan_limit === undefined ? 'unbegrenzt' : n.scan_limit}</small>` +
-                    ((istIch || entfernt) ? '' : `
-                    <div style="display:flex; gap:6px; align-items:center; margin-top:6px;">
-                        <input type="number" min="0" inputmode="numeric" id="scanLimit_${n.id}" placeholder="unbegrenzt"
-                               value="${n.scan_limit === null || n.scan_limit === undefined ? '' : n.scan_limit}"
-                               style="width:96px; padding:6px 8px; margin:0;">
-                        <button class="btn-secondary stapel-btn" style="margin:0;" onclick="scanLimitSetzen('${n.id}','${name}')">Limit setzen</button>
-                    </div>`);
+                    ? `<br><small style="opacity:.75;">${sicher(n.betriebshof)}</small>` : '') +
+                    `<br><small style="opacity:.75;">KI-Scans: ${scanAnzahl[n.id] || 0}</small>`;
 
                 let knoepfe = '';
                 if (!istIch) {
                     if (entfernt) {
                         knoepfe = `
-                            <button class="btn-save stapel-btn" onclick="nutzerWiederherstellen('${n.id}','${name}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M15 5.5 8.5 12 15 18.5"></path></svg>Zurück</button>
-                            <button class="btn-danger stapel-btn" onclick="nutzerSofortLoeschen('${n.id}','${name}')">${ICONS.trash} Sofort</button>`;
+                            <button class="btn-save stapel-btn" ${daten} onclick="nutzerWiederherstellen(this.dataset.id, this.dataset.name)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M15 5.5 8.5 12 15 18.5"></path></svg>Zurück</button>
+                            <button class="btn-danger stapel-btn" ${daten} onclick="nutzerSofortLoeschen(this.dataset.id, this.dataset.name)">${ICONS.trash} Sofort</button>`;
                     } else {
                         const freigabe = n.hilfe_bis && new Date(n.hilfe_bis) > new Date();
                         knoepfe = `
                             ${freigabe
-                              ? `<button class="btn-save stapel-btn" onclick="fremdeDatenAnzeigen('${n.id}','${name}')">${ICONS.unlock} Daten</button>`
-                              : `<button class="btn-secondary stapel-btn" onclick="hilfeAnfragen('${n.id}','${name}')">Hilfe anfragen</button>`}
-                            <button class="btn-danger stapel-btn" onclick="nutzerEntfernen('${n.id}','${name}')">Entfernen</button>`;
+                              ? `<button class="btn-save stapel-btn" ${daten} onclick="fremdeDatenAnzeigen(this.dataset.id, this.dataset.name)">${ICONS.unlock} Daten</button>`
+                              : `<button class="btn-secondary stapel-btn" ${daten} onclick="hilfeAnfragen(this.dataset.id, this.dataset.name)">Hilfe anfragen</button>`}
+                            <button class="btn-danger stapel-btn" ${daten} onclick="nutzerEntfernen(this.dataset.id, this.dataset.name)">Entfernen</button>`;
                     }
                 }
 
                 return `
                 <div class="user-zeile">
-                    <div>${n.anzeigename || n.email}${abzeichen}${zweiteZeile}</div>
+                    <div>${name}${abzeichen}${zweiteZeile}</div>
                     <div style="display:flex; flex-direction:column; gap:6px;">${knoepfe}</div>
                 </div>`;
             }).join('');
         } catch (e) { console.error(e); }
-    }
-
-    // Leeres Feld = unbegrenzt. Geprüft und gespeichert wird serverseitig (nur Admin).
-    async function scanLimitSetzen(id, name) {
-        const feld = document.getElementById('scanLimit_' + id);
-        if (!feld) return;
-        const text = feld.value.trim();
-        let neu = null;
-        if (text !== '') {
-            neu = Number(text);
-            if (!Number.isInteger(neu) || neu < 0) {
-                zeigeMeldung('adminMeldung', 'Bitte eine ganze Zahl ab 0 eingeben (leer = unbegrenzt).', 'fehler');
-                return;
-            }
-        }
-        try {
-            const { data, error } = await sb.rpc('scan_limit_setzen', { ziel_id: id, neues_limit: neu });
-            if (error) throw error;
-            if (data !== 'OK') { zeigeMeldung('adminMeldung', data, 'fehler'); return; }
-            zeigeMeldung('adminMeldung', `${name}: ${neu === null ? 'unbegrenzt' : neu + ' Scans'} eingestellt.`, 'ok');
-            adminDatenLaden();
-        } catch (e) {
-            zeigeMeldung('adminMeldung', 'Fehler: ' + (e.message || e), 'fehler');
-        }
     }
 
     // ---------- Nutzer entfernen / wiederherstellen ----------
@@ -477,7 +661,7 @@
             zeigeMeldung('adminMeldung', `${name} wurde gesperrt. Endgültige Löschung in 14 Tagen.`, 'ok');
             adminDatenLaden();
         } catch (e) {
-            zeigeMeldung('adminMeldung', 'Fehler: ' + (e.message || e), 'fehler');
+            zeigeMeldung('adminMeldung', 'Fehler: ' + fehlerText(e), 'fehler');
         }
     }
 
@@ -489,7 +673,7 @@
             zeigeMeldung('adminMeldung', `${name} ist wieder freigeschaltet – alle Daten sind erhalten.`, 'ok');
             adminDatenLaden();
         } catch (e) {
-            zeigeMeldung('adminMeldung', 'Fehler: ' + (e.message || e), 'fehler');
+            zeigeMeldung('adminMeldung', 'Fehler: ' + fehlerText(e), 'fehler');
         }
     }
 
@@ -502,7 +686,7 @@
             zeigeMeldung('adminMeldung', `${name} wurde endgültig gelöscht.`, 'ok');
             adminDatenLaden();
         } catch (e) {
-            zeigeMeldung('adminMeldung', 'Fehler: ' + (e.message || e), 'fehler');
+            zeigeMeldung('adminMeldung', 'Fehler: ' + fehlerText(e), 'fehler');
         }
     }
 
@@ -555,7 +739,7 @@
                 .sort((a, b) => b[1].gesamt - a[1].gesamt)
                 .map(([id, z]) => `
                     <div class="result-item">
-                        <span class="label">${namen[id] || 'Unbekannt'}</span>
+                        <span class="label">${sicher(namen[id] || 'Unbekannt')}</span>
                         <span style="text-align:right;">${z.gesamt} Scans` +
                         (z.fehler ? `<br><small style="opacity:.8;">${z.fehler} fehlgeschlagen</small>` : '') +
                         `</span>
@@ -868,16 +1052,16 @@
         el.innerHTML = zeilen.map(z => `
             <div class="dienst-karte">
                 <div class="dienst-kopf">
-                    <b>${z.datumKurz}</b>${z.dienst ? ' · Dienst ' + z.dienst : ''}
+                    <b>${sicher(z.datumKurz)}</b>${z.dienst ? ' · Dienst ' + sicher(z.dienst) : ''}
                     <span style="float:right; opacity:.8;">${stundenMinutenKurz(z.dauerMinuten)}</span>
                 </div>
                 <div class="dienst-zeile">
                     <span class="dienst-marke gruen">Beginn</span>
-                    <span>${z.beginnZeit} · ${z.beginnOrt || '–'}${z.beginnLinie ? '<br><small>' + z.beginnLinie + '</small>' : ''}</span>
+                    <span>${sicher(z.beginnZeit)} · ${sicher(z.beginnOrt || '–')}${z.beginnLinie ? '<br><small>' + sicher(z.beginnLinie) + '</small>' : ''}</span>
                 </div>
                 <div class="dienst-zeile">
                     <span class="dienst-marke rot">Ende</span>
-                    <span>${z.endeZeit} · ${z.endeOrt || '–'}${z.endeLinie ? '<br><small>' + z.endeLinie + '</small>' : ''}</span>
+                    <span>${sicher(z.endeZeit)} · ${sicher(z.endeOrt || '–')}${z.endeLinie ? '<br><small>' + sicher(z.endeLinie) + '</small>' : ''}</span>
                 </div>
             </div>`).join('') +
             `<div class="total-box" style="margin-top:14px;">
@@ -1093,7 +1277,7 @@
                 fehlKeys.map(k => `
                 <div class="result-item">
                     <span class="label">${sicher(fehlend[k])}</span>
-                    <button class="btn-secondary" style="width:auto; margin:0; padding:6px 12px;" onclick="wegstreckenVorausfuellen('${k}')">+ km eintragen</button>
+                    <button class="btn-secondary" style="width:auto; margin:0; padding:6px 12px;" data-k="${sicher(k)}" onclick="wegstreckenVorausfuellen(this.dataset.k)">+ km eintragen</button>
                 </div>`).join('');
         }
 
@@ -1105,8 +1289,8 @@
                 <div class="result-item">
                     <span class="label"><b>${sicher(wegstrecken[k].name)}</b><br><small>${wegstrecken[k].km} km (einfache Strecke)${wegstrecken[k].fahrzeitMin != null ? ' · ' + wegstrecken[k].fahrzeitMin + ' Min. Fahrzeit je Richtung' : ''}</small></span>
                     <span>
-                        <button class="btn-secondary" style="width:auto; margin:0 4px 0 0; padding:6px 10px;" onclick="wegstreckeBearbeiten('${k}')">${ICONS.pencil}</button>
-                        <button class="btn-danger" style="width:auto; margin:0; padding:6px 10px;" onclick="wegstreckeLoeschen('${k}')">${ICONS.trash}</button>
+                        <button class="btn-secondary" style="width:auto; margin:0 4px 0 0; padding:6px 10px;" data-k="${sicher(k)}" onclick="wegstreckeBearbeiten(this.dataset.k)" aria-label="Strecke bearbeiten">${ICONS.pencil}</button>
+                        <button class="btn-danger" style="width:auto; margin:0; padding:6px 10px;" data-k="${sicher(k)}" onclick="wegstreckeLoeschen(this.dataset.k)" aria-label="Strecke löschen">${ICONS.trash}</button>
                     </span>
                 </div>`).join('');
         }
@@ -1673,7 +1857,7 @@
             titel: 'Dienst erfassen',
             schritte: [
                 {
-                    text: '<b>1. Foto auswählen</b><br>Dienstzettel fotografieren oder aus der Galerie wählen. Mehrere auf einmal gehen auch.',
+                    text: '<b>1. PDF auswählen</b><br>Tippe auf „PDF-Dienstzettel importieren“ und wähle den Dienstzettel als PDF-Datei. Mehrere auf einmal gehen auch.',
                     bild: handyRahmen(`
                         <rect x="40" y="40" width="120" height="52" rx="8" fill="var(--upload-bg)"
                               stroke="#10b981" stroke-width="1" stroke-dasharray="4 3"/>
@@ -1685,7 +1869,7 @@
                         <rect x="40" y="142" width="74" height="9" rx="4" fill="var(--card)"/>`)
                 },
                 {
-                    text: '<b>2. Die KI liest den Zettel</b><br>Datum, Zeiten, Pausen, Linien und Umläufe werden automatisch erkannt.',
+                    text: '<b>2. Die App liest den Zettel</b><br>Datum, Zeiten, Pausen, Linien und Umläufe werden automatisch aus dem PDF gelesen.',
                     bild: handyRahmen(`
                         <rect x="40" y="40" width="120" height="30" rx="8" fill="var(--total-bg)"/>
                         <text x="100" y="59" font-size="11" fill="var(--primary)" text-anchor="middle">liest aus</text>
@@ -1752,7 +1936,7 @@
             titel: 'Pausenregelung',
             schritte: [
                 {
-                    text: '<b>Wo steht die Regel?</b><br>Im Kopf deines Dienstzettels findest du das Feld „Pausenregel". Die App liest es beim Scannen automatisch mit aus.',
+                    text: '<b>Wo steht die Regel?</b><br>Im Kopf deines Dienstzettels findest du das Feld „Pausenregel". Die App liest es beim Einlesen automatisch mit aus.',
                     bild: handyRahmen(`
                         <rect x="40" y="40" width="120" height="90" rx="6" fill="var(--card)"/>
                         <text x="47" y="54" font-size="9" fill="var(--text-soft)">Dienstdauer</text>
@@ -1779,7 +1963,7 @@
                         <text x="100" y="160" font-size="9" fill="var(--text-soft)" text-anchor="middle">manuell angelegt = immer unbezahlt</text>`)
                 },
                 {
-                    text: '<b>„Bezahlt"-Markierung</b><br>Erkennt die KI beim Scannen eine bereits bezahlte Pause auf dem Dienstzettel, markiert die App sie automatisch grün als „Bezahlt". Das lässt sich nicht manuell umschalten – nur gescannte Pausen können bezahlt sein.',
+                    text: '<b>„Bezahlt"-Markierung</b><br>Erkennt die App beim Einlesen eine bereits bezahlte Pause auf dem Dienstzettel, markiert die App sie automatisch grün als „Bezahlt". Das lässt sich nicht manuell umschalten – nur eingelesene Pausen können bezahlt sein.',
                     bild: handyRahmen(`
                         <rect x="40" y="50" width="120" height="58" rx="6" fill="var(--card)"/>
                         <rect x="46" y="56" width="44" height="16" rx="4" fill="rgba(22,163,74,.2)"/>
@@ -2021,7 +2205,7 @@
             aktuellesProfil.hilfe_bis = data;
             hilfeAnzeigeAktualisieren();
         } catch (e) {
-            alert('Freigabe fehlgeschlagen: ' + (e.message || e));
+            alert('Freigabe fehlgeschlagen: ' + fehlerText(e));
         }
     }
 
@@ -2032,7 +2216,7 @@
             aktuellesProfil.hilfe_bis = null;
             hilfeAnzeigeAktualisieren();
         } catch (e) {
-            alert('Beenden fehlgeschlagen: ' + (e.message || e));
+            alert('Beenden fehlgeschlagen: ' + fehlerText(e));
         }
     }
 
@@ -2058,7 +2242,7 @@
             zeigeMeldung('adminMeldung', `Anfrage an ${name} gesendet.`, 'ok');
             await chatListeLaden();
         } catch (e) {
-            zeigeMeldung('adminMeldung', 'Fehler: ' + (e.message || e), 'fehler');
+            zeigeMeldung('adminMeldung', 'Fehler: ' + fehlerText(e), 'fehler');
         }
     }
 
@@ -2081,10 +2265,39 @@
         return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}. ${pad(d.getHours())}:${pad(d.getMinutes())}`;
     }
 
+    // Macht Text für HTML unschädlich - auch innerhalb von Attributen (dort zusätzlich Anführungszeichen).
+    // In onclick="…" reicht das NICHT (der Browser entschlüsselt die Zeichen vor dem Ausführen):
+    // dort Werte über data-Attribute und this.dataset übergeben.
     function sicher(text) {
-        const div = document.createElement('div');
-        div.innerText = text == null ? '' : String(text);
-        return div.innerHTML;
+        return (text == null ? '' : String(text))
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    // Für Anzeige-Bereiche, die aus Vorlagen mit eingesetzten Daten (KI, PDF, Datenbank) zusammengebaut werden
+    // und keine Klick-Funktionen brauchen: lässt nur harmlose Tags/Attribute durch (Erlaubnisliste).
+    const ERLAUBTE_TAGS = new Set(['DIV', 'SPAN', 'SMALL', 'B', 'BR', 'DETAILS', 'SUMMARY', 'P', 'SVG', 'PATH', 'CIRCLE',
+        'RECT', 'LINE', 'POLYLINE', 'POLYGON', 'G', 'ELLIPSE']);
+    const ERLAUBTE_ATTRIBUTE = new Set(['class', 'style', 'width', 'height', 'viewbox', 'fill', 'stroke', 'stroke-width',
+        'stroke-linecap', 'stroke-linejoin', 'd', 'cx', 'cy', 'r', 'x', 'y', 'rx', 'ry', 'x1', 'y1', 'x2', 'y2', 'points',
+        'transform', 'opacity', 'xmlns']);
+    function anzeigeHtmlBereinigen(html) {
+        const dok = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html');
+        const bereinigen = (knoten) => {
+            Array.from(knoten.childNodes).forEach(kind => {
+                if (kind.nodeType === 3) return;                          // Text
+                if (kind.nodeType !== 1 || !ERLAUBTE_TAGS.has(kind.tagName.toUpperCase())) { kind.remove(); return; }
+                Array.from(kind.attributes).forEach(a => {
+                    const name = a.name.toLowerCase();
+                    const wert = a.value.toLowerCase();
+                    const gefaehrlich = name.startsWith('on') || wert.includes('javascript:') || wert.includes('url(') || wert.includes('expression(');
+                    if (!ERLAUBTE_ATTRIBUTE.has(name) || gefaehrlich) kind.removeAttribute(a.name);
+                });
+                bereinigen(kind);
+            });
+        };
+        bereinigen(dok.body);
+        return dok.body.innerHTML;
     }
 
     // ---------- Übersicht ----------
@@ -2179,7 +2392,7 @@
             await chatListeLaden();
             chatOeffnen(data);
         } catch (e) {
-            alert('Gespräch konnte nicht geöffnet werden: ' + (e.message || e));
+            alert('Gespräch konnte nicht geöffnet werden: ' + fehlerText(e));
         }
     }
 
@@ -2215,7 +2428,7 @@
             await chatListeLaden();
             chatOeffnen(data);
         } catch (e) {
-            zeigeMeldung('gruppeMeldung', 'Fehler: ' + (e.message || e), 'fehler');
+            zeigeMeldung('gruppeMeldung', 'Fehler: ' + fehlerText(e), 'fehler');
         }
     }
 
@@ -2356,7 +2569,7 @@
             if (error) throw error;
             await nachrichtenLaden();
         } catch (e) {
-            alert('Nachricht konnte nicht gesendet werden: ' + (e.message || e));
+            alert('Nachricht konnte nicht gesendet werden: ' + fehlerText(e));
             feld.value = text;
         }
     }
@@ -2368,7 +2581,7 @@
             if (error) throw error;
             await nachrichtenLaden();
         } catch (e) {
-            alert('Löschen fehlgeschlagen: ' + (e.message || e));
+            alert('Löschen fehlgeschlagen: ' + fehlerText(e));
         }
     }
 
@@ -2500,7 +2713,7 @@
             await chatListeLaden();
             chatOeffnen(unterhaltungId);
         } catch (e) {
-            alert('Teilen fehlgeschlagen: ' + (e.message || e));
+            alert('Teilen fehlgeschlagen: ' + fehlerText(e));
         }
     }
 
@@ -2532,14 +2745,14 @@
             aktuellesProfil.profil_fertig = true;
 
             document.getElementById('topbarUser').innerHTML =
-                aktuellesProfil.anzeigename +
+                sicher(aktuellesProfil.anzeigename) +
                 (aktuellesProfil.rolle === 'admin' ? '<span class="badge admin">Admin</span>' : '');
 
             // Weiter zur Verdienst-Einrichtung oder in die App
             if (!ein.eingerichtetAm) wechselSeite('einrichten');
             else wechselSeite('start');
         } catch (e) {
-            zeigeMeldung('profMeldung', 'Fehler: ' + (e.message || e), 'fehler');
+            zeigeMeldung('profMeldung', 'Fehler: ' + fehlerText(e), 'fehler');
         }
     }
 
@@ -2568,7 +2781,8 @@
 
     // Lernt neue Paare aus einem gescannten Dienstzettel
     async function haltestellenLernen(details) {
-        if (!sb || !details) return;
+        // Die gemeinsame Haltestellenliste pflegt nur der Admin (auch die Datenbank erlaubt nur ihm das Anlegen).
+        if (!sb || !details || !istAdminNutzer()) return;
         const paare = {};
         const merke = (kuerzel, name) => {
             const k = (kuerzel || '').trim().toUpperCase();
@@ -2598,7 +2812,8 @@
 
         try {
             const zeilen = neue.map(k => ({ kuerzel: k, name: paare[k], automatisch: true }));
-            await sb.from('haltestellen').upsert(zeilen, { onConflict: 'kuerzel', ignoreDuplicates: true });
+            const { error } = await sb.from('haltestellen').upsert(zeilen, { onConflict: 'kuerzel', ignoreDuplicates: true });
+            if (error) throw error;
             neue.forEach(k => { haltestellen[k] = paare[k]; });
         } catch (e) {
             console.warn('Haltestellen konnten nicht gelernt werden:', e);
@@ -2651,7 +2866,7 @@
             zeigeMeldung('hsMeldung', kuerzel + ' gespeichert.', 'ok');
             haltestellenRendern();
         } catch (e) {
-            zeigeMeldung('hsMeldung', 'Fehler: ' + (e.message || e), 'fehler');
+            zeigeMeldung('hsMeldung', 'Fehler: ' + fehlerText(e), 'fehler');
         }
     }
 
@@ -2663,7 +2878,7 @@
             delete haltestellen[kuerzel];
             haltestellenRendern();
         } catch (e) {
-            zeigeMeldung('hsMeldung', 'Fehler: ' + (e.message || e), 'fehler');
+            zeigeMeldung('hsMeldung', 'Fehler: ' + fehlerText(e), 'fehler');
         }
     }
 
@@ -2690,10 +2905,10 @@
         el.innerHTML = `<p class="auth-hinweis">${treffer.length} von ${Object.keys(haltestellen).length} Einträgen</p>` +
             treffer.map(k => `
             <div class="result-item">
-                <span class="label"><b>${k}</b><br><small>${haltestellen[k]}</small></span>
+                <span class="label"><b>${sicher(k)}</b><br><small>${sicher(haltestellen[k])}</small></span>
                 <span style="display:flex; gap:6px;">
-                    <button class="btn-secondary stapel-btn" onclick="haltestelleBearbeiten('${k}')">${ICONS.pencil}</button>
-                    <button class="btn-danger stapel-btn" onclick="haltestelleLoeschen('${k}')">${ICONS.trash}</button>
+                    <button class="btn-secondary stapel-btn" data-k="${sicher(k)}" onclick="haltestelleBearbeiten(this.dataset.k)" aria-label="Haltestelle bearbeiten">${ICONS.pencil}</button>
+                    <button class="btn-danger stapel-btn" data-k="${sicher(k)}" onclick="haltestelleLoeschen(this.dataset.k)" aria-label="Haltestelle löschen">${ICONS.trash}</button>
                 </span>
             </div>`).join('');
     }
@@ -2997,7 +3212,7 @@
                         <b>${sicher(e.titel || 'Ereignis')}</b>
                         <small>${zeit}</small>
                     </span>
-                    <button class="icon-btn" onclick="ereignisLoeschen('${e.id}')">${ICONS.trash}</button>
+                    <button class="icon-btn" aria-label="Ereignis löschen" onclick="ereignisLoeschen('${e.id}')">${ICONS.trash}</button>
                 </div>`;
             }));
             el.innerHTML = zeilen.join('');
@@ -3088,7 +3303,7 @@
             await ereignisseAnzeigen(ereignisAktuellesDatum);
             await ereignisTageLaden();
         } catch (e) {
-            alert('Ereignis konnte nicht gespeichert werden: ' + (e.message || e));
+            alert('Ereignis konnte nicht gespeichert werden: ' + fehlerText(e));
         }
     }
 
@@ -3758,7 +3973,7 @@
             return `<details class="einst-abschnitt" data-modell="${schluessel}">
                 <summary>${sicher(modell.name)}</summary>
                 <div class="einst-inhalt">
-                    <button class="btn-scan" onclick="fehlermeldungFotoButton('${schluessel}')" style="display:flex; align-items:center; justify-content:center; gap:10px;">
+                    <button class="btn-scan nur-admin" onclick="fehlermeldungFotoButton('${schluessel}')" style="display:flex; align-items:center; justify-content:center; gap:10px;">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5a2 2 0 0 1 2-2h1.2l1-1.5h7.6l1 1.5H19a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8.5Z"></path><circle cx="12" cy="13" r="3.3"></circle></svg>
                         Meldung fotografieren
                     </button>
@@ -3838,6 +4053,7 @@
     }
 
     async function fehlermeldungAnalysieren(blob) {
+        if (!istAdminNutzer()) return;   // KI-Erkennung nur für den Admin
         const modellSchluessel = fehlermeldungAktivesModell;
         const status = document.getElementById(`fmStatus-${modellSchluessel}`);
         const box = document.getElementById(`fmErgebnis-${modellSchluessel}`);
@@ -3853,7 +4069,6 @@
             const { data, error } = await sb.functions.invoke('fehlermeldung-lesen', {
                 body: { bild_base64: base64, medien_typ: medienTyp, busmodell: modellSchluessel }
             });
-            scanKontingentAktualisieren();   // zählt zum selben Kontingent wie der Dienstzettel-Scan
             if (error) throw error;
             if (data && data.fehler) throw new Error(data.fehler);
             status.innerText = '';
@@ -4082,7 +4297,14 @@
             setzeAppSichtbarkeit('setup');
             return;
         }
+        // Kommt man über den Link aus der "Passwort vergessen"-Mail, zuerst das neue Passwort abfragen (nicht in die App springen)
+        if (/type=recovery/.test(location.hash)) passwortWiederherstellung = true;
         sb = supabase.createClient(url, key);
+        sb.auth.onAuthStateChange((ereignis) => {
+            if (ereignis === 'PASSWORD_RECOVERY') neuesPasswortZeigen();
+        });
+        // Wieder Netz: Daten neu laden und den Offline-Hinweis entfernen
+        window.addEventListener('online', () => { if (aktuellerNutzer && !passwortWiederherstellung) schichtenLaden(); });
         nutzerLaden();
     }
 
@@ -4221,6 +4443,18 @@
         return (text || '').toLowerCase().replace(/[^a-zäöüß]/g, '');
     }
 
+    // Die Texterkennung (Tesseract) ist nur noch Notfall-Fallback des Admins und wird deshalb erst bei Bedarf geladen.
+    function tesseractLaden() {
+        if (window.Tesseract) return Promise.resolve();
+        return new Promise((ok, fehler) => {
+            const skript = document.createElement('script');
+            skript.src = './vendor/libs/tesseract.min.js';
+            skript.onload = ok;
+            skript.onerror = () => fehler(new Error('Die Texterkennung konnte nicht geladen werden.'));
+            document.head.appendChild(skript);
+        });
+    }
+
     // Baut aus den von Tesseract gelieferten Zeilen eine flache Liste aller Wörter
     // inkl. Zeilenindex, damit wir sowohl wort- als auch zeilenweise suchen können.
     function sammleWoerterMitZeile(zeilen) {
@@ -4329,6 +4563,9 @@
             stapelRendern();
             try {
                 // PDFs werden direkt aus dem Text gelesen (ohne KI, ohne Kontingent), Fotos gehen an die KI
+                if (!istPdfDatei(stapel[i].datei) && !istAdminNutzer()) {
+                    throw new Error('Nur PDF-Dienstzettel möglich');
+                }
                 const ergebnis = istPdfDatei(stapel[i].datei)
                     ? await DienstzettelPdf.pdfDateiZuErgebnis(stapel[i].datei)
                     : await kiErkennung(await dateiAlsDataUrl(stapel[i].datei));
@@ -4373,7 +4610,7 @@
             } else if (s.status === 'fehler') text = s.fehler;
 
             return `<div class="result-item">
-                <span class="label">${symbol} ${text}</span>
+                <span class="label">${symbol} ${sicher(text)}</span>
                 ${s.status === 'fertig'
                     ? `<button class="btn-secondary stapel-btn" onclick="stapelUebernehmen(${i})">${s.ergebnis.abwesenheit ? 'Eintragen' : 'Öffnen'}</button>` : ''}
             </div>`;
@@ -4437,45 +4674,14 @@
             body: { bild_base64: base64, medien_typ: medienTyp }
         });
 
-        // Gezählt wird ausschließlich auf dem Server (scan_reservieren) - hier nur die Anzeige auffrischen.
-        scanKontingentAktualisieren();
-
+        // Serverseitig (scan_reservieren) darf nur der Admin die KI nutzen.
         if (error) throw error;
-        if (data && data.fehler) {
-            const fehler = new Error(data.fehler);
-            fehler.limitErreicht = !!data.limit_erreicht;
-            throw fehler;
-        }
+        if (data && data.fehler) throw new Error(data.fehler);
         return data;
     }
 
-    // Zeigt Testern unter dem Upload-Button, wie viele Scans noch übrig sind.
-    // Admins und Nutzer ohne Limit sehen nichts.
-    async function scanKontingentAktualisieren() {
-        const el = document.getElementById('scanKontingent');
-        if (!el) return;
-        el.style.display = 'none';
-        if (!sb || !aktuellerNutzer) return;
-        try {
-            const { data: profil, error: profilFehler } = await sb
-                .from('profile').select('scan_limit').eq('id', aktuellerNutzer.id).single();
-            if (profilFehler) throw profilFehler;
-            if (aktuellesProfil) aktuellesProfil.scan_limit = profil.scan_limit;
-            const limit = profil.scan_limit;
-            if (limit === null || limit === undefined) return;
-
-            const { count, error } = await sb
-                .from('scans').select('id', { count: 'exact', head: true }).eq('user_id', aktuellerNutzer.id);
-            if (error) throw error;
-
-            const rest = Math.max(0, limit - (count || 0));
-            el.innerText = rest > 0
-                ? `Noch ${rest} von ${limit} Test-Scans übrig`
-                : `Test-Kontingent (${limit} Scans) aufgebraucht – die lokale Erkennung bleibt nutzbar`;
-            el.style.display = 'block';
-        } catch (e) {
-            console.log('Scan-Kontingent konnte nicht geladen werden:', e);
-        }
+    function istAdminNutzer() {
+        return !!aktuellesProfil && aktuellesProfil.rolle === 'admin';
     }
 
     // Merkt sich die von der KI gelesenen Dienstdetails zur aktuellen Schicht
@@ -4483,8 +4689,8 @@
 
     // Zeigt den vollen Haltestellennamen; weicht das Kuerzel ab, steht es dahinter.
     function ortText(name, kuerzel) {
-        const n = (name || '').trim();
-        const k = (kuerzel || '').trim();
+        const n = sicher((name || '').trim());
+        const k = sicher((kuerzel || '').trim());
         if (!n && !k) return '';
         if (!n) return k;
         if (!k || n === k) return n;
@@ -4494,14 +4700,14 @@
     // Baut einen Kurztext wie "Linie M46 · Umlauf 2 → Zoologischer Garten (ab 12:45)"
     function fahrtInfo(linie, umlauf, nach, nachKuerzel, abfahrt) {
         const teile = [];
-        const l = (linie === 0 || linie) ? String(linie).trim() : '';
-        const u = (umlauf === 0 || umlauf) ? String(umlauf).trim() : '';
+        const l = (linie === 0 || linie) ? sicher(String(linie).trim()) : '';
+        const u = (umlauf === 0 || umlauf) ? sicher(String(umlauf).trim()) : '';
         if (l) teile.push('Linie ' + l);
         if (u) teile.push('Umlauf ' + u);
         let text = teile.join(' · ');
         const ziel = ortText(nach, nachKuerzel);
         if (ziel) text += (text ? ' → ' : '→ ') + ziel;
-        if (abfahrt) text += (text ? ' ' : '') + '(ab ' + abfahrt + ')';
+        if (abfahrt) text += (text ? ' ' : '') + '(ab ' + sicher(abfahrt) + ')';
         return text;
     }
 
@@ -4731,7 +4937,7 @@
                         </summary><div class="vf-liste">${reihen}</div></details>`;
         }
 
-        inhalt.innerHTML = html;
+        inhalt.innerHTML = anzeigeHtmlBereinigen(html);
         box.style.display = html ? 'block' : 'none';
 
         const dat = document.getElementById('datum').value;
@@ -4878,6 +5084,11 @@
         if (!file) return;
         if (istPdfDatei(file)) return starteAnalysePdf(file);
         const statusEl = document.getElementById('statusText');
+        if (!istAdminNutzer()) {
+            statusEl.style.color = "#b91c1c";
+            statusEl.innerText = "❌ Bitte den Dienstzettel als PDF auswählen. Foto-Erkennung gibt es nicht.";
+            return;
+        }
         const btnKorrigieren = document.getElementById('btnManuellKorrigieren');
 
         const reader = new FileReader();
@@ -4907,13 +5118,12 @@
                 statusEl.innerText = "⚠️ KI konnte nicht alles lesen – versuche lokale Erkennung...";
             } catch (fehler) {
                 console.warn('KI-Erkennung fehlgeschlagen, nutze lokale Erkennung:', fehler);
-                statusEl.innerText = (fehler && fehler.limitErreicht)
-                    ? "ℹ️ Dein Test-Kontingent ist aufgebraucht – nutze lokale Erkennung..."
-                    : "ℹ️ KI nicht erreichbar – nutze lokale Erkennung...";
+                statusEl.innerText = "ℹ️ KI nicht erreichbar – nutze lokale Erkennung...";
             }
 
             // 2. Versuch: lokale Erkennung (Tesseract), falls die KI nichts liefert
             try {
+                await tesseractLaden();
                 const result = await Tesseract.recognize(letztesHochgeladenesBild, 'deu');
                 const zeilen = result.data.lines || [];
                 const woerter = sammleWoerterMitZeile(zeilen);
@@ -4973,7 +5183,8 @@
         const croppedDataUrl = croppedCanvas.toDataURL('image/png');
 
         try {
-            const result = await Tesseract.recognize(croppedDataUrl, 'deu');
+            await tesseractLaden();
+                const result = await Tesseract.recognize(croppedDataUrl, 'deu');
             const rawText = result.data.text;
 
             const datumMatch = rawText.match(/(\d{2})[./-](\d{2})[./-](\d{4})/);
@@ -5284,7 +5495,7 @@
             await schichtSpeichern(aktuellesBerechnetesErgebnis);
             alert(`✅ Schicht für den ${aktuellesBerechnetesErgebnis.datumStr} gespeichert!`);
         } catch (e) {
-            alert('❌ Speichern fehlgeschlagen: ' + (e.message || e));
+            alert('❌ Speichern fehlgeschlagen: ' + fehlerText(e));
         }
     }
 
@@ -5305,7 +5516,7 @@
             if (datumStr === heutigesDatumStr()) aktuelleFahrtWidgetSyncHeute();
             alert(`🗑️ Schicht für ${datumStr} gelöscht.`);
         } catch (e) {
-            alert('❌ Löschen fehlgeschlagen: ' + (e.message || e));
+            alert('❌ Löschen fehlgeschlagen: ' + fehlerText(e));
         }
     }
 
@@ -5454,7 +5665,7 @@
     // ---------- Backup ----------
     function backupExportieren() {
         const blob = new Blob([JSON.stringify(gespeicherteSchichten, null, 2)], { type: 'application/json' });
-        const heute = new Date().toISOString().split('T')[0];
+        const heute = heutigesDatumStr();
         dateiSpeichernOderTeilen(`Dienstplan_Backup_${heute}.json`, blob);
     }
 
@@ -5523,7 +5734,7 @@
             mFeiertag = 0, mSonder = 0, mMehrMin = 0, mMehrEuro = 0, mZuschlaege = 0,
             mKrankheitsaufschlag = 0, mUrlaubsaufschlag = 0;
 
-        const heuteStr = new Date().toISOString().split('T')[0];
+        const heuteStr = heutigesDatumStr();
 
         for (let d = 1; d <= tageImMonat; d++) {
             const dayCell = document.createElement('div');
@@ -5830,7 +6041,7 @@
             const zusatz = keineBerechnung ? '' : ` (Gesamt: ${euroText(stundenProTag * tage * ref.satz)})`;
             alert(`✅ ${tage} ${info.label}-Tag${tage === 1 ? '' : 'e'} gespeichert${zusatz}.`);
         } catch (e) {
-            alert('❌ Speichern fehlgeschlagen: ' + (e.message || e));
+            alert('❌ Speichern fehlgeschlagen: ' + fehlerText(e));
         }
     }
 
@@ -5851,7 +6062,7 @@
             renderCalendar();
             krankFormularSchliessen();
         } catch (e) {
-            alert('❌ Löschen fehlgeschlagen: ' + (e.message || e));
+            alert('❌ Löschen fehlgeschlagen: ' + fehlerText(e));
         }
     }
 

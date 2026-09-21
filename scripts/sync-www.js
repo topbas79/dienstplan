@@ -21,6 +21,15 @@ if (fs.existsSync(pdfQuelle)) {
     console.log('kopiert: vendor/pdfjs (' + fs.readdirSync(pdfQuelle).length + ' Dateien)');
 }
 
+// Feste Kopien der Drittanbieter-Bibliotheken (laufen offline)
+const libsQuelle = path.join(root, 'vendor', 'libs');
+const libsZiel = path.join(ziel, 'vendor', 'libs');
+if (fs.existsSync(libsQuelle)) {
+    fs.mkdirSync(libsZiel, { recursive: true });
+    fs.readdirSync(libsQuelle).forEach((datei) => fs.copyFileSync(path.join(libsQuelle, datei), path.join(libsZiel, datei)));
+    console.log('kopiert: vendor/libs (' + fs.readdirSync(libsQuelle).length + ' Dateien)');
+}
+
 // Einzelne Piktogramm-Icons je Busmodell (fuer die durchsuchbare Liste)
 const iconsQuelle = path.join(root, 'busfehler-icons');
 const iconsZiel = path.join(ziel, 'busfehler-icons');

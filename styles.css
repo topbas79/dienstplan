@@ -54,6 +54,11 @@
             margin: 0;
             color: var(--primary);
         }
+        .offline-hinweis {
+            max-width: 650px; margin: -6px auto 12px auto; padding: 8px 12px;
+            background: #fef3c7; color: #92400e; border-radius: 10px;
+            font-size: 0.82rem; text-align: center;
+        }
         .icon-btn {
             width: auto;
             background: var(--card);
@@ -125,6 +130,13 @@
             min-height: 46px;
         }
         .upload-label:hover { opacity: 0.9; }
+        /* Nur für den Admin sichtbar (KI-Foto-Scan usw.) - body.ist-admin wird beim Anmelden gesetzt */
+        body:not(.ist-admin) .nur-admin { display: none !important; }
+        /* Ohne Foto-Scan ist der PDF-Import die Hauptaktion und sieht wie der große Knopf aus */
+        body:not(.ist-admin) #btnPdfImport {
+            background: var(--success) !important; color: white !important; border: 0 !important;
+            margin-top: 0;
+        }
         #statusText {
             margin-top: 8px;
             font-size: 0.85rem;
@@ -199,6 +211,7 @@
             color: var(--text) !important;
             border: 1px solid var(--border) !important;
         }
+        body.dark .offline-hinweis { background: #422006; color: #fde68a; }
         body.dark .btn-save { color: #6ee7b7 !important; }
         body.dark .btn-gcal { color: #93bbfb !important; }
         body.dark .btn-danger { color: #fca5a5 !important; }
