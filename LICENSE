@@ -1,0 +1,25 @@
+Copyright (c) 2026 Aydin Topbas. Alle Rechte vorbehalten.
+Copyright (c) 2026 Aydin Topbas. All rights reserved.
+
+Dieser Quellcode und alle zugehörigen Dateien (Dienstplan-App) sind urheberrechtlich
+geschützt. Ohne vorherige schriftliche Erlaubnis des Rechteinhabers ist es nicht gestattet,
+den Code oder Teile davon zu kopieren, zu verändern, weiterzuverbreiten, zu veröffentlichen,
+zu verkaufen oder in eigenen Produkten zu verwenden. Das Einsehen des Quellcodes auf GitHub
+im Rahmen der GitHub-Nutzungsbedingungen bleibt unberührt.
+
+This source code and all related files (Dienstplan app) are protected by copyright.
+Without the prior written permission of the copyright holder, you may not copy, modify,
+distribute, publish, sell or use the code or parts of it in your own products. Viewing the
+source code on GitHub as permitted by the GitHub Terms of Service is not affected.
+
+Drittanbieter-Komponenten / Third-party components
+--------------------------------------------------
+Die Ordner "vendor/pdfjs" und "vendor/libs" enthalten unveränderte Bibliotheken anderer
+Urheber (u. a. pdf.js, jsPDF, jsPDF-AutoTable, supabase-js, Cropper.js, Tesseract.js).
+Für sie gelten ausschließlich deren eigene Lizenzen (siehe Lizenzhinweise in den jeweiligen
+Dateien bzw. Ordnern), nicht diese Lizenz.
+
+The folders "vendor/pdfjs" and "vendor/libs" contain unmodified libraries by other authors
+(including pdf.js, jsPDF, jsPDF-AutoTable, supabase-js, Cropper.js, Tesseract.js). They are
+covered solely by their own licenses (see the license notices in the respective files or
+folders), not by this license.
