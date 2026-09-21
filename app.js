@@ -3995,30 +3995,34 @@
     }
 
     function fehlermeldungIconPfad(modellSchluessel, farbe, index) {
-        return `busfehler-icons/${modellSchluessel}/${farbe}-${String(index).padStart(2, '0')}.jpg`;
+        return `busfehler-icons/${modellSchluessel}/${farbe}-${String(index).padStart(2, '0')}.png`;
     }
 
+    // Nur Piktogramme als Kacheln, nach Farbe gruppiert. Die Beschriftung erscheint erst beim Antippen (Popup).
+    // Die Suche filtert weiterhin nach Bedeutung und Symboltext.
     function fehlermeldungListeRendern(modellSchluessel) {
         const modell = BUSMODELLE[modellSchluessel];
         const el = document.getElementById(`fmListe-${modellSchluessel}`);
         if (!modell || !el) return;
         const suchfeld = document.getElementById(`fmSuche-${modellSchluessel}`);
         const suchbegriff = (suchfeld && suchfeld.value || '').toLowerCase().trim();
-        const zeile = (gruppenFarbe, e, index) => {
-            const text = [e.symbol, e.bedeutung].filter(Boolean).join(' ').toLowerCase();
-            if (suchbegriff && !text.includes(suchbegriff)) return '';
-            const iconSrc = fehlermeldungIconPfad(modellSchluessel, gruppenFarbe, index);
-            return `<div class="result-item fm-zeile" onclick="fehlermeldungDetailOeffnen('${modellSchluessel}', '${gruppenFarbe}', ${index})">
-                <span class="label fm-label">
-                    <img src="${iconSrc}" alt="" class="fm-icon">
-                    ${e.symbol ? sicher(e.symbol) : ''}
-                </span>
-                <span style="text-align:right; max-width:55%;">${sicher(e.bedeutung)}</span>
+
+        const inhalt = modell.gruppen.map((gruppe) => {
+            const kacheln = gruppe.eintraege.map((e, i) => {
+                const text = [e.symbol, e.bedeutung].filter(Boolean).join(' ').toLowerCase();
+                if (suchbegriff && !text.includes(suchbegriff)) return '';
+                return `<button type="button" class="fm-kachel" data-modell="${sicher(modellSchluessel)}" data-farbe="${sicher(gruppe.farbe)}" data-index="${i + 1}"
+                            onclick="fehlermeldungDetailOeffnen(this.dataset.modell, this.dataset.farbe, Number(this.dataset.index))"
+                            aria-label="${sicher(e.bedeutung)}">
+                        <img src="${fehlermeldungIconPfad(modellSchluessel, gruppe.farbe, i + 1)}" alt="" loading="lazy">
+                    </button>`;
+            }).join('');
+            if (!kacheln) return '';
+            return `<div class="fm-gruppe">
+                <div class="fm-gruppen-kopf fm-farbe-${sicher(gruppe.farbe)}">${sicher(gruppe.label)}</div>
+                <div class="fm-raster">${kacheln}</div>
             </div>`;
-        };
-        const inhalt = modell.gruppen
-            .map((gruppe) => gruppe.eintraege.map((e, i) => zeile(gruppe.farbe, e, i + 1)).join(''))
-            .join('');
+        }).join('');
         el.innerHTML = inhalt || '<p class="auth-hinweis">Kein Piktogramm gefunden.</p>';
     }
 
@@ -4030,6 +4034,15 @@
         if (!eintrag) return;
         document.getElementById('fmDetailBild').src = fehlermeldungIconPfad(modellSchluessel, farbe, index);
         document.getElementById('fmDetailText').innerText = eintrag.bedeutung;
+        // Handlungsanweisung der Farbstufe (aus dem Handbuch-Auszug), z. B. bei Rot "sofort anhalten"
+        const hinweisEl = document.getElementById('fmDetailHinweis');
+        if (gruppe.hinweis) {
+            hinweisEl.className = 'fm-hinweis fm-hinweis-' + gruppe.farbe;
+            hinweisEl.innerHTML = `<b>${sicher(gruppe.label)} – was zu tun ist</b><br>${sicher(gruppe.hinweis)}`;
+            hinweisEl.style.display = 'block';
+        } else {
+            hinweisEl.style.display = 'none';
+        }
         document.getElementById('fmDetailOverlay').style.display = 'flex';
     }
 
