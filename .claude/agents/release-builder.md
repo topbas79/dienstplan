@@ -42,15 +42,16 @@ Du bist der **Release-Builder** der Dienstplan-App (`C:\dienstplan`, Capacitor-A
 6. **Bereitstellen**: `mkdir -p /c/Users/atopb/Dienstplan-Releases`, APK als `Dienstplan-<versionName>.apk` dorthin kopieren (nie eine frühere Version überschreiben - alte Versionen dort duerfen aber geloescht werden, um Platz zu sparen). `sha256sum` der Datei bestimmen.
 7. **Veröffentlichen (nur wenn die Anfrage das ausdrücklich sagt, z. B. "... und veröffentlichen")**:
    a. `git add android/app/build.gradle` (nur diese Datei - keine anderen ungeprueften Aenderungen mit committen) und committen ("Version <versionName>"), dann `git push`. Ohne diesen Push zeigt der oeffentliche Quellcode eine falsche Versionsnummer.
-   b. GitHub-Release anlegen und dabei ZWEI Kopien der APK hochladen - eine mit festem Namen (das ist die, auf die die Download-Seite fest verlinkt und die sich nie aendert) und eine mit Versionsnummer (fuers Archiv/die Release-Liste):
+   b. GitHub-Release anlegen und dabei ZWEI Kopien der APK hochladen - eine mit festem Namen (das ist die, auf die die Download-Seite fest verlinkt und die sich nie aendert) und eine mit Versionsnummer (fuers Archiv/die Release-Liste). WICHTIG: `gh release create <datei>#<label>` benennt die hochgeladene Datei NICHT um (das `#label` ist nur eine Anzeige-Beschriftung) - die beiden Kopien muessen vorher lokal unter dem gewuenschten Dateinamen liegen:
       ```
       cp app/build/outputs/apk/release/app-release.apk /tmp/Dienstplan.apk
-      gh release create v<versionName> /tmp/Dienstplan.apk "app/build/outputs/apk/release/app-release.apk#Dienstplan-<versionName>.apk" \
+      cp app/build/outputs/apk/release/app-release.apk /tmp/Dienstplan-<versionName>.apk
+      gh release create v<versionName> /tmp/Dienstplan.apk /tmp/Dienstplan-<versionName>.apk \
         --title "Dienstplan <versionName>" --notes "<kurze deutsche Zusammenfassung der Aenderungen, aus git log seit dem letzten Tag>"
       ```
-      Schlaegt das fehl (z. B. Tag existiert schon), NICHT `--force` o. ae. erzwingen, sondern dem Nutzer den Fehler melden.
+      Schlaegt das fehl (z. B. Tag existiert schon), NICHT `--force` o. ae. erzwingen, sondern dem Nutzer den Fehler melden. Nach dem Hochladen `gh release view v<versionName> --json assets --jq '.assets[].name'` pruefen - stehen dort nicht genau `Dienstplan.apk` und `Dienstplan-<versionName>.apk`, das falsch benannte Asset mit `gh release delete-asset v<versionName> <falscher-name> -y` entfernen und mit dem richtig benannten lokalen Pfad per `gh release upload v<versionName> <pfad>` neu hochladen.
    c. Kurz pruefen: `gh release view v<versionName> --json assets --jq '.assets[].name'` muss `Dienstplan.apk` und `Dienstplan-<versionName>.apk` zeigen.
-   d. Wird NICHT veroeffentlicht (Standardfall): im Bericht kurz erwaehnen, dass die Download-Seite fuer Kollegen erst nach einem "... und veroeffentlichen"-Release die neue Version zeigt.
+   d. Wird NICHT veroeffentlicht (Standardfall): am ENDE DES BERICHTS immer ausdruecklich fragen, ob diese Version jetzt veroeffentlicht werden soll (nicht nur beilaeufig erwaehnen) - z. B. "Soll ich Version <versionName> auch veroeffentlichen, damit Kollegen sie ueber die Download-Seite bekommen?". Das gilt bei JEDEM Lauf ohne "veroeffentlichen" in der Anfrage, auch wenn schon frueher einmal veroeffentlicht wurde.
 
 ## Bericht (kurz, deutsch)
 
