@@ -58,7 +58,18 @@ public class WidgetBridgePlugin extends Plugin {
                     PendingIntent pi = PendingIntent.getBroadcast(ctx, ALARM_REQUEST_BASIS + i,
                             new Intent(ctx, WidgetUpdateReceiver.class),
                             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-                    am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, zeitMs, pi);
+                    try {
+                        am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, zeitMs, pi);
+                    } catch (SecurityException e) {
+                        // Ab Android 12 braucht ein exakter Alarm die Berechtigung "Alarme & Erinnerungen"
+                        // (Einstellungen > Apps > Dienstplan > Spezieller Zugriff). Fehlt sie - z. B. weil
+                        // die App neu signiert/neu installiert wurde - NIE abstuerzen, sondern ungefaehr
+                        // planen. Das Widget aktualisiert sich dann zur Not weiterhin von selbst alle
+                        // 30 Minuten (siehe updatePeriodMillis in aktuelle_fahrt_widget_info.xml).
+                        try {
+                            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, zeitMs, pi);
+                        } catch (SecurityException e2) { /* selbes Sicherheitsnetz, dann eben ganz ohne Alarm */ }
+                    }
                 }
             } catch (JSONException e) {
                 call.reject("Ungueltige Zeiten", e);

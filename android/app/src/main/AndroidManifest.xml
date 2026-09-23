@@ -53,4 +53,9 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Fuer punktgenaue Widget-Updates (Wende-/Pausenwechsel). Ohne diese Erklaerung bleibt der
+         Schalter "Alarme & Erinnerungen" in den Android-Einstellungen ausgegraut und laesst sich
+         gar nicht erst einschalten. Der Code fragt trotzdem nie danach und stuerzt nie ab, wenn sie
+         fehlt (siehe WidgetBridgePlugin) - das Widget aktualisiert sich dann nur alle 30 Min. selbst. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 </manifest>
