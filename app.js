@@ -516,15 +516,16 @@
     }
 
     function einladungsText(code) {
-        return `Hier ist dein Zugang zur Dienstplan-App:\n` +
-               `${APP_ADRESSE}\n\n` +
+        return `Hier ist dein Zugang zur Dienstplan-App:\n\n` +
+               `Android-App herunterladen: ${APP_ADRESSE}/app/\n` +
+               `Kein Android oder lieber im Browser? ${APP_ADRESSE}\n\n` +
                `Einladungscode: ${code}\n\n` +
                `So geht's:\n` +
-               `1. Link öffnen\n` +
+               `1. App installieren (oder Link im Browser öffnen)\n` +
                `2. Auf "Noch kein Konto? Mit Einladungscode registrieren" tippen\n` +
                `3. E-Mail, Passwort und den Code eintragen\n\n` +
-               `Tipp: Danach im Browser-Menü "Zum Startbildschirm hinzufügen" wählen, ` +
-               `dann hast du die App wie eine normale App auf dem Handy.`;
+               `Tipp bei der Browser-Variante: Danach im Browser-Menü "Zum Startbildschirm hinzufügen" ` +
+               `wählen, dann hast du die App wie eine normale App auf dem Handy.`;
     }
 
     async function einladungTeilen(code) {
