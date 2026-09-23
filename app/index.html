@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dienstplan – App herunterladen</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="../icon-192.png">
+<style>
+    :root {
+        --primary: #2563eb;
+        --primary-dunkel: #1d4ed8;
+        --bg: #f5f6f8;
+        --card: #ffffff;
+        --text: #12141c;
+        --text-soft: #5b6072;
+        --text-faint: #9297a6;
+        --border: #e7e9ef;
+        --chip-bg: #e6f1fb;
+        --chip-text: #0c447c;
+    }
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #f1f5f9;
+            --text-soft: #94a3b8;
+            --text-faint: #7c8494;
+            --border: #334155;
+            --chip-bg: #1e3a5f;
+            --chip-text: #93c5fd;
+        }
+    }
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        min-height: 100vh;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding: 40px 16px;
+    }
+    .karte {
+        width: 100%;
+        max-width: 380px;
+        text-align: center;
+    }
+    .icon {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 16px;
+        border-radius: 18px;
+        background: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .icon img { width: 38px; height: 38px; }
+    h1 { font-size: 21px; font-weight: 700; margin: 0 0 4px; }
+    .untertitel { font-size: 14px; color: var(--text-soft); margin: 0 0 24px; }
+    .box {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 18px;
+        margin-bottom: 14px;
+        text-align: left;
+    }
+    .version-zeile {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+        font-size: 13px;
+        color: var(--text-soft);
+    }
+    .version-zeile b { color: var(--text); font-weight: 700; }
+    a.laden-knopf {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        background: var(--primary);
+        color: #ffffff;
+        text-decoration: none;
+        border-radius: 12px;
+        padding: 14px;
+        font-size: 15px;
+        font-weight: 700;
+    }
+    a.laden-knopf:active { background: var(--primary-dunkel); }
+    .lade-hinweis { font-size: 12.5px; color: var(--text-faint); margin-top: 10px; text-align: center; }
+    .schritt-titel {
+        font-size: 11.5px;
+        font-weight: 700;
+        color: var(--text-soft);
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        margin: 0 0 12px;
+    }
+    .schritt { display: flex; gap: 10px; margin-bottom: 12px; }
+    .schritt:last-child { margin-bottom: 0; }
+    .schritt-nr {
+        width: 20px; height: 20px; flex: none;
+        border-radius: 50%;
+        background: var(--chip-bg);
+        color: var(--chip-text);
+        font-size: 12px; font-weight: 700;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .schritt p { font-size: 13.5px; line-height: 1.5; margin: 0; color: var(--text); }
+    .fussnote { font-size: 12px; color: var(--text-faint); margin: 18px 0 0; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="karte">
+    <div class="icon"><img src="../icon-192.png" alt=""></div>
+    <h1>Dienstplan</h1>
+    <p class="untertitel">App für Kollegen aus dem Betriebshof</p>
+
+    <div class="box">
+        <div class="version-zeile">
+            <span>Aktuelle Version</span>
+            <b id="version">wird geladen …</b>
+        </div>
+        <a class="laden-knopf" id="ladenKnopf" href="https://github.com/topbas79/dienstplan/releases/latest/download/Dienstplan.apk">
+            ⬇ App herunterladen
+        </a>
+        <p class="lade-hinweis" id="ladeHinweis"></p>
+    </div>
+
+    <div class="box">
+        <p class="schritt-titel">So installierst du sie</p>
+        <div class="schritt">
+            <div class="schritt-nr">1</div>
+            <p>Datei öffnen und Installation aus unbekannten Quellen erlauben.</p>
+        </div>
+        <div class="schritt">
+            <div class="schritt-nr">2</div>
+            <p>Warnung von Play Protect mit „Trotzdem installieren“ bestätigen.</p>
+        </div>
+        <div class="schritt">
+            <div class="schritt-nr">3</div>
+            <p>Mit dem Einladungscode vom Admin registrieren.</p>
+        </div>
+    </div>
+
+    <p class="fussnote">Nur für eingeladene Kollegen der Dienstplan-App. Kein Einladungscode? Frag deinen Admin.</p>
+</div>
+<script>
+    // Zeigt die zuletzt veröffentlichte Version an. Der Download-Knopf zeigt fest auf
+    // ".../releases/latest/download/Dienstplan.apk" - diese Adresse bleibt bei jeder
+    // neuen Version automatisch gleich, hier muss nichts von Hand aktualisiert werden.
+    fetch('https://api.github.com/repos/topbas79/dienstplan/releases/latest')
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+        .then(function (release) {
+            var assets = release.assets || [];
+            var apk = assets.filter(function (a) { return a.name === 'Dienstplan.apk'; })[0];
+            document.getElementById('version').textContent = release.tag_name || release.name || '–';
+            if (apk) {
+                var mb = (apk.size / 1024 / 1024).toFixed(1);
+                document.getElementById('ladeHinweis').textContent = mb + ' MB · für Android';
+            }
+        })
+        .catch(function () {
+            document.getElementById('version').textContent = '–';
+            document.getElementById('ladeHinweis').textContent = 'Noch keine Version veröffentlicht.';
+            document.getElementById('ladenKnopf').style.opacity = '.5';
+            document.getElementById('ladenKnopf').style.pointerEvents = 'none';
+        });
+</script>
+</body>
+</html>
