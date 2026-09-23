@@ -4,7 +4,11 @@ import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
+import android.os.Build;
+import android.provider.Settings;
 import com.getcapacitor.JSArray;
+import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
@@ -86,6 +90,34 @@ public class WidgetBridgePlugin extends Plugin {
         AktuelleFahrtWidgetProvider.alleAktualisieren(ctx, true);
         AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
         if (am != null) alteAlarmeVerwerfen(ctx, am);
+        call.resolve();
+    }
+
+    // Meldet, ob punktgenaue Widget-Updates gerade moeglich sind (fuer eine kleine Statusanzeige
+    // in den Einstellungen). Vor Android 12 gibt es diese Einschraenkung gar nicht - dort immer true.
+    @PluginMethod
+    public void alarmBerechtigungStatus(PluginCall call) {
+        boolean erlaubt = true;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            AlarmManager am = (AlarmManager) getContext().getApplicationContext().getSystemService(Context.ALARM_SERVICE);
+            erlaubt = am != null && am.canScheduleExactAlarms();
+        }
+        JSObject ergebnis = new JSObject();
+        ergebnis.put("erlaubt", erlaubt);
+        call.resolve(ergebnis);
+    }
+
+    // Oeffnet direkt den passenden Android-Einstellungsbildschirm fuer diese App (spart das
+    // Suchen durch "Spezieller App-Zugriff"). Vor Android 12 gibt es dort nichts zu erlauben.
+    @PluginMethod
+    public void alarmBerechtigungOeffnen(PluginCall call) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            Context ctx = getContext().getApplicationContext();
+            Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
+            intent.setData(Uri.parse("package:" + ctx.getPackageName()));
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            ctx.startActivity(intent);
+        }
         call.resolve();
     }
 

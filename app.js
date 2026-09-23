@@ -422,6 +422,8 @@
         const istAdmin = profil.rolle === 'admin';
         // KI-Scan, Foto-Erkennung und Haltestellen-Pflege gibt es nur für den Admin (Elemente mit Klasse "nur-admin")
         document.body.classList.toggle('ist-admin', istAdmin);
+        // Manche Einstellungen (z. B. Widget-Genauigkeit) gibt es nur in der nativen App (Klasse "nur-nativ")
+        document.body.classList.toggle('ist-nativ', capacitorAktiv());
         document.getElementById('topbarUser').innerHTML =
             sicher(profil.anzeigename || profil.email) + (istAdmin ? '<span class="badge admin">Admin</span>' : '');
         const verwaltungGruppe = document.getElementById('mehrVerwaltungGruppe');
@@ -4297,6 +4299,30 @@
         } catch (e) { console.log('Widget-Sync fehlgeschlagen:', e); }
     }
 
+    // ---------- Widget-Genauigkeit (Android "Alarme & Erinnerungen") ----------
+    // Zeigt in den Einstellungen, ob das Widget sich punktgenau bei jedem Wende-/Pausenwechsel
+    // aktualisieren darf, oder nur alle 30 Minuten (Android-Fallback ohne diese Berechtigung).
+    async function widgetGenauigkeitPruefen() {
+        if (!capacitorAktiv()) return;
+        const WB = window.Capacitor.Plugins.WidgetBridge;
+        const el = document.getElementById('widgetGenauigkeitStatus');
+        if (!WB || !el) return;
+        try {
+            const { erlaubt } = await WB.alarmBerechtigungStatus();
+            el.innerHTML = erlaubt
+                ? `<span style="display:flex; align-items:flex-start; gap:6px;">${ICONS.check} Eingeschaltet – das Widget aktualisiert sich punktgenau bei jedem Wende-/Pausenwechsel.</span>`
+                : `<span style="display:flex; align-items:flex-start; gap:6px;">${ICONS.warning} Noch nicht eingeschaltet – das Widget aktualisiert sich nur alle 30 Minuten von selbst.</span>`;
+        } catch (e) { el.innerText = ''; }
+    }
+
+    function widgetGenauigkeitOeffnen() {
+        if (!capacitorAktiv()) return;
+        const WB = window.Capacitor.Plugins.WidgetBridge;
+        if (WB) WB.alarmBerechtigungOeffnen();
+        // Nach der Rueckkehr aus den Android-Einstellungen den Status neu abfragen
+        setTimeout(widgetGenauigkeitPruefen, 1500);
+    }
+
     // ---------- App starten ----------
     // Verbindungsdaten des Supabase-Projekts (dürfen öffentlich sein –
     // der Zugriffsschutz passiert über die Regeln in der Datenbank).
@@ -4353,7 +4379,7 @@
         if (seite === 'admin') { adminDatenLaden(); scansLaden(); haltestellenRendern(); }
         if (seite === 'liste') listeRendern();
         if (seite === 'wegstrecken') wegstreckenRendern();
-        if (seite === 'einstellungen') { einstellungenLaden(); hilfeAnzeigeAktualisieren(); }
+        if (seite === 'einstellungen') { einstellungenLaden(); hilfeAnzeigeAktualisieren(); widgetGenauigkeitPruefen(); }
         if (seite === 'fehlermeldung') fehlermeldungSeiteOeffnen();
         if (seite === 'chat') chatListeLaden();
         if (seite === 'kontakte' || seite === 'gruppe-neu') kontakteLaden();

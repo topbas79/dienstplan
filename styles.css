@@ -132,6 +132,7 @@
         .upload-label:hover { opacity: 0.9; }
         /* Nur für den Admin sichtbar (KI-Foto-Scan usw.) - body.ist-admin wird beim Anmelden gesetzt */
         body:not(.ist-admin) .nur-admin { display: none !important; }
+        body:not(.ist-nativ) .nur-nativ { display: none !important; }
         /* Ohne Foto-Scan ist der PDF-Import die Hauptaktion und sieht wie der große Knopf aus */
         body:not(.ist-admin) #btnPdfImport {
             background: var(--success) !important; color: white !important; border: 0 !important;
