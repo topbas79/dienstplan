@@ -685,9 +685,16 @@
         </details>
 
         <details class="einst-abschnitt nur-nativ">
-            <summary>Widget-Genauigkeit</summary>
+            <summary>Widgets</summary>
             <div class="einst-inhalt">
-                <p class="auth-hinweis">Android verlangt seit Version 12 eine eigene Erlaubnis für punktgenaue Erinnerungen. Ohne sie funktioniert das Homescreen-Widget „Aktuelle Fahrt“ trotzdem, aktualisiert sich dann aber nur alle 30 Minuten statt bei jedem Wende- oder Pausenwechsel.</p>
+                <p class="auth-hinweis">Lege deinen Kalender oder die aktuelle Fahrt direkt auf den Startbildschirm.</p>
+                <button class="btn-secondary" onclick="widgetAufStartbildschirm('kalender')">Kalender-Widget hinzufügen</button>
+                <button class="btn-secondary" onclick="widgetAufStartbildschirm('fahrt')">Widget „Aktuelle Fahrt“ hinzufügen</button>
+                <div id="widgetMeldung" class="auth-hinweis" style="margin:8px 0 14px;"></div>
+                <p class="auth-hinweis">Hintergrund durchsichtig machen: Widget auf dem Startbildschirm gedrückt halten → „Einstellungen“ und den Regler verschieben.</p>
+
+                <p class="auth-hinweis" style="font-weight:700;">Punktgenaue Updates</p>
+                <p class="auth-hinweis">Android verlangt seit Version 12 eine eigene Erlaubnis für punktgenaue Erinnerungen. Ohne sie funktioniert das Widget „Aktuelle Fahrt“ trotzdem, aktualisiert sich dann aber nur alle 30 Minuten statt bei jedem Wende- oder Pausenwechsel.</p>
                 <div id="widgetGenauigkeitStatus" class="auth-hinweis" style="margin-bottom:10px;"></div>
                 <button class="btn-secondary" onclick="widgetGenauigkeitOeffnen()">Berechtigung öffnen</button>
             </div>

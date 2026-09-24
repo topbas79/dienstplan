@@ -118,6 +118,77 @@ public class WidgetDaten {
                 .remove(SCHLUESSEL_MANUELL_TAG_PREFIX + appWidgetId).apply();
     }
 
+    // ---------- Darstellung (beide Widgets): Deckkraft des Hintergrunds ----------
+    // 0..100 in 10er-Schritten je Widget-Instanz, Standard 100 (deckend).
+    private static final String PREFS_DARSTELLUNG = "widget_darstellung";
+    private static final String SCHLUESSEL_DECKKRAFT_PREFIX = "deckkraft_";
+
+    public static int deckkraftLaden(Context ctx, int appWidgetId) {
+        return ctx.getSharedPreferences(PREFS_DARSTELLUNG, Context.MODE_PRIVATE)
+                .getInt(SCHLUESSEL_DECKKRAFT_PREFIX + appWidgetId, 100);
+    }
+
+    public static void deckkraftSpeichern(Context ctx, int appWidgetId, int prozent) {
+        int gerundet = Math.max(0, Math.min(100, Math.round(prozent / 10f) * 10));
+        ctx.getSharedPreferences(PREFS_DARSTELLUNG, Context.MODE_PRIVATE).edit()
+                .putInt(SCHLUESSEL_DECKKRAFT_PREFIX + appWidgetId, gerundet).apply();
+    }
+
+    public static void deckkraftLoeschen(Context ctx, int appWidgetId) {
+        ctx.getSharedPreferences(PREFS_DARSTELLUNG, Context.MODE_PRIVATE).edit()
+                .remove(SCHLUESSEL_DECKKRAFT_PREFIX + appWidgetId).apply();
+    }
+
+    // Hintergrund-Drawable (drawable/ bzw. drawable-night/widget_bg_<prozent>) fuer dieses Widget
+    public static int hintergrundRes(Context ctx, int appWidgetId) {
+        return ctx.getResources().getIdentifier("widget_bg_" + deckkraftLaden(ctx, appWidgetId), "drawable", ctx.getPackageName());
+    }
+
+    // ---------- Kalender-Widget ----------
+    // Eigene Preferences-Datei: {"schichten": {"2026-09-21": {s: "05:12", t: "", m: false}, ...},
+    // "feiertage": {"2026-10-03": {a: "f", k: "Einheit"}, ...}} plus je Widget-Instanz der
+    // angezeigte Monat als Versatz zum aktuellen Monat (0 = dieser Monat).
+    private static final String PREFS_KALENDER = "kalender_widget";
+    private static final String SCHLUESSEL_KALENDER = "kalender_json";
+    private static final String SCHLUESSEL_VERSATZ_PREFIX = "monat_versatz_";
+
+    public static void kalenderSpeichern(Context ctx, String json) {
+        ctx.getSharedPreferences(PREFS_KALENDER, Context.MODE_PRIVATE).edit()
+                .putString(SCHLUESSEL_KALENDER, json).apply();
+    }
+
+    public static JSONObject kalenderLaden(Context ctx) {
+        String json = ctx.getSharedPreferences(PREFS_KALENDER, Context.MODE_PRIVATE).getString(SCHLUESSEL_KALENDER, "{}");
+        try {
+            return new JSONObject(json);
+        } catch (JSONException e) {
+            return new JSONObject();
+        }
+    }
+
+    public static int kalenderVersatzLaden(Context ctx, int appWidgetId) {
+        return ctx.getSharedPreferences(PREFS_KALENDER, Context.MODE_PRIVATE).getInt(SCHLUESSEL_VERSATZ_PREFIX + appWidgetId, 0);
+    }
+
+    public static void kalenderVersatzSpeichern(Context ctx, int appWidgetId, int versatz) {
+        ctx.getSharedPreferences(PREFS_KALENDER, Context.MODE_PRIVATE).edit()
+                .putInt(SCHLUESSEL_VERSATZ_PREFIX + appWidgetId, versatz).apply();
+    }
+
+    public static void kalenderVersatzLoeschen(Context ctx, int appWidgetId) {
+        ctx.getSharedPreferences(PREFS_KALENDER, Context.MODE_PRIVATE).edit()
+                .remove(SCHLUESSEL_VERSATZ_PREFIX + appWidgetId).apply();
+    }
+
+    public static void alleKalenderVersaetzeLoeschen(Context ctx) {
+        SharedPreferences prefs = ctx.getSharedPreferences(PREFS_KALENDER, Context.MODE_PRIVATE);
+        SharedPreferences.Editor e = prefs.edit();
+        for (String schluessel : prefs.getAll().keySet()) {
+            if (schluessel.startsWith(SCHLUESSEL_VERSATZ_PREFIX)) e.remove(schluessel);
+        }
+        e.apply();
+    }
+
     // Wird bei neuen Daten und bei jedem echten Wende-/Pausenwechsel
     // aufgerufen, damit alle Widget-Instanzen wieder auf den heutigen Tag
     // und den automatisch aktuellen Punkt springen (wie "Jetzt" in der App).

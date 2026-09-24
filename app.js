@@ -285,6 +285,11 @@
         if (!confirm('Wirklich abmelden?')) return;
         await sb.auth.signOut();
         await kvLeeren();
+        // Keine Dienstdaten auf dem Startbildschirm zuruecklassen
+        try {
+            const WB = capacitorAktiv() && window.Capacitor.Plugins.WidgetBridge;
+            if (WB) await WB.leeren();
+        } catch (e) { console.log('Widgets leeren fehlgeschlagen:', e); }
         document.body.classList.remove('ist-admin');
         aktuellerNutzer = null;
         aktuellesProfil = null;
@@ -467,6 +472,7 @@
             wechselSeite('einrichten');
         } else {
             tarifErinnerungPruefen();
+            widgetTagPruefen();
         }
     }
 
@@ -4280,10 +4286,84 @@
         });
     }
 
+    // Alles, was das Kalender-Widget anzeigt, in kompakter Form: je gespeichertem Tag Dienstbeginn (s),
+    // Art (t: krank/urlaub/frei) und Mehrarbeit (m), dazu die Feiertage der naechsten/letzten 2 Jahre.
+    function widgetKalenderDatenBauen() {
+        const schichten = {};
+        Object.keys(gespeicherteSchichten).forEach(datumStr => {
+            const sch = gespeicherteSchichten[datumStr];
+            if (!sch) return;
+            const eintrag = {};
+            if (sch.typ && SONDERTAG_INFO[sch.typ]) {
+                eintrag.t = sch.typ;
+            } else {
+                eintrag.s = sch.startStr || '';
+                if (sch.istMehrarbeitTag) eintrag.m = true;
+            }
+            schichten[datumStr] = eintrag;
+        });
+
+        const feiertage = {};
+        const heute = new Date();
+        const pad = (n) => n < 10 ? '0' + n : String(n);
+        const ende = new Date(heute.getFullYear(), heute.getMonth() + 25, 0);
+        for (let d = new Date(heute.getFullYear(), heute.getMonth() - 24, 1); d <= ende; d.setDate(d.getDate() + 1)) {
+            const datumStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+            const ft = feiertagAm(datumStr);
+            if (ft) feiertage[datumStr] = { a: ft.art === 'feiertag' ? 'f' : 's', k: feiertagKurz(ft.name) };
+        }
+        return { schichten, feiertage };
+    }
+
+    async function kalenderWidgetSync() {
+        const WB = window.Capacitor.Plugins.WidgetBridge;
+        if (!WB || !WB.kalenderSpeichern) return;
+        try {
+            await WB.kalenderSpeichern({ kalenderJson: JSON.stringify(widgetKalenderDatenBauen()) });
+        } catch (e) { console.log('Kalender-Widget-Sync fehlgeschlagen:', e); }
+    }
+
+    // Tipp auf einen Tag im Kalender-Widget: Kalender auf diesen Monat stellen und den Tag genauso
+    // oeffnen wie beim Antippen im Kalender der App (Dienst, Krank/Urlaub/Frei oder Auswahl).
+    // Ist die App noch nicht angemeldet/eingerichtet, bleibt der Tag beim Plugin gemerkt und wird
+    // nach dem Anmelden abgeholt.
+    async function widgetTagPruefen() {
+        if (!capacitorAktiv() || !aktuellerNutzer || !aktuellesProfil) return;
+        if (!aktuellesProfil.aktiv || !aktuellesProfil.profil_fertig || !ein.eingerichtetAm) return;
+        const WB = window.Capacitor.Plugins.WidgetBridge;
+        if (!WB || !WB.offenesDatum) return;
+        let antwort;
+        try { antwort = await WB.offenesDatum(); } catch (e) { return; }
+        const datumStr = antwort && antwort.datum;
+        if (!datumStr || !/^\d{4}-\d{2}-\d{2}$/.test(datumStr)) return;
+        const [jahr, monat] = datumStr.split('-').map(Number);
+        aktuellesDatumAnzeige = new Date(jahr, monat - 1, 1);
+        wechselSeite('kalender');
+        kalenderTagKlick(datumStr);
+    }
+
+    // Bittet Android, ein Widget auf den Startbildschirm zu legen (Systemdialog zum Bestaetigen)
+    async function widgetAufStartbildschirm(art) {
+        const el = document.getElementById('widgetMeldung');
+        const WB = capacitorAktiv() && window.Capacitor.Plugins.WidgetBridge;
+        if (!el || !WB) return;
+        try {
+            const { unterstuetzt } = await WB.widgetHinzufuegen({ art });
+            el.innerText = unterstuetzt
+                ? 'Android fragt dich jetzt, ob das Widget hinzugefügt werden soll.'
+                : 'Dein Startbildschirm kann das nicht automatisch. Halte eine freie Stelle gedrückt → Widgets → Dienstplan.';
+        } catch (e) {
+            el.innerText = 'Das hat nicht geklappt. Halte eine freie Stelle auf dem Startbildschirm gedrückt → Widgets → Dienstplan.';
+        }
+    }
+
     async function aktuelleFahrtWidgetSyncHeute() {
         if (!capacitorAktiv()) return;
         const WB = window.Capacitor.Plugins.WidgetBridge;
         if (!WB) return;
+        // Nur eigene Daten aufs Widget, nie die eines anderen Nutzers (z. B. Admin-Ansicht mit Freigabe)
+        if (aktuellerNutzer && angezeigterNutzerId !== aktuellerNutzer.id) return;
+        kalenderWidgetSync();
         const heuteStr = heutigesDatumStr();
         const tage = widgetTageBauen();
         if (!tage.length) {
@@ -4343,6 +4423,11 @@
         sb.auth.onAuthStateChange((ereignis) => {
             if (ereignis === 'PASSWORD_RECOVERY') neuesPasswortZeigen();
         });
+        // Tipp auf einen Tag im Kalender-Widget, waehrend die App schon laeuft
+        try {
+            const WB = capacitorAktiv() && window.Capacitor.Plugins.WidgetBridge;
+            if (WB && WB.addListener) WB.addListener('widgetTag', () => { widgetTagPruefen(); });
+        } catch (e) { console.log('Widget-Listener nicht verfügbar:', e); }
         // Wieder Netz: Daten neu laden und den Offline-Hinweis entfernen
         window.addEventListener('online', () => { if (aktuellerNutzer && !passwortWiederherstellung) schichtenLaden(); });
         nutzerLaden();

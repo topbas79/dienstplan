@@ -5,4 +5,5 @@
     <string name="package_name">de.topbas.dienstplan</string>
     <string name="custom_url_scheme">de.topbas.dienstplan</string>
     <string name="aktuelle_fahrt_widget_beschreibung">Aktuelle Fahrt: zeigt den aktuellen bzw. nächsten Wende-/Pausenpunkt deines heutigen Dienstes. Zum Durchblättern wischen.</string>
+    <string name="kalender_widget_beschreibung">Kalender: zeigt deinen Monat mit allen Diensten, Urlaub, Krank- und freien Tagen. Mit ‹ › durch die Monate blättern.</string>
 </resources>

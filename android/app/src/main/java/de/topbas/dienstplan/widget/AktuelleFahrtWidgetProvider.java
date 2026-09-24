@@ -36,11 +36,13 @@ public class AktuelleFahrtWidgetProvider extends AppWidgetProvider {
         for (int id : appWidgetIds) {
             WidgetDaten.manuellerIndexLoeschen(context, id);
             WidgetDaten.manuellerTagIndexLoeschen(context, id);
+            WidgetDaten.deckkraftLoeschen(context, id);
         }
     }
 
     public static void aktualisieren(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_aktuelle_fahrt);
+        views.setInt(R.id.karte, "setBackgroundResource", WidgetDaten.hintergrundRes(context, appWidgetId));
 
         JSONArray tage = WidgetDaten.tageLaden(context);
         int tageGesamt = tage.length();

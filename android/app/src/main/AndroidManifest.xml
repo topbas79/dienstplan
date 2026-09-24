@@ -39,6 +39,29 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/aktuelle_fahrt_widget_info" />
         </receiver>
+        <!-- Homescreen-Widget "Kalender" -->
+        <receiver
+            android:name=".widget.KalenderWidgetProvider"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/kalender_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".widget.KalenderNavReceiver"
+            android:exported="false" />
+        <!-- Einstellungen der Widgets (Hintergrund-Deckkraft), beim Hinzufuegen und per langem Druck -->
+        <activity
+            android:name=".widget.WidgetKonfigActivity"
+            android:theme="@style/WidgetKonfigTheme"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
         <receiver
             android:name=".widget.WidgetUpdateReceiver"
             android:exported="false" />

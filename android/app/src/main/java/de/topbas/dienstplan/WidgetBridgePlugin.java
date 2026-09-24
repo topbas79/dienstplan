@@ -2,6 +2,8 @@ package de.topbas.dienstplan;
 
 import android.app.AlarmManager;
 import android.app.PendingIntent;
+import android.appwidget.AppWidgetManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
@@ -14,6 +16,7 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import de.topbas.dienstplan.widget.AktuelleFahrtWidgetProvider;
+import de.topbas.dienstplan.widget.KalenderWidgetProvider;
 import de.topbas.dienstplan.widget.WidgetDaten;
 import de.topbas.dienstplan.widget.WidgetUpdateReceiver;
 import org.json.JSONException;
@@ -31,6 +34,43 @@ public class WidgetBridgePlugin extends Plugin {
     private static final int ALARM_REQUEST_BASIS = 91000;
     private static final int ALARM_MAX_ANZAHL = 32;
 
+    // Tag, auf den im Kalender-Widget getippt wurde ("2026-09-21") - bleibt gemerkt, bis die App ihn
+    // abholt (sie kann beim Antippen noch gar nicht gestartet/angemeldet sein).
+    private static String offenesDatum = null;
+
+    // App wird durch Tipp aufs Widget neu gestartet
+    @Override
+    public void load() {
+        datumUebernehmen(getActivity() != null ? getActivity().getIntent() : null);
+    }
+
+    // App laeuft schon und wird durch Tipp aufs Widget nach vorn geholt
+    @Override
+    protected void handleOnNewIntent(Intent intent) {
+        super.handleOnNewIntent(intent);
+        if (datumUebernehmen(intent)) notifyListeners("widgetTag", new JSObject());
+    }
+
+    private static boolean datumUebernehmen(Intent intent) {
+        if (intent == null) return false;
+        String datum = intent.getStringExtra("widget_datum");
+        if (datum == null) return false;
+        offenesDatum = datum;
+        intent.removeExtra("widget_datum");   // nicht bei jeder Neuerstellung der Oberflaeche erneut auslesen
+        return true;
+    }
+
+    // Holt (und loescht) den vom Widget angetippten Tag - leeres Objekt, wenn keiner ansteht
+    @PluginMethod
+    public void offenesDatum(PluginCall call) {
+        JSObject ergebnis = new JSObject();
+        if (offenesDatum != null) {
+            ergebnis.put("datum", offenesDatum);
+            offenesDatum = null;
+        }
+        call.resolve(ergebnis);
+    }
+
     // Speichert die letzten/naechsten gespeicherten Dienste (jeweils mit
     // ihren Fahrtpunkten) fuers Widget, plus den Index des heutigen Tages
     // darin - damit sich per Pfeile oben zwischen Tagen blaettern laesst.
@@ -42,6 +82,37 @@ public class WidgetBridgePlugin extends Plugin {
         WidgetDaten.tageSpeichern(ctx, tageJson, heuteIndex);
         AktuelleFahrtWidgetProvider.alleAktualisieren(ctx, true);
         call.resolve();
+    }
+
+    // Alle gespeicherten Tage fuers Kalender-Widget (Dienste, Urlaub/Krank/Frei, Feiertage).
+    // Bei neuen Daten springen alle Kalender-Widgets wieder auf den aktuellen Monat.
+    @PluginMethod
+    public void kalenderSpeichern(PluginCall call) {
+        String kalenderJson = call.getString("kalenderJson", "{}");
+        Context ctx = getContext().getApplicationContext();
+        WidgetDaten.kalenderSpeichern(ctx, kalenderJson);
+        KalenderWidgetProvider.alleAktualisieren(ctx, true);
+        call.resolve();
+    }
+
+    // Bittet Android, ein Widget auf den Startbildschirm zu legen (der Nutzer bestaetigt im
+    // Systemdialog). art: "kalender" oder "fahrt". unterstuetzt=false, wenn der Launcher das
+    // nicht kann - dann muss das Widget von Hand hinzugefuegt werden.
+    @PluginMethod
+    public void widgetHinzufuegen(PluginCall call) {
+        String art = call.getString("art", "kalender");
+        Context ctx = getContext().getApplicationContext();
+        boolean unterstuetzt = false;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            AppWidgetManager mgr = AppWidgetManager.getInstance(ctx);
+            if (mgr.isRequestPinAppWidgetSupported()) {
+                Class<?> klasse = "fahrt".equals(art) ? AktuelleFahrtWidgetProvider.class : KalenderWidgetProvider.class;
+                unterstuetzt = mgr.requestPinAppWidget(new ComponentName(ctx, klasse), null, null);
+            }
+        }
+        JSObject ergebnis = new JSObject();
+        ergebnis.put("unterstuetzt", unterstuetzt);
+        call.resolve(ergebnis);
     }
 
     @PluginMethod
@@ -88,6 +159,9 @@ public class WidgetBridgePlugin extends Plugin {
         Context ctx = getContext().getApplicationContext();
         WidgetDaten.tageSpeichern(ctx, "[]", -1);
         AktuelleFahrtWidgetProvider.alleAktualisieren(ctx, true);
+        // Auch das Kalender-Widget leeren (z. B. beim Abmelden - keine Daten auf dem Startbildschirm liegen lassen)
+        WidgetDaten.kalenderSpeichern(ctx, "{}");
+        KalenderWidgetProvider.alleAktualisieren(ctx, true);
         AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
         if (am != null) alteAlarmeVerwerfen(ctx, am);
         call.resolve();
