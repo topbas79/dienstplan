@@ -4,6 +4,7 @@
 // Alle Daten liegen nur auf diesem Gerät (localStorage), Export/Import als JSON-Datei.
 
 const SPEICHER_KEY = 'stellplatz-daten-v1';
+const ANSAGE_KEY = 'stellplatz-ansage';
 const MAX_VERLAUF = 300;
 const MAX_ZIFFERN = 8;
 const MAX_PLAETZE = 200;
@@ -53,6 +54,7 @@ let ebusGewaehlt = null;       // null = automatisch, sonst true/false vom E-Bus
 let rotGewaehlt = null;        // Rote Karte für einen neu eingegebenen Bus: null = unverändert, sonst true/false
 let hinweisExtra = '';
 let diktat = false;            // Durchsprechen: hört dauerhaft zu, speichert und springt selbst weiter
+let sprechStart = false;       // Schnellstart "Durchsprechen": beim nächsten Tippen auf einen Platz geht es los
 let fokusVorSheet = null;
 let toastTimer = null;
 let bearbeiteBereichId = null;
@@ -427,8 +429,9 @@ function renderSuchErgebnis() {
 
 function renderZuweisen() {
     const banner = $('#zuweisenBanner');
-    banner.hidden = !zuweisenBus || aktiveAnsicht !== 'Plaetze';
+    banner.hidden = !(zuweisenBus || sprechStart) || aktiveAnsicht !== 'Plaetze';
     if (zuweisenBus) $('#zuweisenText').textContent = 'Bus ' + zuweisenBus + ': tippe auf den Platz, wo er steht';
+    else if (sprechStart) $('#zuweisenText').textContent = 'Durchsprechen: tippe auf den ersten Platz, dann einfach lossprechen';
     document.body.classList.toggle('zuweisen-modus', !!zuweisenBus && aktiveAnsicht === 'Plaetze');
 }
 
@@ -611,7 +614,11 @@ function renderBereiche() {
           '</span></div><button type="button" class="btn primaer klein" data-aktion="vorlage">Anlegen</button></div>'
         : '';
 
-    el.innerHTML = vorlage + neu + liste + werkzeuge;
+    const einstellungen = '<div class="karte formular"><h2>Einstellungen</h2>' +
+        '<label class="haken"><input type="checkbox" name="ansage"' + (ansageAn() ? ' checked' : '') + '> ' +
+        'Ansage beim Durchsprechen (z. B. „18 01 gespeichert“, „Akku?“) – vibrieren tut es immer</label></div>';
+
+    el.innerHTML = vorlage + einstellungen + neu + liste + werkzeuge;
 }
 
 // ---------- Eingabefenster (Ziffernblock) ----------
@@ -864,6 +871,7 @@ function speichereUndNaechster() {
     const weiter = naechsterPlatz(bereich, platz);
     if (weiter) oeffneEingabe(weiter.bereich, weiter.platz);
     else schliesseEingabe();
+    return !!weiter;
 }
 
 // ---------- Toast ----------
@@ -893,6 +901,27 @@ function spracheImFenster() {
     }, true);
 }
 
+// ---------- Rückmeldung beim Durchsprechen (Vibration + kurze Ansage) ----------
+
+function ansageAn() {
+    try { return localStorage.getItem(ANSAGE_KEY) !== 'aus'; } catch (e) { return true; }
+}
+
+function rueckmeldung(text, muster = 60) {
+    try { if (navigator.vibrate) navigator.vibrate(muster); } catch (e) { /* ohne Vibration */ }
+    if (text && ansageAn()) sprich(text);
+}
+
+// "1801" → "18 01" (wird als "achtzehn null eins" gesprochen), sonst Ziffer für Ziffer
+function nummerZumSprechen(nr) {
+    return /^\d{4}$/.test(nr) ? nr.slice(0, 2) + ' ' + nr.slice(2) : nr.split('').join(' ');
+}
+
+function gespeichertUndWeiter(ansage) {
+    const weiter = speichereUndNaechster();
+    rueckmeldung(ansage + (weiter ? '' : ', letzter Platz'), weiter ? 60 : [60, 80, 60]);
+}
+
 function zeigeDiktat() {
     $('#spracheBtn').setAttribute('aria-pressed', String(diktat));
     $('#spracheText').textContent = diktat ? 'Stopp' : 'Sprechen';
@@ -901,30 +930,41 @@ function zeigeDiktat() {
 function diktatErgebnis(text) {
     if (!offen) return;
     const erkannt = versteheSprache(text);
-    if (erkannt.befehl === 'stopp') { hoereAuf(); return; }
+    if (erkannt.befehl === 'stopp') { hoereAuf(); rueckmeldung('beendet', [40, 60, 40]); return; }
     const hatZahl = !!erkannt.bus || erkannt.akku !== null || erkannt.km !== null;
     if (!hatZahl && erkannt.frei) {
         eingabe = '';
         eingabeVorbelegt = false;
-        speichereUndNaechster();
+        gespeichertUndWeiter('frei');
         return;
     }
-    if (!hatZahl && erkannt.rot !== null) { schalteRot(erkannt.rot); return; }
-    if (!hatZahl && erkannt.befehl === 'weiter') { speichereUndNaechster(); return; }
-    if (!wendeSpracheAn(text, erkannt)) return;
+    if (!hatZahl && erkannt.rot !== null) {
+        if (!normalisiere(eingabe)) { rueckmeldung('nochmal', [60, 80, 60]); return; }
+        schalteRot(erkannt.rot);
+        rueckmeldung(erkannt.rot ? 'rote Karte' : 'fahrbereit');
+        return;
+    }
+    if (!hatZahl && erkannt.befehl === 'weiter') {
+        const nrJetzt = normalisiere(eingabe);
+        gespeichertUndWeiter(nrJetzt ? nummerZumSprechen(nrJetzt) + ' gespeichert' : 'weiter');
+        return;
+    }
+    if (!wendeSpracheAn(text, erkannt)) { rueckmeldung('nochmal', [60, 80, 60]); return; }
     const nr = normalisiere(eingabe);
     if (!nr) return;
     // Vollständig: normaler Bus, oder E-Bus mit Akku und Reichweite ("weiter" speichert, was da ist)
     if (erkannt.befehl === 'weiter' || !ebusAktiv() || (akkuBearbeitet && kmBearbeitet)) {
-        speichereUndNaechster();
+        gespeichertUndWeiter(nummerZumSprechen(nr) + ' gespeichert' + (rotAktiv() ? ', rote Karte' : ''));
     } else if (!akkuBearbeitet) {
         aktiviereFeld('akku', false);
         hinweisExtra = 'E-Bus ' + nr + ' – jetzt den Akku sagen (oder „weiter“)';
         renderEingabe();
+        rueckmeldung('Akku', 30);
     } else {
         aktiviereFeld('km', false);
         hinweisExtra = 'E-Bus ' + nr + ' – jetzt die Reichweite in km sagen (oder „weiter“)';
         renderEingabe();
+        rueckmeldung('Kilometer', 30);
     }
 }
 
@@ -1210,6 +1250,7 @@ function starteZuweisen() {
 
 function beendeZuweisen() {
     zuweisenBus = null;
+    sprechStart = false;
     render();
 }
 
@@ -1227,6 +1268,26 @@ function aufPlatzGetippt(bereichId, platzId) {
         return;
     }
     oeffneEingabe(ziel.bereich, ziel.platz);
+    if (sprechStart) {
+        sprechStart = false;
+        render();
+        spracheImFenster();
+    }
+}
+
+// Schnellstart vom App-Symbol (Manifest "shortcuts"): ?aktion=suchen oder ?aktion=sprechen
+function schnellstart() {
+    const aktion = new URLSearchParams(location.search).get('aktion');
+    if (!aktion) return;
+    history.replaceState(null, '', location.pathname);
+    if (aktion === 'suchen') {
+        const feldEl = $('#suchFeld');
+        feldEl.focus();
+        feldEl.select();
+    } else if (aktion === 'sprechen' && spracheVerfuegbar() && daten.bereiche.length) {
+        sprechStart = true;
+        render();
+    }
 }
 
 function init() {
@@ -1285,6 +1346,11 @@ function init() {
             case 'import': $('#importDatei').click(); break;
             case 'alle-leeren': alleLeeren(); break;
         }
+    });
+
+    document.querySelector('main').addEventListener('change', (e) => {
+        if (e.target.name !== 'ansage') return;
+        try { localStorage.setItem(ANSAGE_KEY, e.target.checked ? 'an' : 'aus'); } catch (err) { /* nur bis zum Schließen */ }
     });
 
     document.querySelector('main').addEventListener('submit', (e) => {
@@ -1367,6 +1433,7 @@ function init() {
     setInterval(() => { if (!offen && aktiveAnsicht !== 'Bereiche') render(); }, 60000);
 
     render();
+    schnellstart();
 
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
         navigator.serviceWorker.register('./service-worker.js').catch(() => {});
