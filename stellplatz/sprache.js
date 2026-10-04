@@ -11,7 +11,9 @@ const SpracheKlasse = window.SpeechRecognition || window.webkitSpeechRecognition
 const DAUER_STILLE_MS = 120000;   // Dauer-Zuhören endet nach 2 Minuten ohne Erkanntes
 const MAX_KM = 999;
 let laufendeErkennung = null;
+let laufendeRueckrufe = null;
 let dauerAktiv = false;
+let pausiert = false;          // während einer Ansage hört die Erkennung nicht zu (sonst hört sie sich selbst)
 
 const ZAHLWOERTER = {
     null: 0, eins: 1, ein: 1, eine: 1, zwei: 2, zwo: 2, drei: 3, vier: 4, 'fünf': 5, sechs: 6,
@@ -96,8 +98,10 @@ function hoereZu(rueckrufe, dauer = false) {
     erkennung.continuous = dauer;
     erkennung.maxAlternatives = 1;
     dauerAktiv = dauer;
+    pausiert = false;
     let letzteAktivitaet = Date.now();
     erkennung.onresult = (e) => {
+        if (pausiert) return;
         letzteAktivitaet = Date.now();
         let zwischen = '';
         for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -113,6 +117,7 @@ function hoereZu(rueckrufe, dauer = false) {
     };
     erkennung.onend = () => {
         if (laufendeErkennung !== erkennung) { rueckrufe.beiEnde(); return; }
+        if (pausiert) return;   // geht nach der Ansage weiter
         if (dauerAktiv && Date.now() - letzteAktivitaet < DAUER_STILLE_MS) {
             try { erkennung.start(); return; } catch (e) { /* unten beenden */ }
         }
@@ -121,6 +126,7 @@ function hoereZu(rueckrufe, dauer = false) {
         rueckrufe.beiEnde();
     };
     laufendeErkennung = erkennung;
+    laufendeRueckrufe = rueckrufe;
     try {
         erkennung.start();
     } catch (e) {
@@ -133,11 +139,53 @@ function hoereZu(rueckrufe, dauer = false) {
 
 function hoereAuf() {
     dauerAktiv = false;
+    if (pausiert && laufendeErkennung) {
+        // während einer Ansage ist die Erkennung schon angehalten – Ende direkt melden
+        pausiert = false;
+        laufendeErkennung = null;
+        if (laufendeRueckrufe) laufendeRueckrufe.beiEnde();
+        return;
+    }
     if (laufendeErkennung) {
         const erkennung = laufendeErkennung;
         laufendeErkennung = null;
         erkennung.abort();
     }
+}
+
+// Kurze Ansage (z. B. "18 01 gespeichert"). Läuft gerade Dauer-Zuhören, wird es dafür angehalten
+// und danach fortgesetzt.
+function sprich(text) {
+    if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') return;
+    const ansage = new SpeechSynthesisUtterance(text);
+    ansage.lang = 'de-DE';
+    ansage.rate = 1.15;
+    ansage.volume = 0.9;
+    const erkennung = dauerAktiv ? laufendeErkennung : null;
+    if (erkennung) {
+        pausiert = true;
+        try { erkennung.abort(); } catch (e) { /* schon beendet */ }
+    }
+    let fertig = false;
+    const weiter = () => {
+        if (fertig) return;
+        fertig = true;
+        if (!pausiert || laufendeErkennung !== erkennung || !erkennung) return;
+        pausiert = false;
+        if (!dauerAktiv) return;
+        try {
+            erkennung.start();
+        } catch (e) {
+            dauerAktiv = false;
+            laufendeErkennung = null;
+            if (laufendeRueckrufe) laufendeRueckrufe.beiEnde();
+        }
+    };
+    ansage.onend = () => setTimeout(weiter, 250);
+    ansage.onerror = () => setTimeout(weiter, 250);
+    setTimeout(weiter, 5000);   // Sicherheitsnetz, falls das Ende der Ansage nie gemeldet wird
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(ansage);
 }
 
 function hoertZu() {

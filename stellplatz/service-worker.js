@@ -1,4 +1,4 @@
-const CACHE_NAME = 'stellplatz-cache-v14';
+const CACHE_NAME = 'stellplatz-cache-v15';
 const URLS_TO_CACHE = [
   './',
   './index.html',
@@ -8,7 +8,9 @@ const URLS_TO_CACHE = [
   './sprache.js',
   './manifest.json',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './kurz-suchen.png',
+  './kurz-sprechen.png'
 ];
 
 self.addEventListener('install', (event) => {
