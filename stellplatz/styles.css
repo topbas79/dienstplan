@@ -303,6 +303,7 @@ body.zuweisen-modus .platz.frei { border-color: var(--treffer); }
     font-size: 0.82rem; font-weight: 600; color: var(--text-soft);
 }
 .ebus-schalter[aria-pressed="true"] { background: var(--ebus-bg); border-color: var(--ebus); color: var(--ebus); }
+.ebus-schalter.mikro { padding: 7px 14px; font-size: 0.88rem; color: var(--primary); border-color: var(--primary); }
 .mikro[aria-pressed="true"], .such-mikro[aria-pressed="true"] {
     background: var(--gefahr); border-color: var(--gefahr); color: #ffffff; animation: zuhoeren 1.2s ease-in-out infinite;
 }

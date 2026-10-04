@@ -47,6 +47,7 @@ let akkuVorbelegt = false;
 let akkuBearbeitet = false;    // erst wenn getippt wurde, wird der Akkustand gespeichert
 let ebusGewaehlt = null;       // null = automatisch, sonst true/false vom E-Bus-Schalter
 let hinweisExtra = '';
+let diktat = false;            // Durchsprechen: hört dauerhaft zu, speichert und springt selbst weiter
 let fokusVorSheet = null;
 let toastTimer = null;
 let bearbeiteBereichId = null;
@@ -565,7 +566,6 @@ function renderBereiche() {
 // ---------- Eingabefenster (Ziffernblock) ----------
 
 function oeffneEingabe(bereich, platz) {
-    hoereAuf();
     const warSchonOffen = !!offen;
     offen = { bereich, platz };
     eingabe = platz.bus || '';
@@ -574,7 +574,7 @@ function oeffneEingabe(bereich, platz) {
     akkuVorbelegt = false;
     akkuBearbeitet = false;
     ebusGewaehlt = null;
-    hinweisExtra = '';
+    hinweisExtra = diktat ? DIKTAT_HINWEIS : '';
     feld = 'bus';
     // Steht hier schon ein E-Bus, geht es meist um den Akkustand: gleich das Akkufeld aktivieren.
     if (platz.bus && ebusAktiv()) aktiviereFeld('akku', false);
@@ -733,6 +733,10 @@ function speichernUndWeiter() {
     if (!offen) return;
     // Bei E-Bussen erst noch den Akkustand abfragen
     if (feld === 'bus' && ebusAktiv()) { aktiviereFeld('akku'); return; }
+    speichereUndNaechster();
+}
+
+function speichereUndNaechster() {
     const { bereich, platz } = offen;
     uebernehmeEingabe();
     const weiter = naechsterPlatz(bereich, platz);
@@ -744,28 +748,67 @@ function speichernUndWeiter() {
 
 // ---------- Spracheingabe ----------
 
+const DIKTAT_HINWEIS = 'Ich höre zu … Nummer sagen, bei E-Bussen danach den Akku';
+
+// Durchsprechen: einmal antippen, dann Platz für Platz die Nummer (und bei E-Bussen den Akku) sagen.
+// Ist ein Platz vollständig, wird gespeichert und der nächste geöffnet. "weiter" überspringt, "frei" gibt frei, "stopp" beendet.
 function spracheImFenster() {
-    const knopf = $('#spracheBtn');
-    if (hoertZu() && knopf.getAttribute('aria-pressed') === 'true') { hoereAuf(); return; }
-    knopf.setAttribute('aria-pressed', 'true');
-    hinweisExtra = 'Ich höre zu … z. B. „1801 Akku 64“';
+    if (diktat) { hoereAuf(); return; }
+    diktat = true;
+    zeigeDiktat();
+    hinweisExtra = DIKTAT_HINWEIS;
     renderEingabe();
     hoereZu({
         beiZwischen: (text) => { hinweisExtra = '„' + text.trim() + '“ …'; renderEingabe(); },
-        beiErgebnis: wendeSpracheAn,
+        beiErgebnis: diktatErgebnis,
         beiFehler: (code) => { hinweisExtra = spracheFehlerText(code); renderEingabe(); },
         beiEnde: () => {
-            knopf.setAttribute('aria-pressed', 'false');
-            if (hinweisExtra.startsWith('Ich höre zu')) { hinweisExtra = ''; renderEingabe(); }
+            diktat = false;
+            zeigeDiktat();
+            if (hinweisExtra === DIKTAT_HINWEIS) hinweisExtra = '';
+            renderEingabe();
         }
-    });
+    }, true);
 }
 
-// Gesprochenes ins Eingabefenster übernehmen; gespeichert wird erst mit Weiter/Speichern.
-function wendeSpracheAn(text) {
+function zeigeDiktat() {
+    $('#spracheBtn').setAttribute('aria-pressed', String(diktat));
+    $('#spracheText').textContent = diktat ? 'Stopp' : 'Sprechen';
+}
+
+function diktatErgebnis(text) {
     if (!offen) return;
     const erkannt = versteheSprache(text);
+    if (erkannt.befehl === 'stopp') { hoereAuf(); return; }
+    const hatZahl = !!erkannt.bus || erkannt.akku !== null;
+    if (!hatZahl && erkannt.frei) {
+        eingabe = '';
+        eingabeVorbelegt = false;
+        speichereUndNaechster();
+        return;
+    }
+    if (!hatZahl && erkannt.befehl === 'weiter') { speichereUndNaechster(); return; }
+    if (!wendeSpracheAn(text, erkannt)) return;
+    const nr = normalisiere(eingabe);
+    if (!nr) return;
+    if (erkannt.befehl === 'weiter' || !ebusAktiv() || akkuBearbeitet) {
+        speichereUndNaechster();
+    } else {
+        aktiviereFeld('akku', false);
+        hinweisExtra = 'E-Bus ' + nr + ' – jetzt den Akku sagen (oder „weiter“)';
+        renderEingabe();
+    }
+}
+
+// Gesprochenes ins Eingabefenster übernehmen (gibt false zurück, wenn nichts verstanden wurde).
+function wendeSpracheAn(text, erkannt) {
+    if (!offen) return false;
     let akku = erkannt.akku;
+    // "1801 64" ohne das Wort Akku: nur bei E-Bussen als Nummer + Akku lesen
+    if (erkannt.teilung && (istEbus(erkannt.teilung.bus) || offen.bereich.laden)) {
+        erkannt.bus = erkannt.teilung.bus;
+        akku = erkannt.teilung.akku;
+    }
     // Im Akkufeld reicht eine Zahl ("64")
     if (!erkannt.mitAkkuWort && feld === 'akku' && erkannt.bus && Number(erkannt.bus) <= 100) {
         akku = Number(erkannt.bus);
@@ -781,7 +824,7 @@ function wendeSpracheAn(text) {
             hinweisExtra = 'Nicht verstanden: „' + text.trim() + '“';
         }
         renderEingabe();
-        return;
+        return false;
     }
     if (erkannt.bus) {
         eingabe = erkannt.bus;
@@ -797,6 +840,7 @@ function wendeSpracheAn(text) {
     }
     hinweisExtra = 'Verstanden: „' + text.trim() + '“';
     renderEingabe();
+    return true;
 }
 
 function spracheInSuche() {

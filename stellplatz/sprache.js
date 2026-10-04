@@ -1,11 +1,14 @@
 'use strict';
 
 // Spracheingabe über die eingebaute Spracherkennung des Browsers (Chrome auf Android, Safari).
-// Verstanden werden Busnummer und Akkustand, z. B. "1801 Akku 64", "Bus 1801 mit 64 Prozent" oder nur "Akku 80".
+// Verstanden werden Busnummer und Akkustand, z. B. "1801 Akku 64", "Bus 1801 mit 64 Prozent" oder nur "Akku 80",
+// dazu die Befehle "weiter", "frei" und "stopp" für das Durchsprechen ganzer Reihen.
 // Die Erkennung selbst läuft über den Browser-Hersteller (braucht Internet); die App schickt nichts selbst weg.
 
 const SpracheKlasse = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+const DAUER_STILLE_MS = 120000;   // Dauer-Zuhören endet nach 2 Minuten ohne Erkanntes
 let laufendeErkennung = null;
+let dauerAktiv = false;
 
 const ZAHLWOERTER = {
     null: 0, eins: 1, ein: 1, eine: 1, zwei: 2, zwo: 2, drei: 3, vier: 4, 'fünf': 5, sechs: 6,
@@ -24,7 +27,7 @@ function zahlenIn(text) {
 
 function versteheSprache(roh) {
     const text = ' ' + String(roh).toLowerCase().replace(/%/g, ' prozent ').replace(/[.,;:!?/-]/g, ' ') + ' ';
-    const ergebnis = { bus: null, akku: null, frei: false, mitAkkuWort: false };
+    const ergebnis = { bus: null, akku: null, frei: false, mitAkkuWort: false, befehl: null, teilung: null };
     let busTeil = text;
     let akkuTeil = '';
     const akkuWort = text.match(/\s(akku|batterie|ladung|ladestand)\s/);
@@ -38,11 +41,23 @@ function versteheSprache(roh) {
         akkuTeil = prozent[1];
         ergebnis.mitAkkuWort = true;
     }
-    const busZiffern = zahlenIn(busTeil).join('');
+    const busZahlen = zahlenIn(busTeil);
+    const busZiffern = busZahlen.join('');
+    // "1801 64" ohne Akku-Wort: vorne mindestens 4 Ziffern, hinten bis 100 → mögliche Aufteilung Bus + Akku.
+    // Ob sie gilt, entscheidet die App (nur bei E-Bussen), weil "18 01" auch einfach 1801 heißen kann.
+    if (!ergebnis.mitAkkuWort && busZahlen.length >= 2) {
+        const letzte = busZahlen[busZahlen.length - 1];
+        const vorne = busZahlen.slice(0, -1).join('');
+        if (vorne.length >= 4 && letzte.length <= 3 && Number(letzte) <= 100) {
+            ergebnis.teilung = { bus: vorne.slice(0, 8), akku: Number(letzte) };
+        }
+    }
     if (busZiffern) ergebnis.bus = busZiffern.slice(0, 8);
     const akkuZahlen = zahlenIn(akkuTeil);
     if (akkuZahlen.length && Number(akkuZahlen[0]) <= 100) ergebnis.akku = Number(akkuZahlen[0]);
     ergebnis.frei = /\s(frei|freigeben|leer|weg)\s/.test(text);
+    if (/\s(stopp|stop|stoppen|fertig|ende|beenden|aufhören)\s/.test(text)) ergebnis.befehl = 'stopp';
+    else if (/\s(weiter|nächster|nächste|überspringen)\s/.test(text)) ergebnis.befehl = 'weiter';
     return ergebnis;
 }
 
@@ -50,29 +65,42 @@ function spracheVerfuegbar() {
     return !!SpracheKlasse;
 }
 
-// Startet einmaliges Zuhören. Rückrufe: beiZwischen(text), beiErgebnis(text), beiFehler(code), beiEnde().
-function hoereZu(rueckrufe) {
-    if (laufendeErkennung) laufendeErkennung.abort();
+// Startet das Zuhören. Rückrufe: beiZwischen(text), beiErgebnis(text), beiFehler(code), beiEnde().
+// dauer = true: hört weiter zu, bis hoereAuf() kommt (der Browser beendet die Erkennung nach Pausen selbst,
+// dann wird sie still neu gestartet); jeder fertig gesprochene Satz kommt einzeln bei beiErgebnis an.
+function hoereZu(rueckrufe, dauer = false) {
+    if (laufendeErkennung) {
+        dauerAktiv = false;
+        laufendeErkennung.abort();
+    }
     const erkennung = new SpracheKlasse();
     erkennung.lang = 'de-DE';
     erkennung.interimResults = true;
-    erkennung.continuous = false;
+    erkennung.continuous = dauer;
     erkennung.maxAlternatives = 1;
+    dauerAktiv = dauer;
+    let letzteAktivitaet = Date.now();
     erkennung.onresult = (e) => {
-        let text = '';
-        let endgueltig = false;
+        letzteAktivitaet = Date.now();
+        let zwischen = '';
         for (let i = e.resultIndex; i < e.results.length; i++) {
-            text += e.results[i][0].transcript;
-            if (e.results[i].isFinal) endgueltig = true;
+            if (e.results[i].isFinal) rueckrufe.beiErgebnis(e.results[i][0].transcript);
+            else zwischen += e.results[i][0].transcript;
         }
-        if (endgueltig) rueckrufe.beiErgebnis(text);
-        else if (rueckrufe.beiZwischen) rueckrufe.beiZwischen(text);
+        if (zwischen && rueckrufe.beiZwischen) rueckrufe.beiZwischen(zwischen);
     };
     erkennung.onerror = (e) => {
-        if (e.error !== 'aborted') rueckrufe.beiFehler(e.error);
+        if (e.error === 'aborted' || (dauerAktiv && e.error === 'no-speech')) return;
+        dauerAktiv = false;
+        rueckrufe.beiFehler(e.error);
     };
     erkennung.onend = () => {
-        if (laufendeErkennung === erkennung) laufendeErkennung = null;
+        if (laufendeErkennung !== erkennung) { rueckrufe.beiEnde(); return; }
+        if (dauerAktiv && Date.now() - letzteAktivitaet < DAUER_STILLE_MS) {
+            try { erkennung.start(); return; } catch (e) { /* unten beenden */ }
+        }
+        dauerAktiv = false;
+        laufendeErkennung = null;
         rueckrufe.beiEnde();
     };
     laufendeErkennung = erkennung;
@@ -80,13 +108,19 @@ function hoereZu(rueckrufe) {
         erkennung.start();
     } catch (e) {
         laufendeErkennung = null;
+        dauerAktiv = false;
         rueckrufe.beiFehler('start');
         rueckrufe.beiEnde();
     }
 }
 
 function hoereAuf() {
-    if (laufendeErkennung) laufendeErkennung.abort();
+    dauerAktiv = false;
+    if (laufendeErkennung) {
+        const erkennung = laufendeErkennung;
+        laufendeErkennung = null;
+        erkennung.abort();
+    }
 }
 
 function hoertZu() {
