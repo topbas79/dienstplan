@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Stellplätze</title>
+
+<!-- PWA: Manifest, Icons, Theme-Farbe -->
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#2563eb">
+<link rel="icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Stellplätze">
+
+<!-- Nur eigene Dateien; die Daten bleiben auf dem Gerät. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+
+<header class="topbar">
+    <div class="marke">
+        <div class="logo" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="15" rx="3"></rect><path d="M4 11h16"></path><path d="M7 21v-3M17 21v-3"></path><circle cx="8" cy="14.5" r="0.6" fill="#ffffff"></circle><circle cx="16" cy="14.5" r="0.6" fill="#ffffff"></circle></svg>
+        </div>
+        <div>
+            <h1>Stellplätze</h1>
+            <div class="untertitel" id="statusZeile"></div>
+        </div>
+    </div>
+</header>
+
+<div class="suche">
+    <div class="such-feld">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m20 20-4.2-4.2"></path></svg>
+        <input id="suchFeld" type="search" inputmode="numeric" enterkeyhint="search" placeholder="Bus-Nr. suchen" autocomplete="off" aria-label="Busnummer suchen">
+    </div>
+    <div id="suchErgebnis" class="such-ergebnis" role="status" hidden></div>
+    <div id="zuweisenBanner" class="zuweisen-banner" role="status" hidden>
+        <span id="zuweisenText"></span>
+        <button type="button" class="btn klein" id="zuweisenAbbrechen">Abbrechen</button>
+    </div>
+    <nav id="sprungLeiste" class="sprung-leiste" aria-label="Zu Bereich springen" hidden></nav>
+</div>
+
+<main>
+    <section id="ansichtPlaetze"></section>
+    <section id="ansichtListe" hidden></section>
+    <section id="ansichtVerlauf" hidden></section>
+    <section id="ansichtBereiche" hidden></section>
+</main>
+
+<nav class="tabbar" aria-label="Ansichten">
+    <button type="button" data-ansicht="Plaetze" class="aktiv">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"></rect><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"></rect><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"></rect><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"></rect></svg>
+        Plätze
+    </button>
+    <button type="button" data-ansicht="Liste">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"></path><circle cx="4.5" cy="6" r="1"></circle><circle cx="4.5" cy="12" r="1"></circle><circle cx="4.5" cy="18" r="1"></circle></svg>
+        Liste
+    </button>
+    <button type="button" data-ansicht="Verlauf">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg>
+        Verlauf
+    </button>
+    <button type="button" data-ansicht="Bereiche">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"></path><circle cx="16" cy="7" r="2"></circle><circle cx="10" cy="17" r="2"></circle></svg>
+        Bereiche
+    </button>
+</nav>
+
+<!-- Eingabe: Busnummer für einen Platz -->
+<div id="sheetHintergrund" class="sheet-hintergrund" hidden></div>
+<div id="eingabeSheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitel" tabindex="-1" hidden>
+    <div class="sheet-kopf">
+        <div>
+            <div class="sheet-titel" id="sheetTitel"></div>
+            <div class="sheet-info" id="sheetInfo"></div>
+        </div>
+        <button type="button" class="icon-btn" id="sheetSchliessen" aria-label="Schließen">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+        </button>
+    </div>
+    <div class="anzeige" id="anzeige" aria-live="polite"><span id="anzeigeText"></span><span class="cursor" aria-hidden="true"></span></div>
+    <div class="sheet-hinweis" id="sheetHinweis"></div>
+    <div class="tastatur" id="tastatur">
+        <button type="button" data-taste="1">1</button>
+        <button type="button" data-taste="2">2</button>
+        <button type="button" data-taste="3">3</button>
+        <button type="button" data-taste="4">4</button>
+        <button type="button" data-taste="5">5</button>
+        <button type="button" data-taste="6">6</button>
+        <button type="button" data-taste="7">7</button>
+        <button type="button" data-taste="8">8</button>
+        <button type="button" data-taste="9">9</button>
+        <button type="button" data-taste="C" class="taste-neben" aria-label="Eingabe leeren">C</button>
+        <button type="button" data-taste="0">0</button>
+        <button type="button" data-taste="⌫" class="taste-neben" aria-label="Letzte Ziffer löschen">⌫</button>
+    </div>
+    <div class="sheet-aktionen">
+        <button type="button" class="btn" id="btnFreigeben">Freigeben</button>
+        <button type="button" class="btn" id="btnSpeichern">Speichern</button>
+        <button type="button" class="btn primaer" id="btnWeiter">Weiter ›</button>
+    </div>
+</div>
+
+<div id="toast" class="toast" role="status" hidden>
+    <span id="toastText"></span>
+    <button type="button" id="toastRueckgaengig">Rückgängig</button>
+</div>
+
+<input type="file" id="importDatei" accept="application/json,.json" hidden>
+
+<script src="./app.js"></script>
+</body>
+</html>
