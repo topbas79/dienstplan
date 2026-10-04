@@ -15,6 +15,11 @@
     --erfolg-bg: #eafbf1;
     --erfolg-rand: #86efac;
     --schatten: 0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 1px rgba(15, 23, 42, 0.04);
+    --akku-gut: #15803d;
+    --akku-mittel: #b45309;
+    --akku-niedrig: #dc2626;
+    --ebus: #0d9488;
+    --ebus-bg: #e6f7f5;
 }
 @media (prefers-color-scheme: dark) {
     :root {
@@ -32,6 +37,11 @@
         --erfolg-bg: #0f2e1c;
         --erfolg-rand: #166534;
         --schatten: none;
+        --akku-gut: #4ade80;
+        --akku-mittel: #fbbf24;
+        --akku-niedrig: #f87171;
+        --ebus: #2dd4bf;
+        --ebus-bg: #0f2e2b;
     }
 }
 
@@ -181,6 +191,8 @@ body.zuweisen-modus .platz.frei { border-color: var(--treffer); }
 /* ---------- Bereiche ---------- */
 .formular .felder { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .formular .felder .breit { grid-column: 1 / -1; }
+.formular label.haken { flex-direction: row; align-items: center; gap: 8px; font-size: 0.88rem; color: var(--text); font-weight: 500; }
+.formular label.haken input { width: 20px; height: 20px; flex-shrink: 0; accent-color: var(--ebus); }
 .formular label { display: flex; flex-direction: column; gap: 4px; font-size: 0.78rem; color: var(--text-soft); font-weight: 600; }
 .formular input {
     width: 100%; min-width: 0; padding: 10px; border-radius: 9px; border: 1px solid var(--border);
@@ -221,17 +233,46 @@ body.zuweisen-modus .platz.frei { border-color: var(--treffer); }
 .sheet-kopf { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
 .sheet-titel { font-size: 1.25rem; font-weight: 700; }
 .sheet-info { font-size: 0.85rem; color: var(--text-soft); margin-top: 2px; }
+.anzeigen { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; }
+.anzeigen.mit-akku { grid-template-columns: 1.5fr 1fr; }
 .anzeige {
-    margin-top: 12px; height: 64px; border-radius: 12px; background: var(--bg); border: 1.5px solid var(--border);
+    position: relative; height: 64px; padding: 0 8px; border-radius: 12px; background: var(--bg); border: 1.5px solid var(--border);
     display: flex; align-items: center; justify-content: center;
+}
+.anzeige.aktiv { border-color: var(--primary); }
+.anzeige-titel {
+    position: absolute; top: 5px; left: 10px; font-size: 0.68rem; font-weight: 600; color: var(--text-faint);
+    text-transform: uppercase; letter-spacing: 0.04em;
+}
+.anzeige-wert {
+    display: flex; align-items: center;
     font-size: 2.2rem; font-weight: 700; letter-spacing: 0.06em; font-variant-numeric: tabular-nums;
 }
-.anzeige.vorbelegt #anzeigeText { background: var(--belegt-rand); border-radius: 6px; padding: 0 4px; }
-.anzeige.leer::before { content: "Busnummer"; font-size: 1rem; font-weight: 500; letter-spacing: 0; color: var(--text-faint); }
-.cursor { width: 2px; height: 34px; background: var(--primary); margin-left: 3px; animation: cursor 1s steps(1) infinite; }
+.anzeige.vorbelegt .anzeige-wert > span:first-child { background: var(--belegt-rand); border-radius: 6px; padding: 0 4px; }
+.anzeige.leer .anzeige-wert::before { content: "Nummer"; font-size: 1rem; font-weight: 500; letter-spacing: 0; color: var(--text-faint); }
+.akku-feld.leer .anzeige-wert::before { content: "–"; font-size: 1.6rem; }
+.cursor { width: 2px; height: 34px; background: var(--primary); margin-left: 3px; animation: cursor 1s steps(1) infinite; visibility: hidden; }
+.anzeige.aktiv .cursor { visibility: visible; }
 .anzeige.leer .cursor { margin-left: 8px; }
 @keyframes cursor { 50% { opacity: 0; } }
-.sheet-hinweis { min-height: 1.3em; margin: 6px 2px; font-size: 0.82rem; color: var(--treffer); font-weight: 600; }
+.sheet-zeile { display: flex; align-items: center; gap: 8px; margin: 6px 0; min-height: 30px; }
+.sheet-hinweis { flex: 1; font-size: 0.82rem; color: var(--treffer); font-weight: 600; }
+.ebus-schalter {
+    display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0;
+    padding: 5px 11px; border-radius: 999px; border: 1px solid var(--border); background: var(--card);
+    font-size: 0.82rem; font-weight: 600; color: var(--text-soft);
+}
+.ebus-schalter[aria-pressed="true"] { background: var(--ebus-bg); border-color: var(--ebus); color: var(--ebus); }
+
+/* ---------- Akku ---------- */
+.akku { display: inline-flex; align-items: center; gap: 3px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.akku .batterie { flex-shrink: 0; }
+.akku.gut { color: var(--akku-gut); }
+.akku.mittel { color: var(--akku-mittel); }
+.akku.niedrig { color: var(--akku-niedrig); }
+.akku.unbekannt { color: var(--text-faint); font-weight: 500; }
+.platz .akku { font-size: 0.72rem; }
+.ladezeichen { color: var(--ebus); vertical-align: -1px; }
 .tastatur { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .tastatur button {
     height: 56px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg);

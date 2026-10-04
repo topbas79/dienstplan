@@ -8,13 +8,16 @@ const MAX_VERLAUF = 300;
 const MAX_ZIFFERN = 8;
 const MAX_PLAETZE = 200;
 const MAX_STARTNR = 9999;
+// Busnummern mit diesen Anfängen sind E-Busse (einzeln per Schalter abwählbar).
+const EBUS_PRAEFIXE = ['18', '19'];
 
 // Bereiche des eigenen Betriebshofs (die Halle hat 8 Spuren mit je mehreren Bussen hintereinander), per Knopf anlegbar. Platzanzahl danach unter "Bereiche → Ändern" anpassen.
+// laden: Ladeplätze – Busse, die dort abgestellt werden, gelten automatisch als E-Bus (mit Akkuanzeige).
 const VORLAGE = [
-    { name: 'Tanne 1', anzahl: 10 },
-    { name: 'Tanne 2', anzahl: 10 },
-    { name: 'Tanne 3', anzahl: 10 },
-    { name: 'T14 / T15', kuerzel: 'T', start: 14, anzahl: 2 },
+    { name: 'Tanne 1', anzahl: 10, laden: true },
+    { name: 'Tanne 2', anzahl: 10, laden: true },
+    { name: 'Tanne 3', anzahl: 10, laden: true },
+    { name: 'T14 / T15', kuerzel: 'T', start: 14, anzahl: 2, laden: true },
     { name: 'Halle Spur 1', anzahl: 10 },
     { name: 'Halle Spur 2', anzahl: 10 },
     { name: 'Halle Spur 3', anzahl: 10 },
@@ -38,6 +41,12 @@ let zuweisenBus = null;        // Busnummer, die beim nächsten Tippen auf einen
 let offen = null;              // { bereich, platz } im Eingabefenster
 let eingabe = '';
 let eingabeVorbelegt = false;  // erste Taste ersetzt die vorhandene Nummer
+let feld = 'bus';              // aktives Feld im Eingabefenster: 'bus' oder 'akku'
+let akkuEingabe = '';
+let akkuVorbelegt = false;
+let akkuBearbeitet = false;    // erst wenn getippt wurde, wird der Akkustand gespeichert
+let ebusGewaehlt = null;       // null = automatisch, sonst true/false vom E-Bus-Schalter
+let hinweisExtra = '';
 let fokusVorSheet = null;
 let toastTimer = null;
 let bearbeiteBereichId = null;
@@ -51,7 +60,7 @@ function neueId() {
 }
 
 function leererStand() {
-    return { version: 1, bereiche: [], verlauf: [] };
+    return { version: 2, bereiche: [], verlauf: [], busse: {} };
 }
 
 // Prüft und bereinigt geladene/importierte Daten, damit kaputte Dateien die App nicht lahmlegen.
@@ -65,6 +74,8 @@ function bereinige(roh) {
             name: String(b.name || 'Bereich').slice(0, 40),
             kuerzel: String(b.kuerzel || '').slice(0, 6),
             start: Number.isInteger(b.start) && b.start >= 0 && b.start <= MAX_STARTNR ? b.start : 1,
+            // Ältere Daten (vor Version 2) kennen keine Ladeplätze: die Bereiche aus der Vorlage bekommen sie dazu.
+            laden: roh.version >= 2 ? b.laden === true : VORLAGE.some((v) => v.laden && v.name === b.name),
             plaetze: b.plaetze.slice(0, MAX_PLAETZE).map((p) => ({
                 id: String((p && p.id) || neueId()),
                 bus: p && p.bus ? normalisiere(String(p.bus)) || null : null,
@@ -77,6 +88,22 @@ function bereinige(roh) {
             .filter((v) => v && Number.isFinite(v.zeit) && typeof v.text === 'string')
             .slice(0, MAX_VERLAUF)
             .map((v) => ({ zeit: v.zeit, text: v.text.slice(0, 200) }));
+    }
+    // Pro Busnummer: E-Bus ja/nein und letzter Akkustand (wandert mit, wenn der Bus umgesetzt wird)
+    if (roh.busse && typeof roh.busse === 'object') {
+        Object.keys(roh.busse).forEach((schluessel) => {
+            const nr = normalisiere(schluessel);
+            const info = roh.busse[schluessel];
+            if (!nr || !info) return;
+            if (info.ebus === false) {
+                // "kein E-Bus" nur merken, wo es die Regel nach Nummer überstimmt
+                if (ebusNachNummer(nr)) d.busse[nr] = { ebus: false, akku: null, akkuZeit: null };
+                return;
+            }
+            if (info.ebus !== true) return;
+            const akku = Number.isInteger(info.akku) && info.akku >= 0 && info.akku <= 100 ? info.akku : null;
+            d.busse[nr] = { ebus: true, akku, akkuZeit: akku !== null && Number.isFinite(info.akkuZeit) ? info.akkuZeit : null };
+        });
     }
     return d;
 }
@@ -130,6 +157,21 @@ function findeBus(nr) {
     return allePlaetze().find((e) => e.platz.bus === nr) || null;
 }
 
+function ebusNachNummer(nr) {
+    return EBUS_PRAEFIXE.some((praefix) => nr.startsWith(praefix));
+}
+
+// Ausdrücklich gesetzt (Schalter, Ladeplatz) gilt vor der Regel nach Nummer.
+function istEbus(nr) {
+    if (!nr) return false;
+    const info = daten.busse[nr];
+    return info ? info.ebus : ebusNachNummer(nr);
+}
+
+function akkuVon(nr) {
+    return istEbus(nr) && daten.busse[nr] ? daten.busse[nr].akku : null;
+}
+
 function findePlatz(bereichId, platzId) {
     const bereich = daten.bereiche.find((b) => b.id === bereichId);
     const platz = bereich && bereich.plaetze.find((p) => p.id === platzId);
@@ -163,22 +205,46 @@ function aenderungFertig(text) {
     zeigeToast(text, true);
 }
 
-function setzeBus(bereich, platz, roh) {
+// Bus auf einen Platz stellen und/oder E-Bus-Kennzeichen und Akkustand ändern – als eine Änderung (ein Rückgängig).
+// opt.ebus: true/false = ausdrücklich gewählt, undefined = bleibt bzw. automatisch auf Ladeplätzen.
+// opt.akku: Zahl 0–100, null = löschen, undefined = unverändert.
+function speicherePlatz(bereich, platz, roh, opt = {}) {
     const nr = normalisiere(roh);
-    if (!nr || platz.bus === nr) return;
-    merkeStand();
-    const vorher = findeBus(nr);
-    let text = vorher
-        ? 'Bus ' + nr + ': ' + platzLabel(vorher.bereich, vorher.platz) + ' → ' + platzLabel(bereich, platz)
-        : 'Bus ' + nr + ' → ' + platzLabel(bereich, platz);
-    if (vorher) {
-        vorher.platz.bus = null;
-        vorher.platz.zeit = Date.now();
+    if (!nr) { freigeben(bereich, platz); return; }
+    const stand = JSON.stringify(daten);
+    const jetzt = Date.now();
+    const texte = [];
+    if (platz.bus !== nr) {
+        const vorher = findeBus(nr);
+        let text = vorher
+            ? 'Bus ' + nr + ': ' + platzLabel(vorher.bereich, vorher.platz) + ' → ' + platzLabel(bereich, platz)
+            : 'Bus ' + nr + ' → ' + platzLabel(bereich, platz);
+        if (vorher) {
+            vorher.platz.bus = null;
+            vorher.platz.zeit = jetzt;
+        }
+        if (platz.bus) text += ' (Bus ' + platz.bus + ' entfernt)';
+        platz.bus = nr;
+        platz.zeit = jetzt;
+        texte.push(text);
     }
-    if (platz.bus) text += ' (Bus ' + platz.bus + ' entfernt)';
-    platz.bus = nr;
-    platz.zeit = Date.now();
-    aenderungFertig(text);
+    const ebus = opt.ebus !== undefined ? opt.ebus : istEbus(nr) || bereich.laden;
+    if (ebus !== istEbus(nr)) texte.push(ebus ? 'E-Bus' : 'kein E-Bus');
+    if (ebus) {
+        if (!daten.busse[nr] || !daten.busse[nr].ebus) daten.busse[nr] = { ebus: true, akku: null, akkuZeit: null };
+    } else if (ebusNachNummer(nr)) {
+        daten.busse[nr] = { ebus: false, akku: null, akkuZeit: null };
+    } else {
+        delete daten.busse[nr];
+    }
+    if (ebus && opt.akku !== undefined && opt.akku !== daten.busse[nr].akku) {
+        daten.busse[nr].akku = opt.akku;
+        daten.busse[nr].akkuZeit = opt.akku === null ? null : jetzt;
+        texte.push(opt.akku === null ? 'Akku gelöscht' : 'Akku ' + opt.akku + ' %');
+    }
+    if (!texte.length) return;
+    rueckgaengigStand = stand;
+    aenderungFertig(platz.bus === nr && texte[0].startsWith('Bus ') ? texte.join(', ') : 'Bus ' + nr + ' (' + platzLabel(bereich, platz) + '): ' + texte.join(', '));
 }
 
 function freigeben(bereich, platz) {
@@ -221,6 +287,32 @@ function zeitText(ms) {
     if (d.toDateString() === heute.toDateString()) return hhmm;
     return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }) + ' ' + hhmm;
 }
+
+function batterieSvg(prozent) {
+    const breite = (17 * Math.max(0, Math.min(100, prozent)) / 100).toFixed(1);
+    return '<svg class="batterie" viewBox="0 0 26 12" width="20" height="10" aria-hidden="true">' +
+        '<rect x="0.75" y="0.75" width="21.5" height="10.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.5"></rect>' +
+        '<rect x="23" y="3.5" width="2.5" height="5" rx="1" fill="currentColor"></rect>' +
+        '<rect x="2.75" y="2.75" width="' + breite + '" height="6.5" rx="1" fill="currentColor"></rect></svg>';
+}
+
+// Akkuanzeige eines E-Busses (leer, wenn kein E-Bus): Batterie + Prozent, rot unter 20 %, gelb unter 50 %, sonst grün.
+function akkuHtml(nr) {
+    if (!istEbus(nr)) return '';
+    const akku = akkuVon(nr);
+    if (akku === null) return '<span class="akku unbekannt" title="Akkustand noch nicht erfasst">' + batterieSvg(0) + '? %</span>';
+    const stufe = akku < 20 ? 'niedrig' : akku < 50 ? 'mittel' : 'gut';
+    return '<span class="akku ' + stufe + '">' + batterieSvg(akku) + akku + ' %</span>';
+}
+
+function akkuText(nr) {
+    if (!istEbus(nr)) return '';
+    const akku = akkuVon(nr);
+    const zeit = akku !== null && daten.busse[nr].akkuZeit;
+    return akku === null ? 'Akku ? %' : 'Akku ' + akku + ' %' + (zeit ? ' (' + zeitText(zeit) + ')' : '');
+}
+
+const LADEZEICHEN = '<svg class="ladezeichen" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-label="Ladeplätze"><path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12L13 2Z"></path></svg>';
 
 function vergleicheBus(a, b) {
     return a.localeCompare(b, 'de', { numeric: true });
@@ -266,7 +358,7 @@ function renderSuchErgebnis() {
     if (genau) {
         html = '<div class="ergebnis-text"><strong>Bus ' + esc(genau.platz.bus) + '</strong> steht auf <strong class="gross">' +
             esc(platzLabel(genau.bereich, genau.platz)) + '</strong><span class="leise">' +
-            [genau.bereich.kuerzel ? genau.bereich.name : '', genau.platz.zeit ? 'seit ' + zeitText(genau.platz.zeit) : ''].filter(Boolean).map(esc).join(' · ') +
+            [genau.bereich.kuerzel ? genau.bereich.name : '', genau.platz.zeit ? 'seit ' + zeitText(genau.platz.zeit) : '', akkuText(genau.platz.bus)].filter(Boolean).map(esc).join(' · ') +
             '</span></div>' +
             '<button type="button" class="btn klein" data-aktion="zuweisen">Umsetzen</button>';
     } else if (treffer.length) {
@@ -309,13 +401,15 @@ function renderPlaetze() {
             if (trefferIds.has(platz.id)) klassen.push('treffer');
             const label = kurzLabel(bereich, platz);
             return '<button type="button" class="' + klassen.join(' ') + '" data-bereich="' + esc(bereich.id) + '" data-platz="' + esc(platz.id) + '"' +
-                ' aria-label="' + esc(platzLabel(bereich, platz)) + ': ' + (platz.bus ? 'Bus ' + esc(platz.bus) : 'frei') + '">' +
+                ' aria-label="' + esc(platzLabel(bereich, platz)) + ': ' + (platz.bus ? 'Bus ' + esc(platz.bus) + (istEbus(platz.bus) ? ', ' + esc(akkuText(platz.bus)) : '') : 'frei') + '">' +
                 '<span class="platz-label">' + esc(label) + '</span>' +
                 '<span class="platz-bus">' + (platz.bus ? esc(platz.bus) : 'frei') + '</span>' +
-                '<span class="platz-zeit">' + (platz.bus ? esc(zeitText(platz.zeit)) : '&nbsp;') + '</span>' +
+                (platz.bus && istEbus(platz.bus)
+                    ? akkuHtml(platz.bus)
+                    : '<span class="platz-zeit">' + (platz.bus ? esc(zeitText(platz.zeit)) : '&nbsp;') + '</span>') +
                 '</button>';
         }).join('');
-        return '<section class="bereich" id="bereich-' + esc(bereich.id) + '"><div class="bereich-kopf"><h2>' + esc(bereich.name) + '</h2>' +
+        return '<section class="bereich" id="bereich-' + esc(bereich.id) + '"><div class="bereich-kopf"><h2>' + esc(bereich.name) + (bereich.laden ? ' ' + LADEZEICHEN : '') + '</h2>' +
             '<span class="leise">' + belegt + ' / ' + bereich.plaetze.length + ' belegt</span></div>' +
             (bereich.plaetze.length ? '<div class="raster">' + kacheln + '</div>' : '<p class="leise">Keine Plätze in diesem Bereich.</p>') +
             '</section>';
@@ -351,6 +445,7 @@ function renderListe() {
         '<button type="button" class="zeile" data-bereich="' + esc(e.bereich.id) + '" data-platz="' + esc(e.platz.id) + '">' +
         '<span class="zeile-bus">' + esc(e.platz.bus) + '</span>' +
         '<span class="zeile-platz">' + esc(kurzLabel(e.bereich, e.platz)) + '<span class="leise">' + esc(e.bereich.name) + '</span></span>' +
+        akkuHtml(e.platz.bus) +
         '<span class="zeile-zeit leise">' + esc(zeitText(e.platz.zeit)) + '</span>' +
         '</button>'
     ).join('') + '</div>';
@@ -378,6 +473,7 @@ function renderBereiche() {
         '<label>Kürzel<input name="kuerzel" maxlength="6" placeholder="optional" autocapitalize="characters"></label>' +
         '<label>Ab Nr.<input name="start" type="number" inputmode="numeric" min="0" max="' + MAX_STARTNR + '" required value="1"></label>' +
         '<label>Plätze<input name="anzahl" type="number" inputmode="numeric" min="1" max="' + MAX_PLAETZE + '" required value="10"></label>' +
+        '<label class="breit haken"><input type="checkbox" name="laden"> Ladeplätze – Busse hier sind E-Busse (mit Akkuanzeige)</label>' +
         '</div>' +
         '<p class="leise klein-text">Der Name ist frei wählbar (Tanne 1, Halle Spur 3, Platte …). Ohne Kürzel heißen die Plätze „Tanne 1 · Platz 1“, „Platz 2“ …; ' +
         'mit Kürzel kürzer: „H1“ → H1-1, H1-2 …, „A“ → A1, A2 …. „Ab Nr.“ legt die erste Nummer fest: Kürzel „T“ ab 14 → T14, T15 …</p>' +
@@ -392,6 +488,7 @@ function renderBereiche() {
                 '<label>Kürzel<input name="kuerzel" maxlength="6" placeholder="optional" value="' + esc(b.kuerzel) + '" autocapitalize="characters"></label>' +
                 '<label>Ab Nr.<input name="start" type="number" inputmode="numeric" min="0" max="' + MAX_STARTNR + '" required value="' + b.start + '"></label>' +
                 '<label>Plätze<input name="anzahl" type="number" inputmode="numeric" min="0" max="' + MAX_PLAETZE + '" required value="' + b.plaetze.length + '"></label>' +
+                '<label class="breit haken"><input type="checkbox" name="laden"' + (b.laden ? ' checked' : '') + '> Ladeplätze – Busse hier sind E-Busse (mit Akkuanzeige)</label>' +
                 '</div>' +
                 '<div class="knopfreihe"><button type="button" class="btn" data-aktion="bearbeiten-abbrechen">Abbrechen</button>' +
                 '<button type="submit" class="btn primaer">Speichern</button></div>' +
@@ -402,8 +499,8 @@ function renderBereiche() {
             ? kurzLabel(b, b.plaetze[0]) + (b.plaetze.length > 1 ? ' – ' + (b.kuerzel ? kurzLabel(b, b.plaetze[b.plaetze.length - 1]) : platzNr(b, b.plaetze[b.plaetze.length - 1])) : '')
             : 'keine Plätze';
         return '<div class="karte bereich-zeile">' +
-            '<div class="bereich-info"><strong>' + esc(b.name) + '</strong>' +
-            '<span class="leise">' + esc(bereichsText) + ' · ' + belegt + '/' + b.plaetze.length + ' belegt</span></div>' +
+            '<div class="bereich-info"><strong>' + esc(b.name) + (b.laden ? ' ' + LADEZEICHEN : '') + '</strong>' +
+            '<span class="leise">' + esc(bereichsText) + ' · ' + belegt + '/' + b.plaetze.length + ' belegt' + (b.laden ? ' · Ladeplätze' : '') + '</span></div>' +
             '<div class="knopfreihe">' +
             '<button type="button" class="icon-btn" data-aktion="hoch" data-id="' + esc(b.id) + '" aria-label="Nach oben"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
             '<button type="button" class="icon-btn" data-aktion="runter" data-id="' + esc(b.id) + '" aria-label="Nach unten"' + (i === daten.bereiche.length - 1 ? ' disabled' : '') + '>↓</button>' +
@@ -437,6 +534,14 @@ function oeffneEingabe(bereich, platz) {
     offen = { bereich, platz };
     eingabe = platz.bus || '';
     eingabeVorbelegt = !!platz.bus;
+    akkuEingabe = '';
+    akkuVorbelegt = false;
+    akkuBearbeitet = false;
+    ebusGewaehlt = null;
+    hinweisExtra = '';
+    feld = 'bus';
+    // Steht hier schon ein E-Bus, geht es meist um den Akkustand: gleich das Akkufeld aktivieren.
+    if (platz.bus && ebusAktiv()) aktiviereFeld('akku', false);
     if (!warSchonOffen) fokusVorSheet = document.activeElement;
     $('#sheetHintergrund').hidden = false;
     $('#eingabeSheet').hidden = false;
@@ -462,12 +567,30 @@ function renderEingabe() {
     const { bereich, platz } = offen;
     $('#sheetTitel').textContent = bereich.kuerzel ? 'Platz ' + platzLabel(bereich, platz) : platzLabel(bereich, platz);
     $('#sheetInfo').textContent = bereich.name + ' · ' + (platz.bus ? 'jetzt: Bus ' + platz.bus + (platz.zeit ? ' (seit ' + zeitText(platz.zeit) + ')' : '') : 'frei');
+    const nr = normalisiere(eingabe);
+    const mitAkku = ebusAktiv();
+    if (!mitAkku && feld === 'akku') feld = 'bus';
+
+    const busFeld = $('#anzeigeBus');
     $('#anzeigeText').textContent = eingabe;
-    $('#anzeige').classList.toggle('vorbelegt', eingabeVorbelegt);
-    $('#anzeige').classList.toggle('leer', !eingabe);
+    busFeld.classList.toggle('vorbelegt', eingabeVorbelegt && feld === 'bus');
+    busFeld.classList.toggle('leer', !eingabe);
+    busFeld.classList.toggle('aktiv', feld === 'bus');
+
+    const akkuFeld = $('#anzeigeAkku');
+    const akkuWert = akkuBearbeitet || feld === 'akku' ? akkuEingabe : akkuVorschlag();
+    akkuFeld.hidden = !mitAkku;
+    $('#anzeigen').classList.toggle('mit-akku', mitAkku);
+    $('#akkuText').textContent = akkuWert;
+    akkuFeld.classList.toggle('vorbelegt', akkuVorbelegt && feld === 'akku');
+    akkuFeld.classList.toggle('leer', !akkuWert);
+    akkuFeld.classList.toggle('aktiv', feld === 'akku');
+
+    const schalter = $('#ebusSchalter');
+    schalter.hidden = !nr;
+    schalter.setAttribute('aria-pressed', String(mitAkku));
 
     let hinweis = '';
-    const nr = normalisiere(eingabe);
     if (nr && nr !== platz.bus) {
         const woanders = findeBus(nr);
         if (woanders) hinweis = 'Bus ' + nr + ' steht auf ' + platzLabel(woanders.bereich, woanders.platz) + ' – wird hierher umgesetzt.';
@@ -475,11 +598,14 @@ function renderEingabe() {
     } else if (!nr && platz.bus) {
         hinweis = 'Leer speichern gibt den Platz frei.';
     }
+    if (hinweisExtra) hinweis = hinweisExtra;
     $('#sheetHinweis').textContent = hinweis;
 
     $('#btnFreigeben').disabled = !platz.bus;
     const weiter = naechsterPlatz(bereich, platz);
-    $('#btnWeiter').textContent = weiter
+    $('#btnWeiter').textContent = feld === 'bus' && mitAkku
+        ? 'Weiter › Akku'
+        : weiter
         ? 'Weiter › ' + (weiter.bereich === bereich ? kurzLabel(weiter.bereich, weiter.platz) : weiter.bereich.kuerzel ? platzLabel(weiter.bereich, weiter.platz) : weiter.bereich.name)
         : 'Fertig';
 }
@@ -493,8 +619,50 @@ function markiereKachel(platzId) {
     }
 }
 
+// E-Bus-Felder: Schalter ausdrücklich gewählt, sonst bekannter E-Bus oder Bus auf einem Ladeplatz.
+function ebusAktiv() {
+    const nr = normalisiere(eingabe);
+    if (!nr) return false;
+    return ebusGewaehlt !== null ? ebusGewaehlt : istEbus(nr) || offen.bereich.laden;
+}
+
+// Bekannter Akkustand der eingegebenen Busnummer (folgt der Nummer, solange nichts getippt wurde).
+function akkuVorschlag() {
+    const akku = akkuVon(normalisiere(eingabe));
+    return akku === null ? '' : String(akku);
+}
+
+function aktiviereFeld(neu, zeichnen = true) {
+    if (neu === 'akku' && !akkuBearbeitet) {
+        akkuEingabe = akkuVorschlag();
+        akkuVorbelegt = akkuEingabe !== '';
+    }
+    feld = neu;
+    hinweisExtra = '';
+    if (zeichnen) renderEingabe();
+}
+
+function tasteAkku(t) {
+    if (t === '⌫') akkuEingabe = akkuVorbelegt ? '' : akkuEingabe.slice(0, -1);
+    else if (t === 'C') akkuEingabe = '';
+    else if (/^[0-9]$/.test(t)) {
+        const neu = (akkuVorbelegt ? '' : akkuEingabe) + t;
+        if (Number(neu) > 100) {
+            hinweisExtra = 'Höchstens 100 %';
+            renderEingabe();
+            return;
+        }
+        akkuEingabe = String(Number(neu));
+    } else return;
+    akkuVorbelegt = false;
+    akkuBearbeitet = true;
+    renderEingabe();
+}
+
 function taste(t) {
     if (!offen) return;
+    hinweisExtra = '';
+    if (feld === 'akku') { tasteAkku(t); return; }
     if (t === '⌫') {
         eingabe = eingabeVorbelegt ? '' : eingabe.slice(0, -1);
     } else if (t === 'C') {
@@ -510,8 +678,12 @@ function taste(t) {
 function uebernehmeEingabe() {
     const { bereich, platz } = offen;
     const nr = normalisiere(eingabe);
-    if (nr) setzeBus(bereich, platz, nr);
-    else if (platz.bus) freigeben(bereich, platz);
+    if (!nr) { if (platz.bus) freigeben(bereich, platz); return; }
+    const ebus = ebusAktiv();
+    speicherePlatz(bereich, platz, nr, {
+        ebus: ebusGewaehlt !== null ? ebus : undefined,
+        akku: ebus && akkuBearbeitet ? (akkuEingabe === '' ? null : Number(akkuEingabe)) : undefined
+    });
 }
 
 function speichernUndSchliessen() {
@@ -522,6 +694,8 @@ function speichernUndSchliessen() {
 
 function speichernUndWeiter() {
     if (!offen) return;
+    // Bei E-Bussen erst noch den Akkustand abfragen
+    if (feld === 'bus' && ebusAktiv()) { aktiviereFeld('akku'); return; }
     const { bereich, platz } = offen;
     uebernehmeEingabe();
     const weiter = naechsterPlatz(bereich, platz);
@@ -546,7 +720,8 @@ function leseFormular(form) {
     const kuerzel = form.elements.kuerzel.value.trim().toUpperCase().slice(0, 6);
     const anzahl = Math.floor(Number(form.elements.anzahl.value));
     const start = Math.floor(Number(form.elements.start.value));
-    return { name, kuerzel, anzahl, start };
+    const laden = form.elements.laden.checked;
+    return { name, kuerzel, anzahl, start, laden };
 }
 
 function nameVergeben(name, ausserId) {
@@ -558,13 +733,13 @@ function kuerzelVergeben(kuerzel, ausserId) {
 }
 
 function bereichAnlegen(form) {
-    const { name, kuerzel, anzahl, start } = leseFormular(form);
+    const { name, kuerzel, anzahl, start, laden } = leseFormular(form);
     if (!name || !(anzahl >= 1 && anzahl <= MAX_PLAETZE)) { zeigeToast('Bitte Name und 1–' + MAX_PLAETZE + ' Plätze angeben'); return; }
     if (!(start >= 0 && start <= MAX_STARTNR)) { zeigeToast('„Ab Nr.“ muss zwischen 0 und ' + MAX_STARTNR + ' liegen'); return; }
     if (nameVergeben(name)) { zeigeToast('Bereich „' + name + '“ gibt es schon'); return; }
     if (kuerzelVergeben(kuerzel)) { zeigeToast('Kürzel „' + kuerzel + '“ ist schon vergeben'); return; }
     merkeStand();
-    const bereich = { id: neueId(), name, kuerzel, start, plaetze: [] };
+    const bereich = { id: neueId(), name, kuerzel, start, laden, plaetze: [] };
     for (let i = 0; i < anzahl; i++) bereich.plaetze.push({ id: neueId(), bus: null, zeit: null });
     daten.bereiche.push(bereich);
     aenderungFertig('Bereich „' + name + '“ mit ' + anzahl + ' Plätzen angelegt');
@@ -573,7 +748,7 @@ function bereichAnlegen(form) {
 function bereichSpeichern(form) {
     const bereich = daten.bereiche.find((b) => b.id === form.dataset.bearbeiten);
     if (!bereich) return;
-    const { name, kuerzel, anzahl, start } = leseFormular(form);
+    const { name, kuerzel, anzahl, start, laden } = leseFormular(form);
     if (!name || !(anzahl >= 0 && anzahl <= MAX_PLAETZE)) { zeigeToast('Bitte Name und 0–' + MAX_PLAETZE + ' Plätze angeben'); return; }
     if (!(start >= 0 && start <= MAX_STARTNR)) { zeigeToast('„Ab Nr.“ muss zwischen 0 und ' + MAX_STARTNR + ' liegen'); return; }
     if (nameVergeben(name, bereich.id)) { zeigeToast('Bereich „' + name + '“ gibt es schon'); return; }
@@ -586,6 +761,7 @@ function bereichSpeichern(form) {
     bereich.name = name;
     bereich.kuerzel = kuerzel;
     bereich.start = start;
+    bereich.laden = laden;
     if (anzahl < bereich.plaetze.length) bereich.plaetze.length = anzahl;
     while (bereich.plaetze.length < anzahl) bereich.plaetze.push({ id: neueId(), bus: null, zeit: null });
     bearbeiteBereichId = null;
@@ -604,7 +780,7 @@ function vorlageAnlegen() {
     merkeStand();
     fehlend.forEach((v) => {
         const kuerzel = v.kuerzel && !kuerzelVergeben(v.kuerzel) ? v.kuerzel : '';
-        const bereich = { id: neueId(), name: v.name, kuerzel, start: v.start || 1, plaetze: [] };
+        const bereich = { id: neueId(), name: v.name, kuerzel, start: v.start || 1, laden: !!v.laden, plaetze: [] };
         for (let i = 0; i < v.anzahl; i++) bereich.plaetze.push({ id: neueId(), bus: null, zeit: null });
         daten.bereiche.push(bereich);
     });
@@ -681,7 +857,7 @@ function belegungAlsText() {
         const belegt = b.plaetze.filter((p) => p.bus);
         if (!belegt.length) return;
         zeilen.push('', b.name + ':');
-        belegt.forEach((p) => zeilen.push(platzLabel(b, p) + ': ' + p.bus));
+        belegt.forEach((p) => zeilen.push(platzLabel(b, p) + ': ' + p.bus + (istEbus(p.bus) ? ' · ' + akkuText(p.bus) : '')));
     });
     return zeilen.join('\n');
 }
@@ -747,7 +923,7 @@ function aufPlatzGetippt(bereichId, platzId) {
         $('#suchFeld').value = '';
         if (ziel.platz.bus === nr) { render(); zeigeToast('Bus ' + nr + ' steht schon auf ' + platzLabel(ziel.bereich, ziel.platz)); return; }
         if (ziel.platz.bus && !confirm('Auf ' + platzLabel(ziel.bereich, ziel.platz) + ' steht Bus ' + ziel.platz.bus + '. Durch Bus ' + nr + ' ersetzen?')) { render(); return; }
-        setzeBus(ziel.bereich, ziel.platz, nr);
+        speicherePlatz(ziel.bereich, ziel.platz, nr);
         return;
     }
     oeffneEingabe(ziel.bereich, ziel.platz);
@@ -820,6 +996,16 @@ function init() {
     $('#tastatur').addEventListener('click', (e) => {
         const btn = e.target.closest('button[data-taste]');
         if (btn) taste(btn.dataset.taste);
+    });
+    $('#anzeigen').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-feld]');
+        if (btn && offen) aktiviereFeld(btn.dataset.feld);
+    });
+    $('#ebusSchalter').addEventListener('click', () => {
+        if (!offen) return;
+        ebusGewaehlt = !ebusAktiv();
+        if (ebusGewaehlt) aktiviereFeld('akku');
+        else { feld = 'bus'; renderEingabe(); }
     });
     $('#btnSpeichern').addEventListener('click', speichernUndSchliessen);
     $('#btnWeiter').addEventListener('click', speichernUndWeiter);
