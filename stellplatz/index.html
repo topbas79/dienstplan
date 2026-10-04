@@ -116,11 +116,15 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12L13 2Z"></path></svg>
             E-Bus
         </button>
-        <div class="sheet-hinweis" id="sheetHinweis"></div>
+        <button type="button" class="ebus-schalter rote-karte" id="rotSchalter" aria-pressed="false" hidden>
+            <svg width="13" height="15" viewBox="0 0 13 15" aria-hidden="true"><rect x="2" y="1" width="9" height="13" rx="1.5" transform="rotate(-10 6.5 7.5)" fill="currentColor"></rect></svg>
+            Rote Karte
+        </button>
         <button type="button" class="ebus-schalter mikro" id="spracheBtn" aria-pressed="false" aria-label="Durchsprechen: Busnummer und Akku nacheinander sagen" hidden>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg>
             <span id="spracheText">Sprechen</span>
         </button>
+        <div class="sheet-hinweis" id="sheetHinweis"></div>
     </div>
     <div class="tastatur" id="tastatur">
         <button type="button" data-taste="1">1</button>

@@ -50,6 +50,7 @@ let kmEingabe = '';
 let kmVorbelegt = false;
 let kmBearbeitet = false;
 let ebusGewaehlt = null;       // null = automatisch, sonst true/false vom E-Bus-Schalter
+let rotGewaehlt = null;        // Rote Karte für einen neu eingegebenen Bus: null = unverändert, sonst true/false
 let hinweisExtra = '';
 let diktat = false;            // Durchsprechen: hört dauerhaft zu, speichert und springt selbst weiter
 let fokusVorSheet = null;
@@ -66,7 +67,8 @@ function neueId() {
 }
 
 function leererStand() {
-    return { version: 2, bereiche: [], verlauf: [], busse: {} };
+    // rot: Busnummer → Zeitpunkt der roten Karte (defekt, nicht fahrbereit); gehört zum Bus, nicht zum Platz
+    return { version: 2, bereiche: [], verlauf: [], busse: {}, rot: {} };
 }
 
 // Prüft und bereinigt geladene/importierte Daten, damit kaputte Dateien die App nicht lahmlegen.
@@ -94,6 +96,12 @@ function bereinige(roh) {
             .filter((v) => v && Number.isFinite(v.zeit) && typeof v.text === 'string')
             .slice(0, MAX_VERLAUF)
             .map((v) => ({ zeit: v.zeit, text: v.text.slice(0, 200) }));
+    }
+    if (roh.rot && typeof roh.rot === 'object') {
+        Object.keys(roh.rot).forEach((schluessel) => {
+            const nr = normalisiere(schluessel);
+            if (nr && Number.isFinite(roh.rot[schluessel])) d.rot[nr] = roh.rot[schluessel];
+        });
     }
     // Pro Busnummer: E-Bus ja/nein und letzter Akkustand (wandert mit, wenn der Bus umgesetzt wird)
     if (roh.busse && typeof roh.busse === 'object') {
@@ -175,6 +183,10 @@ function istEbus(nr) {
     return info ? info.ebus : ebusNachNummer(nr);
 }
 
+function istRot(nr) {
+    return !!(nr && daten.rot[nr]);
+}
+
 function akkuVon(nr) {
     return istEbus(nr) && daten.busse[nr] ? daten.busse[nr].akku : null;
 }
@@ -219,6 +231,7 @@ function aenderungFertig(text) {
 // Bus auf einen Platz stellen und/oder E-Bus-Kennzeichen und Akkustand ändern – als eine Änderung (ein Rückgängig).
 // opt.ebus: true/false = ausdrücklich gewählt, undefined = bleibt bzw. automatisch auf Ladeplätzen.
 // opt.akku: Zahl 0–100, null = löschen, undefined = unverändert. opt.km (Reichweite) genauso, 0–999.
+// opt.rot: true = rote Karte, false = wieder fahrbereit, undefined = unverändert.
 function speicherePlatz(bereich, platz, roh, opt = {}) {
     const nr = normalisiere(roh);
     if (!nr) { freigeben(bereich, platz); return; }
@@ -257,6 +270,11 @@ function speicherePlatz(bereich, platz, roh, opt = {}) {
         daten.busse[nr].km = opt.km;
         if (opt.km !== null) daten.busse[nr].akkuZeit = jetzt;
         texte.push(opt.km === null ? 'Reichweite gelöscht' : 'Reichweite ' + opt.km + ' km');
+    }
+    if (opt.rot !== undefined && opt.rot !== istRot(nr)) {
+        if (opt.rot) daten.rot[nr] = jetzt;
+        else delete daten.rot[nr];
+        texte.push(opt.rot ? 'Rote Karte – nicht fahrbereit' : 'Rote Karte weg – fahrbereit');
     }
     if (!texte.length) return;
     rueckgaengigStand = stand;
@@ -321,6 +339,12 @@ function akkuHtml(nr) {
     return '<span class="akku ' + stufe + '">' + batterieSvg(akku) + akku + ' %</span>';
 }
 
+const KARTEN_SVG = '<svg width="13" height="15" viewBox="0 0 13 15" aria-hidden="true"><rect x="2" y="1" width="9" height="13" rx="1.5" transform="rotate(-10 6.5 7.5)" fill="currentColor"></rect></svg>';
+
+function rotText(nr) {
+    return istRot(nr) ? 'Rote Karte (seit ' + zeitText(daten.rot[nr]) + ')' : '';
+}
+
 function reichweiteHtml(nr) {
     const km = kmVon(nr);
     return km === null ? '' : '<span class="reichweite">' + km + ' km</span>';
@@ -353,7 +377,10 @@ function trefferListe() {
 function render() {
     const alle = allePlaetze();
     const belegt = alle.filter((e) => e.platz.bus).length;
-    $('#statusZeile').textContent = alle.length ? belegt + ' von ' + alle.length + ' Plätzen belegt' : 'Noch keine Plätze angelegt';
+    const rote = alle.filter((e) => e.platz.bus && istRot(e.platz.bus)).length;
+    $('#statusZeile').textContent = alle.length
+        ? belegt + ' von ' + alle.length + ' Plätzen belegt' + (rote ? ' · ' + rote + ' rote Karte' + (rote > 1 ? 'n' : '') : '')
+        : 'Noch keine Plätze angelegt';
 
     document.querySelectorAll('.tabbar button').forEach((btn) => {
         const aktiv = btn.dataset.ansicht === aktiveAnsicht;
@@ -381,7 +408,7 @@ function renderSuchErgebnis() {
     if (genau) {
         html = '<div class="ergebnis-text"><strong>Bus ' + esc(genau.platz.bus) + '</strong> steht auf <strong class="gross">' +
             esc(platzLabel(genau.bereich, genau.platz)) + '</strong><span class="leise">' +
-            [genau.bereich.kuerzel ? genau.bereich.name : '', genau.platz.zeit ? 'seit ' + zeitText(genau.platz.zeit) : '', akkuText(genau.platz.bus)].filter(Boolean).map(esc).join(' · ') +
+            [genau.bereich.kuerzel ? genau.bereich.name : '', genau.platz.zeit ? 'seit ' + zeitText(genau.platz.zeit) : '', rotText(genau.platz.bus), akkuText(genau.platz.bus)].filter(Boolean).map(esc).join(' · ') +
             '</span></div>' +
             '<button type="button" class="btn klein" data-aktion="zuweisen">Umsetzen</button>';
     } else if (treffer.length) {
@@ -422,9 +449,11 @@ function renderPlaetze() {
         const kacheln = bereich.plaetze.map((platz) => {
             const klassen = ['platz', platz.bus ? 'belegt' : 'frei'];
             if (trefferIds.has(platz.id)) klassen.push('treffer');
+            if (platz.bus && istRot(platz.bus)) klassen.push('rot');
             const label = kurzLabel(bereich, platz);
             return '<button type="button" class="' + klassen.join(' ') + '" data-bereich="' + esc(bereich.id) + '" data-platz="' + esc(platz.id) + '"' +
-                ' aria-label="' + esc(platzLabel(bereich, platz)) + ': ' + (platz.bus ? 'Bus ' + esc(platz.bus) + (istEbus(platz.bus) ? ', ' + esc(akkuText(platz.bus)) : '') : 'frei') + '">' +
+                ' aria-label="' + esc(platzLabel(bereich, platz)) + ': ' + (platz.bus ? 'Bus ' + esc(platz.bus) + (istRot(platz.bus) ? ', Rote Karte' : '') + (istEbus(platz.bus) ? ', ' + esc(akkuText(platz.bus)) : '') : 'frei') + '">' +
+                (platz.bus && istRot(platz.bus) ? '<span class="karten-zeichen">' + KARTEN_SVG + '</span>' : '') +
                 '<span class="platz-label">' + esc(label) + '</span>' +
                 '<span class="platz-bus">' + (platz.bus ? esc(platz.bus) : 'frei') + '</span>' +
                 (platz.bus && istEbus(platz.bus)
@@ -501,6 +530,7 @@ function renderListe() {
     el.innerHTML = kopf + '<div class="karte liste">' + eintraege.map((e) =>
         '<button type="button" class="zeile" data-bereich="' + esc(e.bereich.id) + '" data-platz="' + esc(e.platz.id) + '">' +
         '<span class="zeile-bus">' + esc(e.platz.bus) + '</span>' +
+        (istRot(e.platz.bus) ? '<span class="rot-marke">' + KARTEN_SVG + 'Rote Karte</span>' : '') +
         '<span class="zeile-platz">' + esc(kurzLabel(e.bereich, e.platz)) + '<span class="leise">' + esc(e.bereich.name) + '</span></span>' +
         akkuHtml(e.platz.bus) + reichweiteHtml(e.platz.bus) +
         '<span class="zeile-zeit leise">' + esc(zeitText(e.platz.zeit)) + '</span>' +
@@ -598,6 +628,7 @@ function oeffneEingabe(bereich, platz) {
     kmVorbelegt = false;
     kmBearbeitet = false;
     ebusGewaehlt = null;
+    rotGewaehlt = null;
     hinweisExtra = diktat ? DIKTAT_HINWEIS : '';
     feld = 'bus';
     // Steht hier schon ein E-Bus, geht es meist um den Akkustand: gleich das Akkufeld aktivieren.
@@ -655,6 +686,10 @@ function renderEingabe() {
     kmFeld.classList.toggle('leer', !kmWert);
     kmFeld.classList.toggle('aktiv', feld === 'km');
 
+    const rotKnopf = $('#rotSchalter');
+    rotKnopf.hidden = !nr;
+    rotKnopf.setAttribute('aria-pressed', String(rotAktiv()));
+
     const schalter = $('#ebusSchalter');
     schalter.hidden = !nr;
     schalter.setAttribute('aria-pressed', String(mitAkku));
@@ -688,6 +723,29 @@ function markiereKachel(platzId) {
         kachel.classList.add('aktuell');
         kachel.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
+}
+
+function rotAktiv() {
+    const nr = normalisiere(eingabe);
+    if (!nr) return false;
+    return rotGewaehlt !== null ? rotGewaehlt : istRot(nr);
+}
+
+// Rote Karte umschalten: steht der Bus schon auf diesem Platz, sofort speichern (mit Rückgängig),
+// bei einem neu eingegebenen Bus gilt sie beim Speichern.
+function schalteRot(neu) {
+    if (!offen) return;
+    const nr = normalisiere(eingabe);
+    if (!nr) return;
+    if (nr === offen.platz.bus) {
+        rotGewaehlt = null;
+        speicherePlatz(offen.bereich, offen.platz, nr, { rot: neu });
+        hinweisExtra = neu ? 'Rote Karte gesetzt – Bus ' + nr + ' nicht fahrbereit' : 'Rote Karte weg – Bus ' + nr + ' fahrbereit';
+    } else {
+        rotGewaehlt = neu;
+        hinweisExtra = neu ? 'Rote Karte – wird mit dem Bus gespeichert' : '';
+    }
+    renderEingabe();
 }
 
 // E-Bus-Felder: Schalter ausdrücklich gewählt, sonst bekannter E-Bus oder Bus auf einem Ladeplatz.
@@ -781,7 +839,8 @@ function uebernehmeEingabe() {
     speicherePlatz(bereich, platz, nr, {
         ebus: ebusGewaehlt !== null ? ebus : undefined,
         akku: ebus && akkuBearbeitet ? (akkuEingabe === '' ? null : Number(akkuEingabe)) : undefined,
-        km: ebus && kmBearbeitet ? (kmEingabe === '' ? null : Number(kmEingabe)) : undefined
+        km: ebus && kmBearbeitet ? (kmEingabe === '' ? null : Number(kmEingabe)) : undefined,
+        rot: rotGewaehlt !== null ? rotGewaehlt : undefined
     });
 }
 
@@ -850,6 +909,7 @@ function diktatErgebnis(text) {
         speichereUndNaechster();
         return;
     }
+    if (!hatZahl && erkannt.rot !== null) { schalteRot(erkannt.rot); return; }
     if (!hatZahl && erkannt.befehl === 'weiter') { speichereUndNaechster(); return; }
     if (!wendeSpracheAn(text, erkannt)) return;
     const nr = normalisiere(eingabe);
@@ -903,6 +963,7 @@ function wendeSpracheAn(text, erkannt) {
         eingabeVorbelegt = false;
         feld = 'bus';
     }
+    if (erkannt.rot !== null && normalisiere(eingabe)) rotGewaehlt = erkannt.rot;
     if ((akku !== null || km !== null) && normalisiere(eingabe) && !ebusAktiv()) ebusGewaehlt = true;   // wer Akku/km nennt, meint einen E-Bus
     if (akku !== null && normalisiere(eingabe)) {
         akkuEingabe = String(akku);
@@ -1096,7 +1157,7 @@ function belegungAlsText() {
         const belegt = b.plaetze.filter((p) => p.bus);
         if (!belegt.length) return;
         zeilen.push('', b.name + ':');
-        belegt.forEach((p) => zeilen.push(kurzLabel(b, p) + ': ' + p.bus + (istEbus(p.bus) ? ' · ' + akkuText(p.bus) : '')));
+        belegt.forEach((p) => zeilen.push(kurzLabel(b, p) + ': ' + p.bus + (istRot(p.bus) ? ' · ROTE KARTE' : '') + (istEbus(p.bus) ? ' · ' + akkuText(p.bus) : '')));
     });
     return zeilen.join('\n');
 }
@@ -1247,6 +1308,7 @@ function init() {
         const btn = e.target.closest('[data-feld]');
         if (btn && offen) aktiviereFeld(btn.dataset.feld);
     });
+    $('#rotSchalter').addEventListener('click', () => { if (offen) schalteRot(!rotAktiv()); });
     $('#ebusSchalter').addEventListener('click', () => {
         if (!offen) return;
         ebusGewaehlt = !ebusAktiv();

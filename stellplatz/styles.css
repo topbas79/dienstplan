@@ -20,6 +20,7 @@
     --akku-niedrig: #dc2626;
     --ebus: #0d9488;
     --ebus-bg: #e6f7f5;
+    --rot-bg: #fde8e8;
 }
 :root[data-thema="dunkel"] {
     --primary: #3b82f6;
@@ -41,6 +42,7 @@
     --akku-niedrig: #f87171;
     --ebus: #2dd4bf;
     --ebus-bg: #0f2e2b;
+    --rot-bg: #3b1518;
     color-scheme: dark;
 }
 /* Ohne eigene Wahl folgt die App der Handy-Einstellung */
@@ -65,6 +67,7 @@
         --akku-niedrig: #f87171;
         --ebus: #2dd4bf;
         --ebus-bg: #0f2e2b;
+        --rot-bg: #3b1518;
         color-scheme: dark;
     }
 }
@@ -209,6 +212,18 @@ body.zuweisen-modus .platz.frei { border-color: var(--treffer); }
 .platz.frei .platz-bus { font-size: 0.85rem; font-weight: 500; color: var(--text-faint); }
 .platz-zeit { font-size: 0.66rem; color: var(--text-faint); }
 .platz.treffer { background: var(--treffer-bg); border: 2px solid var(--treffer); }
+/* Rote Karte: Bus defekt, nicht fahrbereit */
+.platz.rot { background: var(--rot-bg); border: 2px solid var(--gefahr); }
+.platz.rot .platz-bus { color: var(--gefahr); }
+.karten-zeichen {
+    position: absolute; top: -7px; right: -5px; color: var(--gefahr); line-height: 0;
+    filter: drop-shadow(0 0 1.5px var(--card));
+}
+.karten-zeichen svg { width: 16px; height: 19px; }
+.rot-marke {
+    display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 6px;
+    background: var(--gefahr); color: #ffffff; font-size: 0.72rem; font-weight: 700; white-space: nowrap;
+}
 .platz.aktuell { outline: 3px solid var(--primary); outline-offset: 1px; }
 .platz.blinken { animation: blinken 0.5s ease-in-out 3; }
 @keyframes blinken { 50% { transform: scale(1.08); box-shadow: 0 0 0 4px var(--treffer); } }
@@ -296,14 +311,18 @@ body.zuweisen-modus .platz.frei { border-color: var(--treffer); }
 .anzeige.aktiv .cursor { visibility: visible; }
 .anzeige.leer .cursor { margin-left: 8px; }
 @keyframes cursor { 50% { opacity: 0; } }
-.sheet-zeile { display: flex; align-items: center; gap: 8px; margin: 6px 0; min-height: 30px; }
-.sheet-hinweis { flex: 1; font-size: 0.82rem; color: var(--treffer); font-weight: 600; }
+.sheet-zeile { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; margin: 8px 0 6px; min-height: 30px; }
+.sheet-hinweis { flex-basis: 100%; min-height: 1.25em; font-size: 0.82rem; color: var(--treffer); font-weight: 600; }
+.sheet-zeile .rote-karte { margin-left: auto; }
+.sheet-zeile .rote-karte[hidden] + .mikro { margin-left: auto; }
 .ebus-schalter {
     display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0;
     padding: 5px 11px; border-radius: 999px; border: 1px solid var(--border); background: var(--card);
     font-size: 0.82rem; font-weight: 600; color: var(--text-soft);
 }
 .ebus-schalter[aria-pressed="true"] { background: var(--ebus-bg); border-color: var(--ebus); color: var(--ebus); }
+.rote-karte { color: var(--gefahr); }
+.rote-karte[aria-pressed="true"] { background: var(--gefahr); border-color: var(--gefahr); color: #ffffff; }
 .ebus-schalter.mikro { padding: 7px 14px; font-size: 0.88rem; color: var(--primary); border-color: var(--primary); }
 .mikro[aria-pressed="true"], .such-mikro[aria-pressed="true"] {
     background: var(--gefahr); border-color: var(--gefahr); color: #ffffff; animation: zuhoeren 1.2s ease-in-out infinite;
