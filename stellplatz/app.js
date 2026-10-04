@@ -80,9 +80,17 @@ function normalisiere(nr) {
     return String(nr || '').toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, MAX_ZIFFERN);
 }
 
+// Voller Name eines Platzes, eindeutig über alle Bereiche:
+// mit Kürzel "A" → A3, mit Kürzel "T1" → T1-3 (sonst wäre T13 mehrdeutig), ohne Kürzel → "Halle 1 · Platz 3".
 function platzLabel(bereich, platz) {
     const nr = bereich.plaetze.indexOf(platz) + 1;
-    return bereich.kuerzel ? bereich.kuerzel + nr : bereich.name + ' ' + nr;
+    if (!bereich.kuerzel) return bereich.name + ' · Platz ' + nr;
+    return bereich.kuerzel + (/[0-9]$/.test(bereich.kuerzel) ? '-' : '') + nr;
+}
+
+// Kurzer Name, wenn der Bereich schon daneben steht (Kacheln, Liste).
+function kurzLabel(bereich, platz) {
+    return bereich.kuerzel ? platzLabel(bereich, platz) : 'Platz ' + (bereich.plaetze.indexOf(platz) + 1);
 }
 
 function allePlaetze() {
@@ -229,8 +237,9 @@ function renderSuchErgebnis() {
     let html;
     if (genau) {
         html = '<div class="ergebnis-text"><strong>Bus ' + esc(genau.platz.bus) + '</strong> steht auf <strong class="gross">' +
-            esc(platzLabel(genau.bereich, genau.platz)) + '</strong><span class="leise">' + esc(genau.bereich.name) +
-            (genau.platz.zeit ? ' · seit ' + esc(zeitText(genau.platz.zeit)) : '') + '</span></div>' +
+            esc(platzLabel(genau.bereich, genau.platz)) + '</strong><span class="leise">' +
+            [genau.bereich.kuerzel ? genau.bereich.name : '', genau.platz.zeit ? 'seit ' + zeitText(genau.platz.zeit) : ''].filter(Boolean).map(esc).join(' · ') +
+            '</span></div>' +
             '<button type="button" class="btn klein" data-aktion="zuweisen">Umsetzen</button>';
     } else if (treffer.length) {
         html = '<div class="ergebnis-text">' + treffer.length + ' Treffer: ' +
@@ -256,7 +265,7 @@ function renderZuweisen() {
 function renderPlaetze() {
     const el = $('#ansichtPlaetze');
     if (!daten.bereiche.length) {
-        el.innerHTML = '<div class="karte leer-zustand"><h2>Willkommen!</h2><p>Lege zuerst deine Stellplätze an – z. B. „Reihe A“ mit 12 Plätzen. ' +
+        el.innerHTML = '<div class="karte leer-zustand"><h2>Willkommen!</h2><p>Lege zuerst deine Stellplätze an – z. B. „Halle 1“ oder „Tanne 1“ mit 12 Plätzen. ' +
             'Danach tippst du einfach auf einen Platz und gibst die Busnummer ein.</p>' +
             '<button type="button" class="btn primaer" data-aktion="zu-bereichen">Bereiche anlegen</button></div>';
         return;
@@ -267,9 +276,9 @@ function renderPlaetze() {
         const kacheln = bereich.plaetze.map((platz) => {
             const klassen = ['platz', platz.bus ? 'belegt' : 'frei'];
             if (trefferIds.has(platz.id)) klassen.push('treffer');
-            const label = platzLabel(bereich, platz);
+            const label = kurzLabel(bereich, platz);
             return '<button type="button" class="' + klassen.join(' ') + '" data-bereich="' + esc(bereich.id) + '" data-platz="' + esc(platz.id) + '"' +
-                ' aria-label="Platz ' + esc(label) + ': ' + (platz.bus ? 'Bus ' + esc(platz.bus) : 'frei') + '">' +
+                ' aria-label="' + esc(platzLabel(bereich, platz)) + ': ' + (platz.bus ? 'Bus ' + esc(platz.bus) : 'frei') + '">' +
                 '<span class="platz-label">' + esc(label) + '</span>' +
                 '<span class="platz-bus">' + (platz.bus ? esc(platz.bus) : 'frei') + '</span>' +
                 '<span class="platz-zeit">' + (platz.bus ? esc(zeitText(platz.zeit)) : '&nbsp;') + '</span>' +
@@ -296,7 +305,7 @@ function renderListe() {
     el.innerHTML = kopf + '<div class="karte liste">' + eintraege.map((e) =>
         '<button type="button" class="zeile" data-bereich="' + esc(e.bereich.id) + '" data-platz="' + esc(e.platz.id) + '">' +
         '<span class="zeile-bus">' + esc(e.platz.bus) + '</span>' +
-        '<span class="zeile-platz">' + esc(platzLabel(e.bereich, e.platz)) + '<span class="leise">' + esc(e.bereich.name) + '</span></span>' +
+        '<span class="zeile-platz">' + esc(kurzLabel(e.bereich, e.platz)) + '<span class="leise">' + esc(e.bereich.name) + '</span></span>' +
         '<span class="zeile-zeit leise">' + esc(zeitText(e.platz.zeit)) + '</span>' +
         '</button>'
     ).join('') + '</div>';
@@ -315,26 +324,17 @@ function renderVerlauf() {
         ).join('') + '</div>';
 }
 
-function vorschlagKuerzel() {
-    const benutzt = new Set(daten.bereiche.map((b) => b.kuerzel));
-    for (let i = 0; i < 26; i++) {
-        const k = String.fromCharCode(65 + i);
-        if (!benutzt.has(k)) return k;
-    }
-    return '';
-}
-
 function renderBereiche() {
     const el = $('#ansichtBereiche');
-    const k = vorschlagKuerzel();
     const neu = '<form class="karte formular" id="formNeu">' +
         '<h2>Neuer Bereich</h2>' +
         '<div class="felder">' +
-        '<label>Name<input name="name" required maxlength="40" value="' + esc(k ? 'Reihe ' + k : '') + '"></label>' +
-        '<label>Kürzel<input name="kuerzel" maxlength="6" value="' + esc(k) + '" autocapitalize="characters"></label>' +
+        '<label>Name<input name="name" required maxlength="40" placeholder="z. B. Halle 1"></label>' +
+        '<label>Kürzel<input name="kuerzel" maxlength="6" placeholder="optional" autocapitalize="characters"></label>' +
         '<label>Plätze<input name="anzahl" type="number" inputmode="numeric" min="1" max="' + MAX_PLAETZE + '" required value="10"></label>' +
         '</div>' +
-        '<p class="leise klein-text">Die Plätze heißen dann Kürzel + Nummer, z. B. A1, A2, …</p>' +
+        '<p class="leise klein-text">Der Name ist frei wählbar (Halle 1, Tanne 1, Reihe A …). Ohne Kürzel heißen die Plätze „Halle 1 · Platz 1“, „Platz 2“ …; ' +
+        'mit Kürzel kürzer: „H1“ → H1-1, H1-2 …, „A“ → A1, A2 …</p>' +
         '<button type="submit" class="btn primaer">Bereich anlegen</button>' +
         '</form>';
 
@@ -343,7 +343,7 @@ function renderBereiche() {
             return '<form class="karte formular" data-bearbeiten="' + esc(b.id) + '">' +
                 '<div class="felder">' +
                 '<label>Name<input name="name" required maxlength="40" value="' + esc(b.name) + '"></label>' +
-                '<label>Kürzel<input name="kuerzel" maxlength="6" value="' + esc(b.kuerzel) + '" autocapitalize="characters"></label>' +
+                '<label>Kürzel<input name="kuerzel" maxlength="6" placeholder="optional" value="' + esc(b.kuerzel) + '" autocapitalize="characters"></label>' +
                 '<label>Plätze<input name="anzahl" type="number" inputmode="numeric" min="0" max="' + MAX_PLAETZE + '" required value="' + b.plaetze.length + '"></label>' +
                 '</div>' +
                 '<div class="knopfreihe"><button type="button" class="btn" data-aktion="bearbeiten-abbrechen">Abbrechen</button>' +
@@ -352,7 +352,7 @@ function renderBereiche() {
         }
         const belegt = b.plaetze.filter((p) => p.bus).length;
         const bereichsText = b.plaetze.length
-            ? platzLabel(b, b.plaetze[0]) + (b.plaetze.length > 1 ? ' – ' + platzLabel(b, b.plaetze[b.plaetze.length - 1]) : '')
+            ? kurzLabel(b, b.plaetze[0]) + (b.plaetze.length > 1 ? ' – ' + (b.kuerzel ? kurzLabel(b, b.plaetze[b.plaetze.length - 1]) : b.plaetze.length) : '')
             : 'keine Plätze';
         return '<div class="karte bereich-zeile">' +
             '<div class="bereich-info"><strong>' + esc(b.name) + '</strong>' +
@@ -406,7 +406,7 @@ function schliesseEingabe() {
 function renderEingabe() {
     if (!offen) return;
     const { bereich, platz } = offen;
-    $('#sheetTitel').textContent = 'Platz ' + platzLabel(bereich, platz);
+    $('#sheetTitel').textContent = bereich.kuerzel ? 'Platz ' + platzLabel(bereich, platz) : platzLabel(bereich, platz);
     $('#sheetInfo').textContent = bereich.name + ' · ' + (platz.bus ? 'jetzt: Bus ' + platz.bus + (platz.zeit ? ' (seit ' + zeitText(platz.zeit) + ')' : '') : 'frei');
     $('#anzeigeText').textContent = eingabe;
     $('#anzeige').classList.toggle('vorbelegt', eingabeVorbelegt);
@@ -425,7 +425,9 @@ function renderEingabe() {
 
     $('#btnFreigeben').disabled = !platz.bus;
     const weiter = naechsterPlatz(bereich, platz);
-    $('#btnWeiter').textContent = weiter ? 'Weiter › ' + platzLabel(weiter.bereich, weiter.platz) : 'Fertig';
+    $('#btnWeiter').textContent = weiter
+        ? 'Weiter › ' + (weiter.bereich === bereich ? kurzLabel(weiter.bereich, weiter.platz) : weiter.bereich.kuerzel ? platzLabel(weiter.bereich, weiter.platz) : weiter.bereich.name)
+        : 'Fertig';
 }
 
 function markiereKachel(platzId) {
@@ -492,6 +494,10 @@ function leseFormular(form) {
     return { name, kuerzel, anzahl };
 }
 
+function nameVergeben(name, ausserId) {
+    return daten.bereiche.some((b) => b.id !== ausserId && b.name.toLowerCase() === name.toLowerCase());
+}
+
 function kuerzelVergeben(kuerzel, ausserId) {
     return kuerzel && daten.bereiche.some((b) => b.id !== ausserId && b.kuerzel === kuerzel);
 }
@@ -499,6 +505,7 @@ function kuerzelVergeben(kuerzel, ausserId) {
 function bereichAnlegen(form) {
     const { name, kuerzel, anzahl } = leseFormular(form);
     if (!name || !(anzahl >= 1 && anzahl <= MAX_PLAETZE)) { zeigeToast('Bitte Name und 1–' + MAX_PLAETZE + ' Plätze angeben'); return; }
+    if (nameVergeben(name)) { zeigeToast('Bereich „' + name + '“ gibt es schon'); return; }
     if (kuerzelVergeben(kuerzel)) { zeigeToast('Kürzel „' + kuerzel + '“ ist schon vergeben'); return; }
     merkeStand();
     const bereich = { id: neueId(), name, kuerzel, plaetze: [] };
@@ -512,17 +519,21 @@ function bereichSpeichern(form) {
     if (!bereich) return;
     const { name, kuerzel, anzahl } = leseFormular(form);
     if (!name || !(anzahl >= 0 && anzahl <= MAX_PLAETZE)) { zeigeToast('Bitte Name und 0–' + MAX_PLAETZE + ' Plätze angeben'); return; }
+    if (nameVergeben(name, bereich.id)) { zeigeToast('Bereich „' + name + '“ gibt es schon'); return; }
     if (kuerzelVergeben(kuerzel, bereich.id)) { zeigeToast('Kürzel „' + kuerzel + '“ ist schon vergeben'); return; }
     const wegfallend = bereich.plaetze.slice(anzahl).filter((p) => p.bus);
     if (wegfallend.length && !confirm('Auf den wegfallenden Plätzen stehen noch ' + wegfallend.length + ' Busse (' +
         wegfallend.map((p) => p.bus).join(', ') + '). Trotzdem verkleinern?')) return;
     merkeStand();
+    const alterName = bereich.name;
     bereich.name = name;
     bereich.kuerzel = kuerzel;
     if (anzahl < bereich.plaetze.length) bereich.plaetze.length = anzahl;
     while (bereich.plaetze.length < anzahl) bereich.plaetze.push({ id: neueId(), bus: null, zeit: null });
     bearbeiteBereichId = null;
-    aenderungFertig('Bereich „' + name + '“ geändert (' + anzahl + ' Plätze)');
+    aenderungFertig(alterName !== name
+        ? 'Bereich „' + alterName + '“ umbenannt in „' + name + '“ (' + anzahl + ' Plätze)'
+        : 'Bereich „' + name + '“ geändert (' + anzahl + ' Plätze)');
 }
 
 function bereichLoeschen(id) {
