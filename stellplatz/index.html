@@ -83,8 +83,23 @@
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
         </button>
     </div>
-    <div class="anzeige" id="anzeige" aria-live="polite"><span id="anzeigeText"></span><span class="cursor" aria-hidden="true"></span></div>
-    <div class="sheet-hinweis" id="sheetHinweis"></div>
+    <div class="anzeigen" id="anzeigen">
+        <button type="button" class="anzeige" id="anzeigeBus" data-feld="bus" aria-live="polite">
+            <span class="anzeige-titel">Bus</span>
+            <span class="anzeige-wert"><span id="anzeigeText"></span><span class="cursor" aria-hidden="true"></span></span>
+        </button>
+        <button type="button" class="anzeige akku-feld" id="anzeigeAkku" data-feld="akku" aria-live="polite" hidden>
+            <span class="anzeige-titel">Akku %</span>
+            <span class="anzeige-wert"><span id="akkuText"></span><span class="cursor" aria-hidden="true"></span></span>
+        </button>
+    </div>
+    <div class="sheet-zeile">
+        <button type="button" class="ebus-schalter" id="ebusSchalter" aria-pressed="false" hidden>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12L13 2Z"></path></svg>
+            E-Bus
+        </button>
+        <div class="sheet-hinweis" id="sheetHinweis"></div>
+    </div>
     <div class="tastatur" id="tastatur">
         <button type="button" data-taste="1">1</button>
         <button type="button" data-taste="2">2</button>
