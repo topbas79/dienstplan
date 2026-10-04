@@ -1018,7 +1018,7 @@ function belegungAlsText() {
         const belegt = b.plaetze.filter((p) => p.bus);
         if (!belegt.length) return;
         zeilen.push('', b.name + ':');
-        belegt.forEach((p) => zeilen.push(platzLabel(b, p) + ': ' + p.bus + (istEbus(p.bus) ? ' · ' + akkuText(p.bus) : '')));
+        belegt.forEach((p) => zeilen.push(kurzLabel(b, p) + ': ' + p.bus + (istEbus(p.bus) ? ' · ' + akkuText(p.bus) : '')));
     });
     return zeilen.join('\n');
 }
