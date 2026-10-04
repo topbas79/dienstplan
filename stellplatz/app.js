@@ -8,6 +8,7 @@ const MAX_VERLAUF = 300;
 const MAX_ZIFFERN = 8;
 const MAX_PLAETZE = 200;
 const MAX_STARTNR = 9999;
+// MAX_KM (höchste Reichweite) steht in sprache.js
 // Busnummern mit diesen Anfängen sind E-Busse (einzeln per Schalter abwählbar).
 const EBUS_PRAEFIXE = ['18', '19'];
 
@@ -41,10 +42,13 @@ let zuweisenBus = null;        // Busnummer, die beim nächsten Tippen auf einen
 let offen = null;              // { bereich, platz } im Eingabefenster
 let eingabe = '';
 let eingabeVorbelegt = false;  // erste Taste ersetzt die vorhandene Nummer
-let feld = 'bus';              // aktives Feld im Eingabefenster: 'bus' oder 'akku'
+let feld = 'bus';              // aktives Feld im Eingabefenster: 'bus', 'akku' oder 'km'
 let akkuEingabe = '';
 let akkuVorbelegt = false;
 let akkuBearbeitet = false;    // erst wenn getippt wurde, wird der Akkustand gespeichert
+let kmEingabe = '';
+let kmVorbelegt = false;
+let kmBearbeitet = false;
 let ebusGewaehlt = null;       // null = automatisch, sonst true/false vom E-Bus-Schalter
 let hinweisExtra = '';
 let diktat = false;            // Durchsprechen: hört dauerhaft zu, speichert und springt selbst weiter
@@ -99,12 +103,13 @@ function bereinige(roh) {
             if (!nr || !info) return;
             if (info.ebus === false) {
                 // "kein E-Bus" nur merken, wo es die Regel nach Nummer überstimmt
-                if (ebusNachNummer(nr)) d.busse[nr] = { ebus: false, akku: null, akkuZeit: null };
+                if (ebusNachNummer(nr)) d.busse[nr] = { ebus: false, akku: null, km: null, akkuZeit: null };
                 return;
             }
             if (info.ebus !== true) return;
             const akku = Number.isInteger(info.akku) && info.akku >= 0 && info.akku <= 100 ? info.akku : null;
-            d.busse[nr] = { ebus: true, akku, akkuZeit: akku !== null && Number.isFinite(info.akkuZeit) ? info.akkuZeit : null };
+            const km = Number.isInteger(info.km) && info.km >= 0 && info.km <= MAX_KM ? info.km : null;
+            d.busse[nr] = { ebus: true, akku, km, akkuZeit: (akku !== null || km !== null) && Number.isFinite(info.akkuZeit) ? info.akkuZeit : null };
         });
     }
     return d;
@@ -174,6 +179,10 @@ function akkuVon(nr) {
     return istEbus(nr) && daten.busse[nr] ? daten.busse[nr].akku : null;
 }
 
+function kmVon(nr) {
+    return istEbus(nr) && daten.busse[nr] && Number.isInteger(daten.busse[nr].km) ? daten.busse[nr].km : null;
+}
+
 function findePlatz(bereichId, platzId) {
     const bereich = daten.bereiche.find((b) => b.id === bereichId);
     const platz = bereich && bereich.plaetze.find((p) => p.id === platzId);
@@ -209,7 +218,7 @@ function aenderungFertig(text) {
 
 // Bus auf einen Platz stellen und/oder E-Bus-Kennzeichen und Akkustand ändern – als eine Änderung (ein Rückgängig).
 // opt.ebus: true/false = ausdrücklich gewählt, undefined = bleibt bzw. automatisch auf Ladeplätzen.
-// opt.akku: Zahl 0–100, null = löschen, undefined = unverändert.
+// opt.akku: Zahl 0–100, null = löschen, undefined = unverändert. opt.km (Reichweite) genauso, 0–999.
 function speicherePlatz(bereich, platz, roh, opt = {}) {
     const nr = normalisiere(roh);
     if (!nr) { freigeben(bereich, platz); return; }
@@ -233,9 +242,9 @@ function speicherePlatz(bereich, platz, roh, opt = {}) {
     const ebus = opt.ebus !== undefined ? opt.ebus : istEbus(nr) || bereich.laden;
     if (ebus !== istEbus(nr)) texte.push(ebus ? 'E-Bus' : 'kein E-Bus');
     if (ebus) {
-        if (!daten.busse[nr] || !daten.busse[nr].ebus) daten.busse[nr] = { ebus: true, akku: null, akkuZeit: null };
+        if (!daten.busse[nr] || !daten.busse[nr].ebus) daten.busse[nr] = { ebus: true, akku: null, km: null, akkuZeit: null };
     } else if (ebusNachNummer(nr)) {
-        daten.busse[nr] = { ebus: false, akku: null, akkuZeit: null };
+        daten.busse[nr] = { ebus: false, akku: null, km: null, akkuZeit: null };
     } else {
         delete daten.busse[nr];
     }
@@ -243,6 +252,11 @@ function speicherePlatz(bereich, platz, roh, opt = {}) {
         daten.busse[nr].akku = opt.akku;
         daten.busse[nr].akkuZeit = opt.akku === null ? null : jetzt;
         texte.push(opt.akku === null ? 'Akku gelöscht' : 'Akku ' + opt.akku + ' %');
+    }
+    if (ebus && opt.km !== undefined && opt.km !== kmVon(nr)) {
+        daten.busse[nr].km = opt.km;
+        if (opt.km !== null) daten.busse[nr].akkuZeit = jetzt;
+        texte.push(opt.km === null ? 'Reichweite gelöscht' : 'Reichweite ' + opt.km + ' km');
     }
     if (!texte.length) return;
     rueckgaengigStand = stand;
@@ -307,11 +321,18 @@ function akkuHtml(nr) {
     return '<span class="akku ' + stufe + '">' + batterieSvg(akku) + akku + ' %</span>';
 }
 
+function reichweiteHtml(nr) {
+    const km = kmVon(nr);
+    return km === null ? '' : '<span class="reichweite">' + km + ' km</span>';
+}
+
+// "Akku 64 % · 150 km (21:14)" – Uhrzeit der letzten Akku-/Reichweiten-Eingabe
 function akkuText(nr) {
     if (!istEbus(nr)) return '';
     const akku = akkuVon(nr);
-    const zeit = akku !== null && daten.busse[nr].akkuZeit;
-    return akku === null ? 'Akku ? %' : 'Akku ' + akku + ' %' + (zeit ? ' (' + zeitText(zeit) + ')' : '');
+    const km = kmVon(nr);
+    const zeit = (akku !== null || km !== null) && daten.busse[nr].akkuZeit;
+    return (akku === null ? 'Akku ? %' : 'Akku ' + akku + ' %') + (km !== null ? ' · ' + km + ' km' : '') + (zeit ? ' (' + zeitText(zeit) + ')' : '');
 }
 
 const LADEZEICHEN = '<svg class="ladezeichen" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-label="Ladeplätze"><path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12L13 2Z"></path></svg>';
@@ -407,7 +428,7 @@ function renderPlaetze() {
                 '<span class="platz-label">' + esc(label) + '</span>' +
                 '<span class="platz-bus">' + (platz.bus ? esc(platz.bus) : 'frei') + '</span>' +
                 (platz.bus && istEbus(platz.bus)
-                    ? akkuHtml(platz.bus)
+                    ? akkuHtml(platz.bus) + reichweiteHtml(platz.bus)
                     : '<span class="platz-zeit">' + (platz.bus ? esc(zeitText(platz.zeit)) : '&nbsp;') + '</span>') +
                 '</button>';
         }).join('');
@@ -481,7 +502,7 @@ function renderListe() {
         '<button type="button" class="zeile" data-bereich="' + esc(e.bereich.id) + '" data-platz="' + esc(e.platz.id) + '">' +
         '<span class="zeile-bus">' + esc(e.platz.bus) + '</span>' +
         '<span class="zeile-platz">' + esc(kurzLabel(e.bereich, e.platz)) + '<span class="leise">' + esc(e.bereich.name) + '</span></span>' +
-        akkuHtml(e.platz.bus) +
+        akkuHtml(e.platz.bus) + reichweiteHtml(e.platz.bus) +
         '<span class="zeile-zeit leise">' + esc(zeitText(e.platz.zeit)) + '</span>' +
         '</button>'
     ).join('') + '</div>';
@@ -573,6 +594,9 @@ function oeffneEingabe(bereich, platz) {
     akkuEingabe = '';
     akkuVorbelegt = false;
     akkuBearbeitet = false;
+    kmEingabe = '';
+    kmVorbelegt = false;
+    kmBearbeitet = false;
     ebusGewaehlt = null;
     hinweisExtra = diktat ? DIKTAT_HINWEIS : '';
     feld = 'bus';
@@ -606,7 +630,7 @@ function renderEingabe() {
     $('#sheetInfo').textContent = bereich.name + ' · ' + (platz.bus ? 'jetzt: Bus ' + platz.bus + (platz.zeit ? ' (seit ' + zeitText(platz.zeit) + ')' : '') : 'frei');
     const nr = normalisiere(eingabe);
     const mitAkku = ebusAktiv();
-    if (!mitAkku && feld === 'akku') feld = 'bus';
+    if (!mitAkku && feld !== 'bus') feld = 'bus';
 
     const busFeld = $('#anzeigeBus');
     $('#anzeigeText').textContent = eingabe;
@@ -622,6 +646,14 @@ function renderEingabe() {
     akkuFeld.classList.toggle('vorbelegt', akkuVorbelegt && feld === 'akku');
     akkuFeld.classList.toggle('leer', !akkuWert);
     akkuFeld.classList.toggle('aktiv', feld === 'akku');
+
+    const kmFeld = $('#anzeigeKm');
+    const kmWert = kmBearbeitet || feld === 'km' ? kmEingabe : kmVorschlag();
+    kmFeld.hidden = !mitAkku;
+    $('#kmText').textContent = kmWert;
+    kmFeld.classList.toggle('vorbelegt', kmVorbelegt && feld === 'km');
+    kmFeld.classList.toggle('leer', !kmWert);
+    kmFeld.classList.toggle('aktiv', feld === 'km');
 
     const schalter = $('#ebusSchalter');
     schalter.hidden = !nr;
@@ -642,6 +674,8 @@ function renderEingabe() {
     const weiter = naechsterPlatz(bereich, platz);
     $('#btnWeiter').textContent = feld === 'bus' && mitAkku
         ? 'Weiter › Akku'
+        : feld === 'akku' && mitAkku
+        ? 'Weiter › km'
         : weiter
         ? 'Weiter › ' + (weiter.bereich === bereich ? kurzLabel(weiter.bereich, weiter.platz) : weiter.bereich.kuerzel ? platzLabel(weiter.bereich, weiter.platz) : weiter.bereich.name)
         : 'Fertig';
@@ -669,10 +703,19 @@ function akkuVorschlag() {
     return akku === null ? '' : String(akku);
 }
 
+function kmVorschlag() {
+    const km = kmVon(normalisiere(eingabe));
+    return km === null ? '' : String(km);
+}
+
 function aktiviereFeld(neu, zeichnen = true) {
     if (neu === 'akku' && !akkuBearbeitet) {
         akkuEingabe = akkuVorschlag();
         akkuVorbelegt = akkuEingabe !== '';
+    }
+    if (neu === 'km' && !kmBearbeitet) {
+        kmEingabe = kmVorschlag();
+        kmVorbelegt = kmEingabe !== '';
     }
     feld = neu;
     hinweisExtra = '';
@@ -696,10 +739,28 @@ function tasteAkku(t) {
     renderEingabe();
 }
 
+function tasteKm(t) {
+    if (t === '⌫') kmEingabe = kmVorbelegt ? '' : kmEingabe.slice(0, -1);
+    else if (t === 'C') kmEingabe = '';
+    else if (/^[0-9]$/.test(t)) {
+        const neu = (kmVorbelegt ? '' : kmEingabe) + t;
+        if (Number(neu) > MAX_KM) {
+            hinweisExtra = 'Höchstens ' + MAX_KM + ' km';
+            renderEingabe();
+            return;
+        }
+        kmEingabe = String(Number(neu));
+    } else return;
+    kmVorbelegt = false;
+    kmBearbeitet = true;
+    renderEingabe();
+}
+
 function taste(t) {
     if (!offen) return;
     hinweisExtra = '';
     if (feld === 'akku') { tasteAkku(t); return; }
+    if (feld === 'km') { tasteKm(t); return; }
     if (t === '⌫') {
         eingabe = eingabeVorbelegt ? '' : eingabe.slice(0, -1);
     } else if (t === 'C') {
@@ -719,7 +780,8 @@ function uebernehmeEingabe() {
     const ebus = ebusAktiv();
     speicherePlatz(bereich, platz, nr, {
         ebus: ebusGewaehlt !== null ? ebus : undefined,
-        akku: ebus && akkuBearbeitet ? (akkuEingabe === '' ? null : Number(akkuEingabe)) : undefined
+        akku: ebus && akkuBearbeitet ? (akkuEingabe === '' ? null : Number(akkuEingabe)) : undefined,
+        km: ebus && kmBearbeitet ? (kmEingabe === '' ? null : Number(kmEingabe)) : undefined
     });
 }
 
@@ -731,8 +793,9 @@ function speichernUndSchliessen() {
 
 function speichernUndWeiter() {
     if (!offen) return;
-    // Bei E-Bussen erst noch den Akkustand abfragen
+    // Bei E-Bussen erst noch Akkustand und Reichweite abfragen
     if (feld === 'bus' && ebusAktiv()) { aktiviereFeld('akku'); return; }
+    if (feld === 'akku' && ebusAktiv()) { aktiviereFeld('km'); return; }
     speichereUndNaechster();
 }
 
@@ -748,7 +811,7 @@ function speichereUndNaechster() {
 
 // ---------- Spracheingabe ----------
 
-const DIKTAT_HINWEIS = 'Ich höre zu … Nummer sagen, bei E-Bussen danach den Akku';
+const DIKTAT_HINWEIS = 'Ich höre zu … Nummer sagen, bei E-Bussen danach Akku und km';
 
 // Durchsprechen: einmal antippen, dann Platz für Platz die Nummer (und bei E-Bussen den Akku) sagen.
 // Ist ein Platz vollständig, wird gespeichert und der nächste geöffnet. "weiter" überspringt, "frei" gibt frei, "stopp" beendet.
@@ -780,7 +843,7 @@ function diktatErgebnis(text) {
     if (!offen) return;
     const erkannt = versteheSprache(text);
     if (erkannt.befehl === 'stopp') { hoereAuf(); return; }
-    const hatZahl = !!erkannt.bus || erkannt.akku !== null;
+    const hatZahl = !!erkannt.bus || erkannt.akku !== null || erkannt.km !== null;
     if (!hatZahl && erkannt.frei) {
         eingabe = '';
         eingabeVorbelegt = false;
@@ -791,11 +854,16 @@ function diktatErgebnis(text) {
     if (!wendeSpracheAn(text, erkannt)) return;
     const nr = normalisiere(eingabe);
     if (!nr) return;
-    if (erkannt.befehl === 'weiter' || !ebusAktiv() || akkuBearbeitet) {
+    // Vollständig: normaler Bus, oder E-Bus mit Akku und Reichweite ("weiter" speichert, was da ist)
+    if (erkannt.befehl === 'weiter' || !ebusAktiv() || (akkuBearbeitet && kmBearbeitet)) {
         speichereUndNaechster();
-    } else {
+    } else if (!akkuBearbeitet) {
         aktiviereFeld('akku', false);
         hinweisExtra = 'E-Bus ' + nr + ' – jetzt den Akku sagen (oder „weiter“)';
+        renderEingabe();
+    } else {
+        aktiviereFeld('km', false);
+        hinweisExtra = 'E-Bus ' + nr + ' – jetzt die Reichweite in km sagen (oder „weiter“)';
         renderEingabe();
     }
 }
@@ -809,12 +877,16 @@ function wendeSpracheAn(text, erkannt) {
         erkannt.bus = erkannt.teilung.bus;
         akku = erkannt.teilung.akku;
     }
-    // Im Akkufeld reicht eine Zahl ("64")
+    let km = erkannt.km;
+    // Im Akku- bzw. km-Feld reicht eine Zahl ("64", "150")
     if (!erkannt.mitAkkuWort && feld === 'akku' && erkannt.bus && Number(erkannt.bus) <= 100) {
         akku = Number(erkannt.bus);
         erkannt.bus = null;
+    } else if (!erkannt.mitAkkuWort && !erkannt.mitKmWort && feld === 'km' && erkannt.bus && Number(erkannt.bus) <= MAX_KM) {
+        km = Number(erkannt.bus);
+        erkannt.bus = null;
     }
-    if (!erkannt.bus && akku === null) {
+    if (!erkannt.bus && akku === null && km === null) {
         if (erkannt.frei) {
             eingabe = '';
             eingabeVorbelegt = false;
@@ -831,12 +903,18 @@ function wendeSpracheAn(text, erkannt) {
         eingabeVorbelegt = false;
         feld = 'bus';
     }
+    if ((akku !== null || km !== null) && normalisiere(eingabe) && !ebusAktiv()) ebusGewaehlt = true;   // wer Akku/km nennt, meint einen E-Bus
     if (akku !== null && normalisiere(eingabe)) {
-        if (!ebusAktiv()) ebusGewaehlt = true;   // wer einen Akku nennt, meint einen E-Bus
         akkuEingabe = String(akku);
         akkuVorbelegt = false;
         akkuBearbeitet = true;
         feld = 'akku';
+    }
+    if (km !== null && normalisiere(eingabe)) {
+        kmEingabe = String(km);
+        kmVorbelegt = false;
+        kmBearbeitet = true;
+        feld = 'km';
     }
     hinweisExtra = 'Verstanden: „' + text.trim() + '“';
     renderEingabe();
