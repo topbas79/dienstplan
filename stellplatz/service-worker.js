@@ -1,9 +1,10 @@
-const CACHE_NAME = 'stellplatz-cache-v7';
+const CACHE_NAME = 'stellplatz-cache-v8';
 const URLS_TO_CACHE = [
   './',
   './index.html',
   './styles.css',
   './app.js',
+  './thema.js',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'

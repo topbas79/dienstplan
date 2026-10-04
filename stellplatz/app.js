@@ -50,6 +50,7 @@ let hinweisExtra = '';
 let fokusVorSheet = null;
 let toastTimer = null;
 let bearbeiteBereichId = null;
+let schnellwahlOffen = false;
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -342,7 +343,7 @@ function render() {
 
     renderSuchErgebnis();
     renderZuweisen();
-    $('#sprungLeiste').hidden = true;
+    $('#schnellwahl').hidden = true;
     if (aktiveAnsicht === 'Plaetze') renderPlaetze();
     if (aktiveAnsicht === 'Liste') renderListe();
     if (aktiveAnsicht === 'Verlauf') renderVerlauf();
@@ -390,7 +391,7 @@ function renderPlaetze() {
             'Danach tippst du einfach auf einen Platz und gibst die Busnummer ein.</p>' +
             '<div class="knopfreihe zentriert umbruch"><button type="button" class="btn primaer" data-aktion="vorlage">Vorlage anlegen</button>' +
             '<button type="button" class="btn" data-aktion="zu-bereichen">Selbst anlegen</button></div></div>';
-        $('#sprungLeiste').hidden = true;
+        $('#schnellwahl').hidden = true;
         return;
     }
     const trefferIds = new Set(trefferListe().map((e) => e.platz.id));
@@ -415,12 +416,46 @@ function renderPlaetze() {
             '</section>';
     }).join('');
 
+    // Schnellwahl: zum Aufklappen, ein Tipp auf einen Bereich springt hin und klappt wieder zu
+    $('#schnellwahl').hidden = daten.bereiche.length < 3 || !!zuweisenBus;
+    $('#schnellwahlInfo').textContent = daten.bereiche.length + ' Bereiche';
+    $('#schnellwahlBtn').setAttribute('aria-expanded', String(schnellwahlOffen));
     const leiste = $('#sprungLeiste');
-    leiste.hidden = daten.bereiche.length < 3 || !!zuweisenBus;
-    leiste.innerHTML = daten.bereiche.map((b) =>
-        '<button type="button" class="chip" data-sprung="' + esc(b.id) + '">' + esc(b.name) +
-        ' <span class="leise">' + b.plaetze.filter((p) => p.bus).length + '/' + b.plaetze.length + '</span></button>'
-    ).join('');
+    leiste.hidden = !schnellwahlOffen;
+    leiste.innerHTML = daten.bereiche.map((b) => {
+        const belegt = b.plaetze.filter((p) => p.bus).length;
+        return '<button type="button" class="chip' + (b.plaetze.length && belegt === b.plaetze.length ? ' voll' : '') + '" data-sprung="' + esc(b.id) + '">' +
+            '<span class="chip-name">' + esc(b.name) + (b.laden ? ' ' + LADEZEICHEN : '') + '</span>' +
+            '<span class="leise">' + belegt + '/' + b.plaetze.length + '</span></button>';
+    }).join('');
+}
+
+function schalteSchnellwahl(offen) {
+    schnellwahlOffen = offen;
+    $('#schnellwahlBtn').setAttribute('aria-expanded', String(offen));
+    $('#sprungLeiste').hidden = !offen;
+}
+
+// ---------- Nachtmodus ----------
+
+function nachtmodusAktiv() {
+    const thema = document.documentElement.dataset.thema;
+    if (thema) return thema === 'dunkel';
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
+function zeigeThema() {
+    const dunkel = nachtmodusAktiv();
+    document.documentElement.classList.toggle('dunkel-aktiv', dunkel);
+    $('#themaBtn').setAttribute('aria-label', dunkel ? 'Nachtmodus ausschalten' : 'Nachtmodus einschalten');
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', dunkel ? '#0f172a' : '#2563eb');
+}
+
+function schalteThema() {
+    const neu = nachtmodusAktiv() ? 'hell' : 'dunkel';
+    document.documentElement.dataset.thema = neu;
+    try { localStorage.setItem('stellplatz-thema', neu); } catch (e) { /* gilt dann nur bis zum Schließen */ }
+    zeigeThema();
 }
 
 function springeZuBereich(id) {
@@ -950,10 +985,17 @@ function init() {
         else springeZuTreffer();
     });
     $('#zuweisenAbbrechen').addEventListener('click', beendeZuweisen);
+    $('#schnellwahlBtn').addEventListener('click', () => schalteSchnellwahl(!schnellwahlOffen));
     $('#sprungLeiste').addEventListener('click', (e) => {
         const chip = e.target.closest('[data-sprung]');
-        if (chip) springeZuBereich(chip.dataset.sprung);
+        if (!chip) return;
+        schalteSchnellwahl(false);
+        springeZuBereich(chip.dataset.sprung);
     });
+
+    zeigeThema();
+    $('#themaBtn').addEventListener('click', schalteThema);
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', zeigeThema);
 
     // Klicks in den Ansichten (Kacheln, Listenzeilen, Knöpfe)
     document.querySelector('main').addEventListener('click', (e) => {

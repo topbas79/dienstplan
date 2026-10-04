@@ -21,8 +21,31 @@
     --ebus: #0d9488;
     --ebus-bg: #e6f7f5;
 }
+:root[data-thema="dunkel"] {
+    --primary: #3b82f6;
+    --bg: #0f172a;
+    --card: #1e293b;
+    --text: #f1f5f9;
+    --text-soft: #94a3b8;
+    --text-faint: #7c8494;
+    --border: #334155;
+    --belegt-bg: #1e3a5f;
+    --belegt-rand: #2f5b92;
+    --treffer-bg: #3a2a0a;
+    --gefahr: #f87171;
+    --erfolg-bg: #0f2e1c;
+    --erfolg-rand: #166534;
+    --schatten: none;
+    --akku-gut: #4ade80;
+    --akku-mittel: #fbbf24;
+    --akku-niedrig: #f87171;
+    --ebus: #2dd4bf;
+    --ebus-bg: #0f2e2b;
+    color-scheme: dark;
+}
+/* Ohne eigene Wahl folgt die App der Handy-Einstellung */
 @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-thema="hell"]) {
         --primary: #3b82f6;
         --bg: #0f172a;
         --card: #1e293b;
@@ -42,6 +65,7 @@
         --akku-niedrig: #f87171;
         --ebus: #2dd4bf;
         --ebus-bg: #0f2e2b;
+        color-scheme: dark;
     }
 }
 
@@ -73,6 +97,9 @@ button:disabled { cursor: default; opacity: 0.45; }
     width: 36px; height: 36px; border-radius: 10px; background: var(--primary);
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
+.thema-btn .icon-sonne { display: none; }
+.dunkel-aktiv .thema-btn .icon-sonne { display: block; }
+.dunkel-aktiv .thema-btn .icon-mond { display: none; }
 .topbar h1 { font-size: 1.2rem; margin: 0; }
 .untertitel { font-size: 0.8rem; color: var(--text-soft); }
 
@@ -132,16 +159,29 @@ body.zuweisen-modus .platz.frei { border-color: var(--treffer); }
 .knopfreihe.umbruch { flex-wrap: wrap; }
 .knopfreihe.zentriert { justify-content: center; }
 
+.schnellwahl { margin-top: 8px; }
+.schnellwahl-kopf {
+    display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 12px;
+    border: 1px solid var(--border); background: var(--card); border-radius: 12px;
+    font-size: 0.92rem; font-weight: 600; text-align: left;
+}
+.schnellwahl-kopf .leise { font-weight: 400; font-size: 0.82rem; flex: 1; }
+.schnellwahl-kopf .pfeil { transition: transform 0.2s; color: var(--text-soft); }
+.schnellwahl-kopf[aria-expanded="true"] { border-radius: 12px 12px 0 0; border-bottom-color: transparent; }
+.schnellwahl-kopf[aria-expanded="true"] .pfeil { transform: rotate(180deg); }
 .sprung-leiste {
-    display: flex; gap: 6px; margin-top: 8px; overflow-x: auto; scrollbar-width: none;
-    margin-left: -16px; margin-right: -16px; padding: 0 16px;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px;
+    padding: 4px 8px 8px; max-height: 55vh; overflow-y: auto;
+    background: var(--card); border: 1px solid var(--border); border-top: 0; border-radius: 0 0 12px 12px;
 }
-.sprung-leiste::-webkit-scrollbar { display: none; }
 .chip {
-    flex-shrink: 0; border: 1px solid var(--border); background: var(--card); border-radius: 999px;
-    padding: 6px 12px; font-size: 0.82rem; font-weight: 600; white-space: nowrap;
+    display: flex; align-items: center; justify-content: space-between; gap: 6px;
+    border: 1px solid var(--border); background: var(--bg); border-radius: 10px;
+    padding: 10px 10px; font-size: 0.86rem; font-weight: 600; text-align: left; min-width: 0;
 }
-.chip .leise { font-weight: 400; font-size: 0.75rem; }
+.chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip .leise { font-weight: 400; font-size: 0.75rem; white-space: nowrap; }
+.chip.voll .leise { color: var(--akku-mittel); font-weight: 600; }
 .vorlage { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-color: var(--primary); }
 .vorlage > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .vorlage .leise { font-size: 0.82rem; }
