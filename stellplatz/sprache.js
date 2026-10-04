@@ -1,12 +1,14 @@
 'use strict';
 
 // Spracheingabe über die eingebaute Spracherkennung des Browsers (Chrome auf Android, Safari).
-// Verstanden werden Busnummer und Akkustand, z. B. "1801 Akku 64", "Bus 1801 mit 64 Prozent" oder nur "Akku 80",
+// Verstanden werden Busnummer, Akkustand und Reichweite, z. B. "1801 Akku 64 Reichweite 150",
+// "Bus 1801 mit 64 Prozent, 150 Kilometer" oder nur "Akku 80",
 // dazu die Befehle "weiter", "frei" und "stopp" für das Durchsprechen ganzer Reihen.
 // Die Erkennung selbst läuft über den Browser-Hersteller (braucht Internet); die App schickt nichts selbst weg.
 
 const SpracheKlasse = window.SpeechRecognition || window.webkitSpeechRecognition || null;
-const DAUER_STILLE_MS = 120000;   // Dauer-Zuhören endet nach 2 Minuten ohne Erkanntes
+const DAUER_STILLE_MS = 120000;
+const MAX_KM = 999;   // Dauer-Zuhören endet nach 2 Minuten ohne Erkanntes
 let laufendeErkennung = null;
 let dauerAktiv = false;
 
@@ -26,8 +28,18 @@ function zahlenIn(text) {
 }
 
 function versteheSprache(roh) {
-    const text = ' ' + String(roh).toLowerCase().replace(/%/g, ' prozent ').replace(/[.,;:!?/-]/g, ' ') + ' ';
-    const ergebnis = { bus: null, akku: null, frei: false, mitAkkuWort: false, befehl: null, teilung: null };
+    let text = ' ' + String(roh).toLowerCase().replace(/%/g, ' prozent ').replace(/[.,;:!?/-]/g, ' ').replace(/\s+/g, ' ') + ' ';
+    const ergebnis = { bus: null, akku: null, km: null, frei: false, mitAkkuWort: false, mitKmWort: false, befehl: null, teilung: null };
+    // Reichweite zuerst herauslösen: "Reichweite 150 (km)" oder "150 Kilometer/km"
+    const kmNach = text.match(/ reichweite (\S+)( kilometer| km)? /);
+    const kmVor = text.match(/ (\S+) (kilometer|km) /);
+    const kmTreffer = kmNach || kmVor;
+    if (kmTreffer) {
+        const kmZahl = zahlenIn(kmTreffer[1]);
+        if (kmZahl.length && Number(kmZahl[0]) <= MAX_KM) ergebnis.km = Number(kmZahl[0]);
+        ergebnis.mitKmWort = true;
+        text = text.slice(0, kmTreffer.index) + ' ' + text.slice(kmTreffer.index + kmTreffer[0].length);
+    }
     let busTeil = text;
     let akkuTeil = '';
     const akkuWort = text.match(/\s(akku|batterie|ladung|ladestand)\s/);

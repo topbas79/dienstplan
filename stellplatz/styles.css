@@ -274,7 +274,8 @@ body.zuweisen-modus .platz.frei { border-color: var(--treffer); }
 .sheet-titel { font-size: 1.25rem; font-weight: 700; }
 .sheet-info { font-size: 0.85rem; color: var(--text-soft); margin-top: 2px; }
 .anzeigen { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; }
-.anzeigen.mit-akku { grid-template-columns: 1.5fr 1fr; }
+.anzeigen.mit-akku { grid-template-columns: 1.35fr 1fr 1fr; gap: 6px; }
+.anzeigen.mit-akku .anzeige-wert { font-size: 1.9rem; letter-spacing: 0.02em; }
 .anzeige {
     position: relative; height: 64px; padding: 0 8px; border-radius: 12px; background: var(--bg); border: 1.5px solid var(--border);
     display: flex; align-items: center; justify-content: center;
@@ -321,6 +322,8 @@ body.zuweisen-modus .platz.frei { border-color: var(--treffer); }
 .akku.niedrig { color: var(--akku-niedrig); }
 .akku.unbekannt { color: var(--text-faint); font-weight: 500; }
 .platz .akku { font-size: 0.72rem; }
+.reichweite { font-size: 0.72rem; font-weight: 600; color: var(--text-soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.zeile .reichweite { font-size: 0.8rem; }
 .ladezeichen { color: var(--ebus); vertical-align: -1px; }
 .tastatur { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .tastatur button {
