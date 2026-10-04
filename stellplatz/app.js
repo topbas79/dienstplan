@@ -939,7 +939,7 @@ function diktatErgebnis(text) {
         return;
     }
     if (!hatZahl && erkannt.rot !== null) {
-        if (!normalisiere(eingabe)) { rueckmeldung('nochmal', [60, 80, 60]); return; }
+        if (!normalisiere(eingabe)) { rueckmeldung(null, [60, 80, 60]); return; }
         schalteRot(erkannt.rot);
         rueckmeldung(erkannt.rot ? 'rote Karte' : 'fahrbereit');
         return;
@@ -949,7 +949,8 @@ function diktatErgebnis(text) {
         gespeichertUndWeiter(nrJetzt ? nummerZumSprechen(nrJetzt) + ' gespeichert' : 'weiter');
         return;
     }
-    if (!wendeSpracheAn(text, erkannt)) { rueckmeldung('nochmal', [60, 80, 60]); return; }
+    // Nicht verstanden: nur vibrieren, nichts ansagen (eine Ansage könnte selbst wieder gehört werden)
+    if (!wendeSpracheAn(text, erkannt)) { rueckmeldung(null, [60, 80, 60]); return; }
     const nr = normalisiere(eingabe);
     if (!nr) return;
     // Vollständig: normaler Bus, oder E-Bus mit Akku und Reichweite ("weiter" speichert, was da ist)
