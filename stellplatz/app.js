@@ -8,6 +8,8 @@ const MAX_VERLAUF = 300;
 const MAX_ZIFFERN = 8;
 const MAX_PLAETZE = 200;
 const MAX_STARTNR = 9999;
+// Busnummern mit diesen Anfängen sind E-Busse (einzeln per Schalter abwählbar).
+const EBUS_PRAEFIXE = ['18', '19'];
 
 // Bereiche des eigenen Betriebshofs (die Halle hat 8 Spuren mit je mehreren Bussen hintereinander), per Knopf anlegbar. Platzanzahl danach unter "Bereiche → Ändern" anpassen.
 // laden: Ladeplätze – Busse, die dort abgestellt werden, gelten automatisch als E-Bus (mit Akkuanzeige).
@@ -92,7 +94,13 @@ function bereinige(roh) {
         Object.keys(roh.busse).forEach((schluessel) => {
             const nr = normalisiere(schluessel);
             const info = roh.busse[schluessel];
-            if (!nr || !info || info.ebus !== true) return;
+            if (!nr || !info) return;
+            if (info.ebus === false) {
+                // "kein E-Bus" nur merken, wo es die Regel nach Nummer überstimmt
+                if (ebusNachNummer(nr)) d.busse[nr] = { ebus: false, akku: null, akkuZeit: null };
+                return;
+            }
+            if (info.ebus !== true) return;
             const akku = Number.isInteger(info.akku) && info.akku >= 0 && info.akku <= 100 ? info.akku : null;
             d.busse[nr] = { ebus: true, akku, akkuZeit: akku !== null && Number.isFinite(info.akkuZeit) ? info.akkuZeit : null };
         });
@@ -149,12 +157,19 @@ function findeBus(nr) {
     return allePlaetze().find((e) => e.platz.bus === nr) || null;
 }
 
+function ebusNachNummer(nr) {
+    return EBUS_PRAEFIXE.some((praefix) => nr.startsWith(praefix));
+}
+
+// Ausdrücklich gesetzt (Schalter, Ladeplatz) gilt vor der Regel nach Nummer.
 function istEbus(nr) {
-    return !!(nr && daten.busse[nr] && daten.busse[nr].ebus);
+    if (!nr) return false;
+    const info = daten.busse[nr];
+    return info ? info.ebus : ebusNachNummer(nr);
 }
 
 function akkuVon(nr) {
-    return istEbus(nr) ? daten.busse[nr].akku : null;
+    return istEbus(nr) && daten.busse[nr] ? daten.busse[nr].akku : null;
 }
 
 function findePlatz(bereichId, platzId) {
@@ -214,12 +229,13 @@ function speicherePlatz(bereich, platz, roh, opt = {}) {
         texte.push(text);
     }
     const ebus = opt.ebus !== undefined ? opt.ebus : istEbus(nr) || bereich.laden;
-    if (ebus && !istEbus(nr)) {
-        daten.busse[nr] = { ebus: true, akku: null, akkuZeit: null };
-        texte.push('E-Bus');
-    } else if (!ebus && istEbus(nr)) {
+    if (ebus !== istEbus(nr)) texte.push(ebus ? 'E-Bus' : 'kein E-Bus');
+    if (ebus) {
+        if (!daten.busse[nr] || !daten.busse[nr].ebus) daten.busse[nr] = { ebus: true, akku: null, akkuZeit: null };
+    } else if (ebusNachNummer(nr)) {
+        daten.busse[nr] = { ebus: false, akku: null, akkuZeit: null };
+    } else {
         delete daten.busse[nr];
-        texte.push('kein E-Bus');
     }
     if (ebus && opt.akku !== undefined && opt.akku !== daten.busse[nr].akku) {
         daten.busse[nr].akku = opt.akku;
@@ -291,8 +307,9 @@ function akkuHtml(nr) {
 
 function akkuText(nr) {
     if (!istEbus(nr)) return '';
-    const info = daten.busse[nr];
-    return info.akku === null ? 'Akku ? %' : 'Akku ' + info.akku + ' %' + (info.akkuZeit ? ' (' + zeitText(info.akkuZeit) + ')' : '');
+    const akku = akkuVon(nr);
+    const zeit = akku !== null && daten.busse[nr].akkuZeit;
+    return akku === null ? 'Akku ? %' : 'Akku ' + akku + ' %' + (zeit ? ' (' + zeitText(zeit) + ')' : '');
 }
 
 const LADEZEICHEN = '<svg class="ladezeichen" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-label="Ladeplätze"><path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12L13 2Z"></path></svg>';
