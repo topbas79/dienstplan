@@ -9,20 +9,20 @@ const MAX_ZIFFERN = 8;
 const MAX_PLAETZE = 200;
 const MAX_STARTNR = 9999;
 
-// Bereiche des eigenen Betriebshofs, per Knopf anlegbar. Platzanzahl danach unter "Bereiche → Ändern" anpassen.
+// Bereiche des eigenen Betriebshofs (die Halle hat 8 Spuren mit je mehreren Bussen hintereinander), per Knopf anlegbar. Platzanzahl danach unter "Bereiche → Ändern" anpassen.
 const VORLAGE = [
     { name: 'Tanne 1', anzahl: 10 },
     { name: 'Tanne 2', anzahl: 10 },
     { name: 'Tanne 3', anzahl: 10 },
     { name: 'T14 / T15', kuerzel: 'T', start: 14, anzahl: 2 },
-    { name: 'Halle 1', anzahl: 10 },
-    { name: 'Halle 2', anzahl: 10 },
-    { name: 'Halle 3', anzahl: 10 },
-    { name: 'Halle 4', anzahl: 10 },
-    { name: 'Halle 5', anzahl: 10 },
-    { name: 'Halle 6', anzahl: 10 },
-    { name: 'Halle 7', anzahl: 10 },
-    { name: 'Halle 8', anzahl: 10 },
+    { name: 'Halle Spur 1', anzahl: 5 },
+    { name: 'Halle Spur 2', anzahl: 5 },
+    { name: 'Halle Spur 3', anzahl: 5 },
+    { name: 'Halle Spur 4', anzahl: 5 },
+    { name: 'Halle Spur 5', anzahl: 5 },
+    { name: 'Halle Spur 6', anzahl: 5 },
+    { name: 'Halle Spur 7', anzahl: 5 },
+    { name: 'Halle Spur 8', anzahl: 5 },
     { name: 'Platte', anzahl: 10 },
     { name: 'Rechter Umlauf', anzahl: 10 },
     { name: 'Werkstattbüro', anzahl: 10 },
@@ -104,7 +104,7 @@ function normalisiere(nr) {
 }
 
 // Voller Name eines Platzes, eindeutig über alle Bereiche:
-// mit Kürzel "A" → A3, mit Kürzel "T1" → T1-3 (sonst wäre T13 mehrdeutig), ohne Kürzel → "Halle 1 · Platz 3".
+// mit Kürzel "A" → A3, mit Kürzel "T1" → T1-3 (sonst wäre T13 mehrdeutig), ohne Kürzel → "Halle Spur 3 · Platz 2".
 function platzNr(bereich, platz) {
     return bereich.start + bereich.plaetze.indexOf(platz);
 }
@@ -294,7 +294,7 @@ function renderPlaetze() {
     const el = $('#ansichtPlaetze');
     if (!daten.bereiche.length) {
         el.innerHTML = '<div class="karte leer-zustand"><h2>Willkommen!</h2><p>Lege zuerst deine Stellplätze an. ' +
-            'Die Vorlage enthält Tanne 1–3, T14/T15, Halle 1–8, Platte, Rechter Umlauf, Werkstattbüro, Giebel und Kantine. ' +
+            'Die Vorlage enthält Tanne 1–3, T14/T15, die Halle mit Spur 1–8, Platte, Rechter Umlauf, Werkstattbüro, Giebel und Kantine. ' +
             'Danach tippst du einfach auf einen Platz und gibst die Busnummer ein.</p>' +
             '<div class="knopfreihe zentriert umbruch"><button type="button" class="btn primaer" data-aktion="vorlage">Vorlage anlegen</button>' +
             '<button type="button" class="btn" data-aktion="zu-bereichen">Selbst anlegen</button></div></div>';
@@ -374,12 +374,12 @@ function renderBereiche() {
     const neu = '<form class="karte formular" id="formNeu">' +
         '<h2>Neuer Bereich</h2>' +
         '<div class="felder">' +
-        '<label class="breit">Name<input name="name" required maxlength="40" placeholder="z. B. Halle 1"></label>' +
+        '<label class="breit">Name<input name="name" required maxlength="40" placeholder="z. B. Tanne 1"></label>' +
         '<label>Kürzel<input name="kuerzel" maxlength="6" placeholder="optional" autocapitalize="characters"></label>' +
         '<label>Ab Nr.<input name="start" type="number" inputmode="numeric" min="0" max="' + MAX_STARTNR + '" required value="1"></label>' +
         '<label>Plätze<input name="anzahl" type="number" inputmode="numeric" min="1" max="' + MAX_PLAETZE + '" required value="10"></label>' +
         '</div>' +
-        '<p class="leise klein-text">Der Name ist frei wählbar (Halle 1, Tanne 1, Reihe A …). Ohne Kürzel heißen die Plätze „Halle 1 · Platz 1“, „Platz 2“ …; ' +
+        '<p class="leise klein-text">Der Name ist frei wählbar (Tanne 1, Halle Spur 3, Platte …). Ohne Kürzel heißen die Plätze „Tanne 1 · Platz 1“, „Platz 2“ …; ' +
         'mit Kürzel kürzer: „H1“ → H1-1, H1-2 …, „A“ → A1, A2 …. „Ab Nr.“ legt die erste Nummer fest: Kürzel „T“ ab 14 → T14, T15 …</p>' +
         '<button type="submit" class="btn primaer">Bereich anlegen</button>' +
         '</form>';
@@ -423,7 +423,7 @@ function renderBereiche() {
     const fehlend = fehlendeVorlage();
     const vorlage = fehlend.length
         ? '<div class="karte vorlage"><div><strong>Vorlage Betriebshof</strong><span class="leise">' +
-          (fehlend.length === VORLAGE.length ? VORLAGE.length + ' Bereiche: Tanne, Halle 1–8, Platte …' : fehlend.length + ' fehlen noch: ' + esc(fehlend.map((v) => v.name).join(', '))) +
+          (fehlend.length === VORLAGE.length ? VORLAGE.length + ' Bereiche: Tanne, Halle Spur 1–8, Platte …' : fehlend.length + ' fehlen noch: ' + esc(fehlend.map((v) => v.name).join(', '))) +
           '</span></div><button type="button" class="btn primaer klein" data-aktion="vorlage">Anlegen</button></div>'
         : '';
 
