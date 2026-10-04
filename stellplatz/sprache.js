@@ -14,20 +14,77 @@ let laufendeErkennung = null;
 let laufendeRueckrufe = null;
 let dauerAktiv = false;
 let pausiert = false;          // während einer Ansage hört die Erkennung nicht zu (sonst hört sie sich selbst)
+let letzteAnsagen = [];        // { text, bis }: eigene Ansagen, die das Mikrofon nachträglich noch auffangen könnte
 
-const ZAHLWOERTER = {
-    null: 0, eins: 1, ein: 1, eine: 1, zwei: 2, zwo: 2, drei: 3, vier: 4, 'fünf': 5, sechs: 6,
-    sieben: 7, acht: 8, neun: 9, zehn: 10, elf: 11, 'zwölf': 12, hundert: 100, einhundert: 100
-};
+const EINER = { null: 0, ein: 1, eins: 1, eine: 1, zwei: 2, zwo: 2, drei: 3, vier: 4, 'fünf': 5, sechs: 6, sieben: 7, acht: 8, neun: 9 };
+const ZEHNER_BIS_19 = { zehn: 10, elf: 11, 'zwölf': 12, dreizehn: 13, vierzehn: 14, 'fünfzehn': 15, sechzehn: 16, siebzehn: 17, achtzehn: 18, neunzehn: 19 };
+const ZEHNER = { zwanzig: 20, 'dreißig': 30, dreissig: 30, vierzig: 40, 'fünfzig': 50, sechzig: 60, siebzig: 70, achtzig: 80, neunzig: 90 };
+
+function hat(tabelle, wort) {
+    return Object.prototype.hasOwnProperty.call(tabelle, wort);
+}
+
+// Ausgeschriebene Zahl bis 9999 → Zahl, sonst null ("vierundsechzig" → 64, "achtzehnhunderteins" → 1801).
+function zahlAusWort(wort) {
+    if (!wort) return null;
+    const t = wort.indexOf('tausend');
+    if (t >= 0) {
+        const vorne = t === 0 ? 1 : zahlUnter100(wort.slice(0, t));
+        const hinten = wort.slice(t + 7);
+        const rest = hinten ? zahlUnter1000(hinten) : 0;
+        return vorne === null || rest === null ? null : vorne * 1000 + rest;
+    }
+    return zahlUnter1000(wort);
+}
+
+function zahlUnter1000(wort) {
+    const h = wort.indexOf('hundert');
+    if (h >= 0) {
+        // "achtzehnhundert..." (18 × 100) ist bei Busnummern üblich, daher bis 99 vorne erlaubt
+        const vorne = h === 0 ? 1 : zahlUnter100(wort.slice(0, h));
+        const hinten = wort.slice(h + 7).replace(/^und/, '');
+        const rest = hinten ? zahlUnter100(hinten) : 0;
+        return vorne === null || rest === null ? null : vorne * 100 + rest;
+    }
+    return zahlUnter100(wort);
+}
+
+function zahlUnter100(wort) {
+    if (hat(EINER, wort)) return EINER[wort];
+    if (hat(ZEHNER_BIS_19, wort)) return ZEHNER_BIS_19[wort];
+    if (hat(ZEHNER, wort)) return ZEHNER[wort];
+    const und = wort.match(/^(.+)und(.+)$/);
+    if (und && hat(EINER, und[1]) && hat(ZEHNER, und[2])) return EINER[und[1]] + ZEHNER[und[2]];
+    return null;
+}
 
 // Alle Zahlen in einem Text, als Ziffernfolgen ("18 01" → ["18", "01"], "eins acht" → ["1", "8"]).
 function zahlenIn(text) {
     const zahlen = [];
     text.split(/\s+/).forEach((wort) => {
-        if (/^\d+$/.test(wort)) zahlen.push(wort);
-        else if (Object.prototype.hasOwnProperty.call(ZAHLWOERTER, wort)) zahlen.push(String(ZAHLWOERTER[wort]));
+        if (/^\d+$/.test(wort)) { zahlen.push(wort); return; }
+        const zahl = zahlAusWort(wort);
+        if (zahl !== null) zahlen.push(String(zahl));
     });
     return zahlen;
+}
+
+function ohneLeerzeichen(text) {
+    return String(text).toLowerCase().replace(/[^0-9a-zäöüß]/g, '');
+}
+
+// Hat das Mikrofon gerade eine eigene Ansage aufgefangen? (Android meldet das Ende der Ansage oft zu früh.)
+function istEcho(text) {
+    const jetzt = Date.now();
+    letzteAnsagen = letzteAnsagen.filter((a) => a.bis > jetzt);
+    const gehoert = ohneLeerzeichen(text);
+    if (!gehoert) return true;
+    return letzteAnsagen.some((a) => {
+        // Nur Ziffern ("1801"): Echo nur, wenn es genau die angesagte Nummer ist – "23" als Akku nach "23 01 gespeichert" zählt
+        if (/^\d+$/.test(gehoert)) return gehoert === a.text.replace(/\D/g, '');
+        // Mit Wörtern: Echo, wenn das Gehörte ganz in der Ansage steckt ("Akku", "18 01 gespeichert"), nicht aber "Akku 64"
+        return a.text.includes(gehoert);
+    });
 }
 
 function versteheSprache(roh) {
@@ -105,8 +162,10 @@ function hoereZu(rueckrufe, dauer = false) {
         letzteAktivitaet = Date.now();
         let zwischen = '';
         for (let i = e.resultIndex; i < e.results.length; i++) {
-            if (e.results[i].isFinal) rueckrufe.beiErgebnis(e.results[i][0].transcript);
-            else zwischen += e.results[i][0].transcript;
+            const text = e.results[i][0].transcript;
+            if (istEcho(text)) continue;
+            if (e.results[i].isFinal) rueckrufe.beiErgebnis(text);
+            else zwischen += text;
         }
         if (zwischen && rueckrufe.beiZwischen) rueckrufe.beiZwischen(zwischen);
     };
@@ -181,9 +240,15 @@ function sprich(text) {
             if (laufendeRueckrufe) laufendeRueckrufe.beiEnde();
         }
     };
-    ansage.onend = () => setTimeout(weiter, 250);
-    ansage.onerror = () => setTimeout(weiter, 250);
-    setTimeout(weiter, 5000);   // Sicherheitsnetz, falls das Ende der Ansage nie gemeldet wird
+    // Mikrofon erst wieder an, wenn die Ansage sicher vorbei ist: nach dem gemeldeten Ende UND frühestens nach der
+    // geschätzten Sprechdauer (Android meldet das Ende oft sofort, obwohl noch gesprochen wird).
+    const beginn = Date.now();
+    const dauer = 500 + text.length * 70;
+    letzteAnsagen.push({ text: ohneLeerzeichen(text), bis: beginn + dauer + 2000 });
+    const nachDemEnde = () => setTimeout(weiter, Math.max(300, beginn + dauer - Date.now()));
+    ansage.onend = nachDemEnde;
+    ansage.onerror = nachDemEnde;
+    setTimeout(weiter, dauer + 5000);   // Sicherheitsnetz, falls das Ende der Ansage nie gemeldet wird
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(ansage);
 }
