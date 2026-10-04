@@ -120,6 +120,21 @@ body.zuweisen-modus .platz.frei { border-color: var(--treffer); }
 }
 .knopfreihe { display: flex; gap: 6px; align-items: center; }
 .knopfreihe.umbruch { flex-wrap: wrap; }
+.knopfreihe.zentriert { justify-content: center; }
+
+.sprung-leiste {
+    display: flex; gap: 6px; margin-top: 8px; overflow-x: auto; scrollbar-width: none;
+    margin-left: -16px; margin-right: -16px; padding: 0 16px;
+}
+.sprung-leiste::-webkit-scrollbar { display: none; }
+.chip {
+    flex-shrink: 0; border: 1px solid var(--border); background: var(--card); border-radius: 999px;
+    padding: 6px 12px; font-size: 0.82rem; font-weight: 600; white-space: nowrap;
+}
+.chip .leise { font-weight: 400; font-size: 0.75rem; }
+.vorlage { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-color: var(--primary); }
+.vorlage > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.vorlage .leise { font-size: 0.82rem; }
 
 /* ---------- Plätze ---------- */
 .bereich { margin-bottom: 18px; }
@@ -164,7 +179,8 @@ body.zuweisen-modus .platz.frei { border-color: var(--treffer); }
 .zeile.verlauf .zeile-zeit { min-width: 4.5em; }
 
 /* ---------- Bereiche ---------- */
-.formular .felder { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; }
+.formular .felder { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.formular .felder .breit { grid-column: 1 / -1; }
 .formular label { display: flex; flex-direction: column; gap: 4px; font-size: 0.78rem; color: var(--text-soft); font-weight: 600; }
 .formular input {
     width: 100%; min-width: 0; padding: 10px; border-radius: 9px; border: 1px solid var(--border);
@@ -240,7 +256,5 @@ body.sheet-offen .toast { bottom: auto; top: calc(12px + env(safe-area-inset-top
 .toast button { border: 0; background: transparent; color: #93c5fd; font-weight: 700; padding: 4px 2px; white-space: nowrap; }
 
 @media (max-width: 420px) {
-    .formular .felder { grid-template-columns: 1fr 1fr; }
-    .formular .felder label:first-child { grid-column: 1 / -1; }
     .raster { grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 6px; }
 }
