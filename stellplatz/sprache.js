@@ -3,12 +3,13 @@
 // Spracheingabe über die eingebaute Spracherkennung des Browsers (Chrome auf Android, Safari).
 // Verstanden werden Busnummer, Akkustand und Reichweite, z. B. "1801 Akku 64 Reichweite 150",
 // "Bus 1801 mit 64 Prozent, 150 Kilometer" oder nur "Akku 80",
-// dazu die Befehle "weiter", "frei" und "stopp" für das Durchsprechen ganzer Reihen.
+// dazu die Befehle "weiter", "frei" und "stopp" für das Durchsprechen ganzer Reihen
+// sowie "rote Karte" (defekt, nicht fahrbereit) und "fahrbereit" (rote Karte weg).
 // Die Erkennung selbst läuft über den Browser-Hersteller (braucht Internet); die App schickt nichts selbst weg.
 
 const SpracheKlasse = window.SpeechRecognition || window.webkitSpeechRecognition || null;
-const DAUER_STILLE_MS = 120000;
-const MAX_KM = 999;   // Dauer-Zuhören endet nach 2 Minuten ohne Erkanntes
+const DAUER_STILLE_MS = 120000;   // Dauer-Zuhören endet nach 2 Minuten ohne Erkanntes
+const MAX_KM = 999;
 let laufendeErkennung = null;
 let dauerAktiv = false;
 
@@ -29,7 +30,11 @@ function zahlenIn(text) {
 
 function versteheSprache(roh) {
     let text = ' ' + String(roh).toLowerCase().replace(/%/g, ' prozent ').replace(/[.,;:!?/-]/g, ' ').replace(/\s+/g, ' ') + ' ';
-    const ergebnis = { bus: null, akku: null, km: null, frei: false, mitAkkuWort: false, mitKmWort: false, befehl: null, teilung: null };
+    const ergebnis = { bus: null, akku: null, km: null, frei: false, rot: null, mitAkkuWort: false, mitKmWort: false, befehl: null, teilung: null };
+    // Rote Karte: "rote Karte"/"defekt"/"Werkstatt" → true, "fahrbereit"/"repariert"/"Karte weg" → false
+    if (/ (fahrbereit|repariert|karte weg|keine rote karte) /.test(text)) ergebnis.rot = false;
+    else if (/ (rote karte|defekt|werkstatt) /.test(text)) ergebnis.rot = true;
+    text = text.replace(/ (keine rote karte|rote karte|karte weg|fahrbereit|repariert|defekt|werkstatt)(?= )/g, ' ');
     // Reichweite zuerst herauslösen: "Reichweite 150 (km)" oder "150 Kilometer/km"
     const kmNach = text.match(/ reichweite (\S+)( kilometer| km)? /);
     const kmVor = text.match(/ (\S+) (kilometer|km) /);
@@ -67,7 +72,7 @@ function versteheSprache(roh) {
     if (busZiffern) ergebnis.bus = busZiffern.slice(0, 8);
     const akkuZahlen = zahlenIn(akkuTeil);
     if (akkuZahlen.length && Number(akkuZahlen[0]) <= 100) ergebnis.akku = Number(akkuZahlen[0]);
-    ergebnis.frei = /\s(frei|freigeben|leer|weg)\s/.test(text);
+    ergebnis.frei = /\s(frei|freigeben|leer)\s/.test(text);
     if (/\s(stopp|stop|stoppen|fertig|ende|beenden|aufhören)\s/.test(text)) ergebnis.befehl = 'stopp';
     else if (/\s(weiter|nächster|nächste|überspringen)\s/.test(text)) ergebnis.befehl = 'weiter';
     return ergebnis;

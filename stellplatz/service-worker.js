@@ -1,4 +1,4 @@
-const CACHE_NAME = 'stellplatz-cache-v12';
+const CACHE_NAME = 'stellplatz-cache-v14';
 const URLS_TO_CACHE = [
   './',
   './index.html',
