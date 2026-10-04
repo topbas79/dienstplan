@@ -565,6 +565,7 @@ function renderBereiche() {
 // ---------- Eingabefenster (Ziffernblock) ----------
 
 function oeffneEingabe(bereich, platz) {
+    hoereAuf();
     const warSchonOffen = !!offen;
     offen = { bereich, platz };
     eingabe = platz.bus || '';
@@ -588,6 +589,7 @@ function oeffneEingabe(bereich, platz) {
 
 function schliesseEingabe() {
     if (!offen) return;
+    hoereAuf();
     offen = null;
     $('#sheetHintergrund').hidden = true;
     $('#eingabeSheet').hidden = true;
@@ -739,6 +741,86 @@ function speichernUndWeiter() {
 }
 
 // ---------- Toast ----------
+
+// ---------- Spracheingabe ----------
+
+function spracheImFenster() {
+    const knopf = $('#spracheBtn');
+    if (hoertZu() && knopf.getAttribute('aria-pressed') === 'true') { hoereAuf(); return; }
+    knopf.setAttribute('aria-pressed', 'true');
+    hinweisExtra = 'Ich höre zu … z. B. „1801 Akku 64“';
+    renderEingabe();
+    hoereZu({
+        beiZwischen: (text) => { hinweisExtra = '„' + text.trim() + '“ …'; renderEingabe(); },
+        beiErgebnis: wendeSpracheAn,
+        beiFehler: (code) => { hinweisExtra = spracheFehlerText(code); renderEingabe(); },
+        beiEnde: () => {
+            knopf.setAttribute('aria-pressed', 'false');
+            if (hinweisExtra.startsWith('Ich höre zu')) { hinweisExtra = ''; renderEingabe(); }
+        }
+    });
+}
+
+// Gesprochenes ins Eingabefenster übernehmen; gespeichert wird erst mit Weiter/Speichern.
+function wendeSpracheAn(text) {
+    if (!offen) return;
+    const erkannt = versteheSprache(text);
+    let akku = erkannt.akku;
+    // Im Akkufeld reicht eine Zahl ("64")
+    if (!erkannt.mitAkkuWort && feld === 'akku' && erkannt.bus && Number(erkannt.bus) <= 100) {
+        akku = Number(erkannt.bus);
+        erkannt.bus = null;
+    }
+    if (!erkannt.bus && akku === null) {
+        if (erkannt.frei) {
+            eingabe = '';
+            eingabeVorbelegt = false;
+            feld = 'bus';
+            hinweisExtra = 'Verstanden: frei – mit „Speichern“ freigeben';
+        } else {
+            hinweisExtra = 'Nicht verstanden: „' + text.trim() + '“';
+        }
+        renderEingabe();
+        return;
+    }
+    if (erkannt.bus) {
+        eingabe = erkannt.bus;
+        eingabeVorbelegt = false;
+        feld = 'bus';
+    }
+    if (akku !== null && normalisiere(eingabe)) {
+        if (!ebusAktiv()) ebusGewaehlt = true;   // wer einen Akku nennt, meint einen E-Bus
+        akkuEingabe = String(akku);
+        akkuVorbelegt = false;
+        akkuBearbeitet = true;
+        feld = 'akku';
+    }
+    hinweisExtra = 'Verstanden: „' + text.trim() + '“';
+    renderEingabe();
+}
+
+function spracheInSuche() {
+    const knopf = $('#sucheSpracheBtn');
+    const feldEl = $('#suchFeld');
+    if (hoertZu() && knopf.getAttribute('aria-pressed') === 'true') { hoereAuf(); return; }
+    knopf.setAttribute('aria-pressed', 'true');
+    feldEl.placeholder = 'Ich höre zu …';
+    hoereZu({
+        beiErgebnis: (text) => {
+            const nr = versteheSprache(text).bus;
+            if (!nr) { zeigeToast('Nicht verstanden: „' + text.trim() + '“'); return; }
+            feldEl.value = nr;
+            suchBegriff = normalisiere(nr);
+            render();
+            springeZuTreffer();
+        },
+        beiFehler: (code) => zeigeToast(spracheFehlerText(code)),
+        beiEnde: () => {
+            knopf.setAttribute('aria-pressed', 'false');
+            feldEl.placeholder = 'Bus-Nr. suchen';
+        }
+    });
+}
 
 function zeigeToast(text, mitRueckgaengig) {
     $('#toastText').textContent = text;
@@ -1049,6 +1131,12 @@ function init() {
         if (ebusGewaehlt) aktiviereFeld('akku');
         else { feld = 'bus'; renderEingabe(); }
     });
+    if (spracheVerfuegbar()) {
+        $('#spracheBtn').hidden = false;
+        $('#sucheSpracheBtn').hidden = false;
+        $('#spracheBtn').addEventListener('click', spracheImFenster);
+        $('#sucheSpracheBtn').addEventListener('click', spracheInSuche);
+    }
     $('#btnSpeichern').addEventListener('click', speichernUndSchliessen);
     $('#btnWeiter').addEventListener('click', speichernUndWeiter);
     $('#btnFreigeben').addEventListener('click', () => {

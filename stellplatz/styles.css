@@ -303,6 +303,14 @@ body.zuweisen-modus .platz.frei { border-color: var(--treffer); }
     font-size: 0.82rem; font-weight: 600; color: var(--text-soft);
 }
 .ebus-schalter[aria-pressed="true"] { background: var(--ebus-bg); border-color: var(--ebus); color: var(--ebus); }
+.mikro[aria-pressed="true"], .such-mikro[aria-pressed="true"] {
+    background: var(--gefahr); border-color: var(--gefahr); color: #ffffff; animation: zuhoeren 1.2s ease-in-out infinite;
+}
+@keyframes zuhoeren { 50% { box-shadow: 0 0 0 6px rgba(220, 38, 38, 0.22); } }
+.such-mikro {
+    width: 36px; height: 36px; margin-right: -6px; border: 0; border-radius: 50%; flex-shrink: 0;
+    background: transparent; color: var(--text-soft); display: inline-flex; align-items: center; justify-content: center;
+}
 
 /* ---------- Akku ---------- */
 .akku { display: inline-flex; align-items: center; gap: 3px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }

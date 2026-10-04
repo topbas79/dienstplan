@@ -41,6 +41,7 @@
     <div class="such-feld">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m20 20-4.2-4.2"></path></svg>
         <input id="suchFeld" type="search" inputmode="numeric" enterkeyhint="search" placeholder="Bus-Nr. suchen" autocomplete="off" aria-label="Busnummer suchen">
+        <button type="button" class="such-mikro" id="sucheSpracheBtn" aria-label="Busnummer per Sprache suchen" aria-pressed="false" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg></button>
     </div>
     <div id="suchErgebnis" class="such-ergebnis" role="status" hidden></div>
     <div id="zuweisenBanner" class="zuweisen-banner" role="status" hidden>
@@ -107,6 +108,10 @@
         </button>
     </div>
     <div class="sheet-zeile">
+        <button type="button" class="ebus-schalter mikro" id="spracheBtn" aria-pressed="false" aria-label="Per Sprache eingeben, z. B. 1801 Akku 64" hidden>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg>
+            Sprechen
+        </button>
         <button type="button" class="ebus-schalter" id="ebusSchalter" aria-pressed="false" hidden>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12L13 2Z"></path></svg>
             E-Bus
@@ -141,6 +146,7 @@
 
 <input type="file" id="importDatei" accept="application/json,.json" hidden>
 
+<script src="./sprache.js"></script>
 <script src="./app.js"></script>
 </body>
 </html>
