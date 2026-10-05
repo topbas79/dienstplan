@@ -285,6 +285,7 @@
         if (!confirm('Wirklich abmelden?')) return;
         await sb.auth.signOut();
         await kvLeeren();
+        Object.keys(bvgCache).forEach(k => delete bvgCache[k]);
         // Keine Dienstdaten auf dem Startbildschirm zuruecklassen
         try {
             const WB = capacitorAktiv() && window.Capacitor.Plugins.WidgetBridge;
@@ -4765,6 +4766,7 @@
         knopf.innerHTML = 'Speichere...';
 
         let gespeichert = 0, fehlgeschlagen = 0;
+        bvgHinweiseGesperrt = true;   // nicht nach jedem einzelnen Dienst bei der BVG nachfragen
         for (const eintrag of fertige) {
             try {
                 felderSetzen(eintrag.ergebnis);
@@ -4782,6 +4784,8 @@
 
         knopf.disabled = false;
         knopf.innerHTML = `${ICONS.download} Alle speichern`;
+        bvgHinweiseGesperrt = false;
+        bvgHinweiseTerminieren();   // einmal fuer den zuletzt geladenen Dienst
         await schichtenLaden();
         alert(`✅ ${gespeichert} Dienste gespeichert.` +
               (fehlgeschlagen ? ` ${fehlgeschlagen} fehlgeschlagen.` : ''));
@@ -4807,6 +4811,175 @@
 
     function istAdminNutzer() {
         return !!aktuellesProfil && aktuellesProfil.rolle === 'admin';
+    }
+
+    // ---------- BVG-Meldungen (Umleitungen, verlegte Haltestellen ...) zu den Linien eines Dienstes ----------
+    // Fragt über die Funktion "bvg-meldungen" (Supabase) die aktuellen Meldungen der BVG zu allen Linien
+    // ab, die in einem Dienst vorkommen, und zeigt sie beim Erfassen und im Dienstverlauf an - mit Link
+    // zur Karte der BVG. Die BVG erlaubt den direkten Abruf aus der App nicht, daher der Umweg.
+    // Es werden nur Dienste von heute bis 14 Tage voraus geprüft: die Meldungen beschreiben den aktuellen
+    // Stand und sagen über alte oder weit entfernte Dienste nichts Verlässliches aus.
+    const BVG_CACHE_MS = 10 * 60 * 1000;
+    const BVG_TAGE_VORAUS = 14;
+    const bvgCache = {};            // "171,M46" -> { zeit, daten }
+    let bvgLaufNr = 0;
+    let bvgTimer = null;
+    let bvgHinweiseGesperrt = false;   // beim Stapel-Speichern: nicht nach jedem Dienst neu abfragen
+    let bvgOffenFuer = '';             // welche Meldungsliste der Nutzer aufgeklappt hat ("Linien|Datum")
+
+    function bvgToggle(el) {
+        bvgOffenFuer = el.open ? (el.dataset.schluessel || '') : '';
+        // Die zweite Karte (Erfassen/Verlauf) gleich mitziehen
+        document.querySelectorAll('details.bvg-einklapp').forEach(d => {
+            if (d !== el && (d.dataset.schluessel || '') === (el.dataset.schluessel || '') && d.open !== el.open) d.open = el.open;
+        });
+    }
+
+    // Alle Liniennummern, die in den Dienstdaten vorkommen (Beginn, Ende, Wechsel, Pausen, Fahrten)
+    function dienstLinien(d) {
+        const menge = new Set();
+        if (!d) return [];
+        const merke = (l) => {
+            const k = String(l == null ? '' : l).trim().toUpperCase();
+            if (/^[A-Z0-9]{1,5}$/.test(k)) menge.add(k);
+        };
+        merke(d.beginn_linie); merke(d.ende_linie);
+        (d.wechsel || []).forEach(w => merke(w && w.linie));
+        (d.pausen || []).forEach(p => { if (p) { merke(p.davor_linie); merke(p.danach_linie); } });
+        (d.fahrten || []).forEach(f => merke(f && f.linie));
+        return [...menge].sort();
+    }
+
+    // Gilt die Meldung an diesem Diensttag? (hat spätestens an dem Tag begonnen und ist nicht schon vorbei)
+    function bvgMeldungGiltAm(m, datumStr) {
+        const von = String(m.von || '').slice(0, 10);
+        const bis = String(m.bis || '').slice(0, 10);
+        if (von && von > datumStr) return false;
+        if (bis && bis < datumStr) return false;
+        return true;
+    }
+
+    function bvgDatumKurz(iso) {
+        const t = String(iso || '').slice(0, 10).split('-');
+        return t.length === 3 ? `${t[2]}.${t[1]}.${t[0]}` : '';
+    }
+
+    async function bvgMeldungenLaden(linien) {
+        const schluessel = linien.join(',');
+        const gemerkt = bvgCache[schluessel];
+        if (gemerkt && Date.now() - gemerkt.zeit < BVG_CACHE_MS) return gemerkt.daten;
+        const { data, error } = await sb.functions.invoke('bvg-meldungen', { body: { linien } });
+        if (error) throw error;
+        if (!data || data.fehler || !Array.isArray(data.linien)) throw new Error((data && data.fehler) || 'Keine Antwort');
+        bvgCache[schluessel] = { zeit: Date.now(), daten: data };
+        return data;
+    }
+
+    function bvgHinweiseHtml(daten, linien, datumStr) {
+        // Eine Meldung kann mehrere Linien betreffen (z. B. "Bus M46, 171") - nur einmal zeigen
+        const nachId = new Map();
+        const ungeprueft = [];
+        daten.linien.forEach(l => {
+            if (l.fehler) { ungeprueft.push(l.linie); return; }
+            (l.meldungen || []).forEach(m => {
+                if (!bvgMeldungGiltAm(m, datumStr)) return;
+                const schluessel = m.id || (l.linie + '|' + m.text);
+                if (!nachId.has(schluessel)) nachId.set(schluessel, { m, abgefragt: l.linie });
+            });
+        });
+
+        const rang = (art) => /umleitung/i.test(art) ? 0 : /kein halt/i.test(art) ? 1 : /verlegt/i.test(art) ? 2 : 3;
+        // Neueste Meldungen zuerst (nach Beginn, bei gleichem Beginn nach letzter Aktualisierung)
+        const zeit = (iso) => Date.parse(iso || '') || 0;
+        const eintraege = [...nachId.values()].sort((a, b) =>
+            (zeit(b.m.von) - zeit(a.m.von)) || (zeit(b.m.aktualisiert) - zeit(a.m.aktualisiert)));
+        const istNeu = (m) => zeit(m.von) > Date.now() - 7 * 86400000;
+        const neuAnzahl = eintraege.filter(e => istNeu(e.m)).length;
+        const linienText = linien.join(', ');
+        const stand = daten.abgerufen
+            ? new Date(daten.abgerufen).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : '';
+        const quelle = `<div class="bvg-stand">Quelle: BVG${stand ? ', Stand ' + sicher(stand) + ' Uhr' : ''}${ungeprueft.length ? ' · nicht geprüft: ' + sicher(ungeprueft.join(', ')) : ''}</div>`;
+
+        if (!eintraege.length) {
+            return `<div class="bvg-titel">${ICONS.check} Keine Meldungen der BVG zu ${sicher(linienText)}</div>${quelle}`;
+        }
+
+        const kartenHtml = eintraege.map(({ m, abgefragt }) => {
+            const betroffen = (m.linien || []).filter(l => linien.includes(l));
+            const lt = betroffen.length ? betroffen : [abgefragt];
+            const artKlasse = rang(m.art) === 0 ? 'bvg-art-umleitung' : rang(m.art) === 1 ? 'bvg-art-keinhalt' : rang(m.art) === 2 ? 'bvg-art-verlegt' : '';
+            const von = bvgDatumKurz(m.von);
+            const bis = bvgDatumKurz(m.bis);
+            const zeitraum = bis ? `${von} – ${bis}` : (von ? `seit ${von}` : '');
+            let text = String(m.text || '');
+            if (text.length > 500) text = text.slice(0, 500).replace(/\s+\S*$/, '') + ' …';
+            const kartenLink = (typeof m.karte === 'string' && m.karte.startsWith('https://fahrinfo.vbb.de/'))
+                ? `<a href="${sicher(m.karte)}" target="_blank" rel="noopener noreferrer">Karte ansehen</a>` : '';
+            const bvgLink = `<a href="https://www.bvg.de/de/verbindungen/linienuebersicht/${sicher(encodeURIComponent(lt[0].toLowerCase()))}#stoerungsmeldungen" target="_blank" rel="noopener noreferrer">Auf bvg.de ansehen</a>`;
+            return `<div class="bvg-meldung">
+                <div class="bvg-kopf">
+                    ${lt.map(l => `<span class="bvg-linien">${sicher(l)}</span>`).join('')}
+                    <span class="bvg-art ${artKlasse}">${sicher(m.art || 'Meldung')}</span>
+                    ${istNeu(m) ? '<span class="bvg-neu">Neu</span>' : ''}
+                    ${zeitraum ? `<span class="bvg-seit">${sicher(zeitraum)}</span>` : ''}
+                </div>
+                <div class="bvg-text">${sicher(text)}</div>
+                <div class="bvg-links">${kartenLink}${bvgLink}</div>
+            </div>`;
+        });
+
+        // Alles zugeklappt: nur eine Zeile ("7 Meldungen ...", ggf. mit "n neu"), Antippen zeigt die Liste.
+        // Ob sie offen war, merkt sich bvgToggle, damit sie beim Neuzeichnen nicht wieder zuklappt.
+        const anzahl = eintraege.length;
+        const schluessel = linien.join(',') + '|' + datumStr;
+        const offen = bvgOffenFuer === schluessel ? ' open' : '';
+        return `<details class="bvg-einklapp"${offen} data-schluessel="${sicher(schluessel)}" ontoggle="bvgToggle(this)">
+            <summary class="bvg-titel">
+                ${ICONS.warning}
+                <span class="bvg-titel-text">${anzahl} Meldung${anzahl === 1 ? '' : 'en'} der BVG zu ${sicher(linienText)}${neuAnzahl ? ` <span class="bvg-neu">${neuAnzahl} neu</span>` : ''}</span>
+                <span class="bvg-pfeil" aria-hidden="true">▾</span>
+            </summary>
+            ${kartenHtml.join('')}${quelle}
+        </details>`;
+    }
+
+    function bvgHinweiseTerminieren() {
+        if (bvgHinweiseGesperrt) return;
+        clearTimeout(bvgTimer);
+        // Kurz warten: beim Einlesen eines Dienstes werden Datum und Details nacheinander gesetzt
+        bvgTimer = setTimeout(bvgHinweiseAktualisieren, 150);
+    }
+
+    async function bvgHinweiseAktualisieren() {
+        const ziele = ['bvgHinweiseErfassen', 'bvgHinweiseVerlauf'].map(id => document.getElementById(id)).filter(Boolean);
+        const zeigen = (html, ruhig) => ziele.forEach(z => {
+            z.innerHTML = html;
+            z.classList.toggle('bvg-ruhig', !!ruhig);
+            z.style.display = html ? 'block' : 'none';
+        });
+
+        const lauf = ++bvgLaufNr;
+        const datumStr = (document.getElementById('datum') || {}).value || '';
+        const linien = dienstLinien(aktuelleDetails);
+        if (!sb || !aktuellerNutzer || !linien.length || !/^\d{4}-\d{2}-\d{2}$/.test(datumStr)) { zeigen(''); return; }
+
+        const tage = Math.round((new Date(datumStr + 'T00:00:00') - new Date(heutigesDatumStr() + 'T00:00:00')) / 86400000);
+        if (tage < 0 || tage > BVG_TAGE_VORAUS) { zeigen(''); return; }
+
+        const gemerkt = bvgCache[linien.join(',')];
+        if (!gemerkt || Date.now() - gemerkt.zeit >= BVG_CACHE_MS) {
+            zeigen(`<div class="bvg-titel bvg-leise">Prüfe BVG-Meldungen zu ${sicher(linien.join(', '))} …</div>`, true);
+        }
+        try {
+            const daten = await bvgMeldungenLaden(linien);
+            if (lauf !== bvgLaufNr) return;   // inzwischen wurde ein anderer Dienst geöffnet
+            const html = bvgHinweiseHtml(daten, linien, datumStr);
+            zeigen(html, !/bvg-meldung"/.test(html));
+        } catch (e) {
+            if (lauf !== bvgLaufNr) return;
+            console.log('BVG-Meldungen nicht geladen:', e);
+            zeigen(`<div class="bvg-titel bvg-leise">BVG-Meldungen zu ${sicher(linien.join(', '))} konnten gerade nicht geprüft werden.</div>`, true);
+        }
     }
 
     // Merkt sich die von der KI gelesenen Dienstdetails zur aktuellen Schicht
@@ -4853,6 +5026,7 @@
         const inhalt = document.getElementById('dienstDetailsInhalt');
         const leerEl = document.getElementById('verlaufLeer');
         aktuelleDetails = d;
+        bvgHinweiseTerminieren();   // BVG-Meldungen zu den Linien dieses Dienstes (auch wenn d leer ist: Anzeige leeren)
 
         if (!d || (!d.beginn_ort && !d.ende_ort &&
                    !(d.wechsel || []).length && !(d.pausen || []).length)) {

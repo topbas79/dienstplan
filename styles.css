@@ -342,6 +342,38 @@
         .cal-day.frei-tag { background: #f1f5f9; border-color: #94a3b8; color: #475569; }
         body.dark .cal-day.frei-tag { background: #334155; border-color: #94a3b8; color: #e2e8f0; }
 
+        /* BVG-Meldungen (Umleitungen usw.) zu den Linien eines Dienstes */
+        .bvg-karte {
+            background: var(--card); border: 1px solid var(--border); border-left: 4px solid #f59e0b;
+            border-radius: 12px; padding: 12px 14px; margin: 0 0 16px 0; font-size: 0.88rem;
+        }
+        .bvg-karte.bvg-ruhig { border-left-color: var(--success); }
+        .bvg-titel { font-weight: 700; display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+        .bvg-titel.bvg-leise { font-weight: 500; color: var(--text-soft); margin-bottom: 0; }
+        .bvg-meldung { padding: 10px 0; border-top: 1px solid var(--border); }
+        .bvg-kopf { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 4px; }
+        .bvg-linien { background: var(--primary); color: #fff; font-weight: 700; border-radius: 6px; padding: 1px 7px; font-size: 0.78rem; }
+        .bvg-art { font-weight: 700; font-size: 0.76rem; padding: 1px 8px; border-radius: 999px; background: #e5e7eb; color: #374151; }
+        .bvg-art-umleitung { background: #fef3c7; color: #92400e; }
+        .bvg-art-keinhalt { background: #fee2e2; color: #991b1b; }
+        .bvg-art-verlegt { background: #e0f2fe; color: #075985; }
+        body.dark .bvg-art { background: #334155; color: #e2e8f0; }
+        body.dark .bvg-art-umleitung { background: #78350f; color: #fde68a; }
+        body.dark .bvg-art-keinhalt { background: #450a0a; color: #fca5a5; }
+        body.dark .bvg-art-verlegt { background: #0c4a6e; color: #bae6fd; }
+        .bvg-seit { color: var(--text-soft); font-size: 0.78rem; }
+        .bvg-text { white-space: pre-line; line-height: 1.45; }
+        .bvg-links { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 6px; }
+        .bvg-links a { color: var(--primary); font-weight: 600; text-decoration: underline; }
+        details.bvg-einklapp > summary { list-style: none; cursor: pointer; margin-bottom: 0; }
+        details.bvg-einklapp > summary::-webkit-details-marker { display: none; }
+        details.bvg-einklapp[open] > summary { margin-bottom: 6px; }
+        .bvg-titel-text { flex: 1; min-width: 0; }
+        .bvg-pfeil { margin-left: auto; color: var(--text-soft); transition: transform .2s; }
+        details.bvg-einklapp[open] .bvg-pfeil { transform: rotate(180deg); }
+        .bvg-neu { background: var(--primary); color: #fff; font-weight: 700; font-size: 0.7rem; padding: 1px 7px; border-radius: 999px; white-space: nowrap; }
+        .bvg-stand { color: var(--text-faint); font-size: 0.74rem; margin-top: 8px; }
+
         /* Farbige Markierung im Dienstverlauf */
         .verlauf-zeile { border-left: 4px solid transparent; padding-left: 8px; }
         .verlauf-gruen {
