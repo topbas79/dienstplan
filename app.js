@@ -493,6 +493,7 @@
                 offlineHinweisZeigen(null);
             }
             renderCalendar();
+            startseiteAktualisieren();   // sonst bleibt die Startseite nach dem Start bei den Platzhaltern, bis man "Start" antippt
             aktuelleFahrtWidgetSyncHeute();
             ereignisTageLaden();
         } catch (e) {
@@ -504,6 +505,7 @@
                 gespeicherteSchichten = zwischenspeicher.wert || {};
                 offlineHinweisZeigen(zwischenspeicher.zeit);
                 renderCalendar();
+                startseiteAktualisieren();
                 aktuelleFahrtWidgetSyncHeute();
                 return;
             }
@@ -3148,10 +3150,12 @@
                     ${linieZeile ? `<span>${sicher(linieZeile)}</span>` : ''}
                 </div>
             </div>
+            <div id="bvgHinweiseStart" class="bvg-karte" style="display:none; margin:12px 0 0 0;"></div>
             <div class="af-nav">
                 <button class="btn-secondary" onclick="startDienstZurueck()" ${startDienstIndex === 0 ? 'disabled' : ''}>‹ Zurück</button>
                 <button class="btn-secondary" onclick="startDienstWeiter()" ${startDienstIndex === startDienstListe.length - 1 ? 'disabled' : ''}>Weiter ›</button>
             </div>`;
+        bvgStartHinweisTerminieren();   // BVG-Meldungen zu den Linien dieses Dienstes
     }
 
     function startDienstWeiter() {
@@ -4822,8 +4826,9 @@
     const BVG_CACHE_MS = 10 * 60 * 1000;
     const BVG_TAGE_VORAUS = 14;
     const bvgCache = {};            // "171,M46" -> { zeit, daten }
-    let bvgLaufNr = 0;
+    const bvgLaeufe = { dienst: 0, start: 0 };   // je Anzeige-Gruppe: nur die neueste Abfrage darf zeichnen
     let bvgTimer = null;
+    let bvgStartTimer = null;
     let bvgHinweiseGesperrt = false;   // beim Stapel-Speichern: nicht nach jedem Dienst neu abfragen
     let bvgOffenFuer = '';             // welche Meldungsliste der Nutzer aufgeklappt hat ("Linien|Datum")
 
@@ -4875,7 +4880,7 @@
         return data;
     }
 
-    function bvgHinweiseHtml(daten, linien, datumStr) {
+    function bvgHinweiseHtml(daten, linien, datumStr, kompakt) {
         // Eine Meldung kann mehrere Linien betreffen (z. B. "Bus M46, 171") - nur einmal zeigen
         const nachId = new Map();
         const ungeprueft = [];
@@ -4901,7 +4906,8 @@
         const quelle = `<div class="bvg-stand">Quelle: BVG${stand ? ', Stand ' + sicher(stand) + ' Uhr' : ''}${ungeprueft.length ? ' · nicht geprüft: ' + sicher(ungeprueft.join(', ')) : ''}</div>`;
 
         if (!eintraege.length) {
-            return `<div class="bvg-titel">${ICONS.check} Keine Meldungen der BVG zu ${sicher(linienText)}</div>${quelle}`;
+            // Auf der Startseite bleibt es ruhig: ohne Meldungen wird nichts gezeigt
+            return kompakt ? '' : `<div class="bvg-titel">${ICONS.check} Keine Meldungen der BVG zu ${sicher(linienText)}</div>${quelle}`;
         }
 
         const kartenHtml = eintraege.map(({ m, abgefragt }) => {
@@ -4936,7 +4942,9 @@
         return `<details class="bvg-einklapp"${offen} data-schluessel="${sicher(schluessel)}" ontoggle="bvgToggle(this)">
             <summary class="bvg-titel">
                 ${ICONS.warning}
-                <span class="bvg-titel-text">${anzahl} Meldung${anzahl === 1 ? '' : 'en'} der BVG zu ${sicher(linienText)}${neuAnzahl ? ` <span class="bvg-neu">${neuAnzahl} neu</span>` : ''}</span>
+                <span class="bvg-titel-text">${kompakt
+                    ? `${anzahl} BVG-Meldung${anzahl === 1 ? '' : 'en'}`
+                    : `${anzahl} Meldung${anzahl === 1 ? '' : 'en'} der BVG zu ${sicher(linienText)}`}${neuAnzahl ? ` <span class="bvg-neu">${neuAnzahl} neu</span>` : ''}</span>
                 <span class="bvg-pfeil" aria-hidden="true">▾</span>
             </summary>
             ${kartenHtml.join('')}${quelle}
@@ -4950,36 +4958,59 @@
         bvgTimer = setTimeout(bvgHinweiseAktualisieren, 150);
     }
 
-    async function bvgHinweiseAktualisieren() {
-        const ziele = ['bvgHinweiseErfassen', 'bvgHinweiseVerlauf'].map(id => document.getElementById(id)).filter(Boolean);
+    function bvgStartHinweisTerminieren() {
+        if (bvgHinweiseGesperrt) return;
+        clearTimeout(bvgStartTimer);
+        bvgStartTimer = setTimeout(bvgStartHinweisAktualisieren, 150);
+    }
+
+    // Zeichnet die Meldungen zu den Linien von "details" in die Zielelemente. kompakt = Startseite:
+    // kuerzere Zeile, und ohne Meldungen, waehrend des Ladens und bei Fehlern wird nichts gezeigt.
+    async function bvgHinweiseZeichnen(gruppe, ziele, details, datumStr, kompakt) {
+        ziele = ziele.filter(Boolean);
+        if (!ziele.length) return;
         const zeigen = (html, ruhig) => ziele.forEach(z => {
             z.innerHTML = html;
             z.classList.toggle('bvg-ruhig', !!ruhig);
             z.style.display = html ? 'block' : 'none';
         });
 
-        const lauf = ++bvgLaufNr;
-        const datumStr = (document.getElementById('datum') || {}).value || '';
-        const linien = dienstLinien(aktuelleDetails);
+        const lauf = ++bvgLaeufe[gruppe];
+        const linien = dienstLinien(details);
         if (!sb || !aktuellerNutzer || !linien.length || !/^\d{4}-\d{2}-\d{2}$/.test(datumStr)) { zeigen(''); return; }
 
         const tage = Math.round((new Date(datumStr + 'T00:00:00') - new Date(heutigesDatumStr() + 'T00:00:00')) / 86400000);
         if (tage < 0 || tage > BVG_TAGE_VORAUS) { zeigen(''); return; }
 
         const gemerkt = bvgCache[linien.join(',')];
-        if (!gemerkt || Date.now() - gemerkt.zeit >= BVG_CACHE_MS) {
+        if (!kompakt && (!gemerkt || Date.now() - gemerkt.zeit >= BVG_CACHE_MS)) {
             zeigen(`<div class="bvg-titel bvg-leise">Prüfe BVG-Meldungen zu ${sicher(linien.join(', '))} …</div>`, true);
         }
         try {
             const daten = await bvgMeldungenLaden(linien);
-            if (lauf !== bvgLaufNr) return;   // inzwischen wurde ein anderer Dienst geöffnet
-            const html = bvgHinweiseHtml(daten, linien, datumStr);
+            if (lauf !== bvgLaeufe[gruppe]) return;   // inzwischen wurde ein anderer Dienst geöffnet
+            const html = bvgHinweiseHtml(daten, linien, datumStr, kompakt);
             zeigen(html, !/bvg-meldung"/.test(html));
         } catch (e) {
-            if (lauf !== bvgLaufNr) return;
+            if (lauf !== bvgLaeufe[gruppe]) return;
             console.log('BVG-Meldungen nicht geladen:', e);
-            zeigen(`<div class="bvg-titel bvg-leise">BVG-Meldungen zu ${sicher(linien.join(', '))} konnten gerade nicht geprüft werden.</div>`, true);
+            zeigen(kompakt ? '' : `<div class="bvg-titel bvg-leise">BVG-Meldungen zu ${sicher(linien.join(', '))} konnten gerade nicht geprüft werden.</div>`, true);
         }
+    }
+
+    // Erfassen-Seite und Dienstverlauf: der gerade geladene Dienst
+    function bvgHinweiseAktualisieren() {
+        return bvgHinweiseZeichnen('dienst',
+            ['bvgHinweiseErfassen', 'bvgHinweiseVerlauf'].map(id => document.getElementById(id)),
+            aktuelleDetails, (document.getElementById('datum') || {}).value || '', false);
+    }
+
+    // Startseite: der Dienst, der im "Dienst"-Kasten angezeigt wird
+    function bvgStartHinweisAktualisieren() {
+        const k = startDienstListe[startDienstIndex];
+        const sch = k ? gespeicherteSchichten[k] : null;
+        return bvgHinweiseZeichnen('start', [document.getElementById('bvgHinweiseStart')],
+            sch && !sch.typ ? sch.details : null, k || '', true);
     }
 
     // Merkt sich die von der KI gelesenen Dienstdetails zur aktuellen Schicht
