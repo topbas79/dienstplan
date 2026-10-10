@@ -6060,7 +6060,7 @@
             grid.appendChild(emptyCell);
         }
 
-        let mCount = 0, mNettoMin = 0, mNacht = 0, mSamstag = 0, mSonntag = 0,
+        let mCount = 0, mNettoMin = 0, mNacht = 0, mNachtMin = 0, mSamstag = 0, mSonntag = 0,
             mFeiertag = 0, mSonder = 0, mMehrMin = 0, mMehrEuro = 0, mZuschlaege = 0,
             mKrankheitsaufschlag = 0, mUrlaubsaufschlag = 0;
 
@@ -6118,6 +6118,7 @@
                     mCount++;
                     mNettoMin += sch.nettoMinuten || 0;
                     mNacht += sch.nachtEuro || 0;
+                    mNachtMin += nachtMinutenVon(sch);
                     mSamstag += sch.samstagEuro || 0;
                     mSonntag += sch.sonntagEuro || 0;
                     mFeiertag += sch.feiertagEuro || 0;
@@ -6147,6 +6148,7 @@
 
         setzeM('mSchichten', mCount);
         setzeM('mNetto', zeitText(mNettoMin));
+        setzeM('mNachtStunden', mNachtMin ? zeitText(mNachtMin) : '–');
         setzeM('mNacht', euroText(mNacht));
         setzeM('mSamstag', euroText(mSamstag));
         setzeM('mSonntag', euroText(mSonntag));
@@ -6163,11 +6165,22 @@
 
     }
 
+    // Nachtminuten eines gespeicherten Dienstes. Ältere Einträge ohne nachtMin werden
+    // aus dem Nachtzuschlag zurückgerechnet (Euro ÷ Zuschlagsentgelt ÷ Prozentsatz).
+    function nachtMinutenVon(sch) {
+        if (typeof sch.nachtMin === 'number') return sch.nachtMin;
+        if (sch.nachtEuro > 0 && sch.zz > 0 && ein.nacht > 0) {
+            return Math.round(sch.nachtEuro / (sch.zz * ein.nacht / 100) * 60);
+        }
+        return 0;
+    }
+
     function renderJahresuebersicht(jahr) {
         const el = document.getElementById('jahrLabel');
         if (el) el.innerText = jahr;
 
         let jCount = 0, jZuschlaege = 0, jMehrMin = 0, jKrankheitsaufschlag = 0, jUrlaubsaufschlag = 0;
+        let jNachtMin = 0, jNachtEuro = 0;
         Object.keys(gespeicherteSchichten).forEach(key => {
             if (!key.startsWith(String(jahr))) return;
             const sch = gespeicherteSchichten[key];
@@ -6177,6 +6190,8 @@
             jCount++;
             jZuschlaege += sch.zuschlagSumme || 0;
             jMehrMin += sch.mehrarbeitMinuten || 0;
+            jNachtMin += nachtMinutenVon(sch);
+            jNachtEuro += sch.nachtEuro || 0;
         });
 
         const festJahr = (ein.monatsentgelt + ein.unregelm + ein.dienstklasse) * 12;
@@ -6184,6 +6199,10 @@
         if (s1) s1.innerText = jCount;
         const s2 = document.getElementById('jGesamt');
         if (s2) s2.innerText = euroText(festJahr + jZuschlaege + jKrankheitsaufschlag + jUrlaubsaufschlag);
+        const sn1 = document.getElementById('jNachtStunden');
+        if (sn1) sn1.innerText = jNachtMin ? zeitText(jNachtMin) : '–';
+        const sn2 = document.getElementById('jNacht');
+        if (sn2) sn2.innerText = euroText(jNachtEuro);
         const s3 = document.getElementById('jZeitkonto');
         if (s3) s3.innerText = jMehrMin ? zeitText(jMehrMin) : '–';
         const s4 = document.getElementById('jKrankheitsaufschlag');
