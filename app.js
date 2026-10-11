@@ -251,7 +251,12 @@
                     zeigeMeldung('authMeldung', 'Bitte den Einladungscode eingeben.', 'fehler');
                     return;
                 }
-                const { data, error } = await sb.auth.signUp({ email, password: passwort });
+                // Bestaetigungslink in der E-Mail soll direkt zur App fuehren (nicht zur GitHub-Startseite)
+                const { data, error } = await sb.auth.signUp({
+                    email,
+                    password: passwort,
+                    options: { emailRedirectTo: APP_ADRESSE + '/' }
+                });
                 if (error) throw error;
 
                 if (!data.session) {
