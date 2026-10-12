@@ -244,7 +244,7 @@
         .fm-gruppen-kopf.fm-farbe-rot::before { background: #ef4444; }
         .fm-gruppen-kopf.fm-farbe-gelb::before { background: #eab308; }
         .fm-gruppen-kopf.fm-farbe-gruen::before { background: #22c55e; }
-        .fm-raster { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; }
+        .fm-raster { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 10px; }
         .fm-hinweis {
             margin-top: 14px; padding: 10px 12px; border-radius: 12px; text-align: left;
             font-size: 0.9rem; line-height: 1.45; border-left: 4px solid #9ca3af; background: var(--card); color: var(--text);
