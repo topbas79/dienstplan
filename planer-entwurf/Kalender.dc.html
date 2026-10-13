@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Planer – Kalender</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&amp;family=Barlow:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font-family:inherit;cursor:pointer}
+a{color:#0a0a0a}a:hover{color:#333}
+</style>
+</helmet>
+<div style="width: 390px; height: 1040px; box-sizing: border-box; background: {{accent}}; font-family: 'Barlow', sans-serif; color: #0a0a0a; position: relative; overflow: hidden; padding: 18px 16px 0 16px; display: flex; flex-direction: column; gap: 14px">
+
+  <div style="display: flex; align-items: center; gap: 10px; padding: 0 4px">
+    <button aria-label="Voriger Monat" style="width: 44px; height: 44px; border-radius: 14px; border: none; background: #0a0a0a; display: flex; align-items: center; justify-content: center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffd100" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"></path></svg>
+    </button>
+    <div style="flex: 1; text-align: center; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 34px; line-height: 1">Oktober 2026</div>
+    <button aria-label="Nächster Monat" style="width: 44px; height: 44px; border-radius: 14px; border: none; background: #0a0a0a; display: flex; align-items: center; justify-content: center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffd100" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>
+    </button>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px">
+    <sc-for list="{{wochentage}}" as="w" hint-placeholder-count="7">
+      <div style="text-align: center; font-size: 12px; font-weight: 800; letter-spacing: 1px; padding-bottom: 2px">{{w}}</div>
+    </sc-for>
+    <sc-for list="{{tage}}" as="t" hint-placeholder-count="35">
+      <div style="{{t.stil}}">
+        <div style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 20px; line-height: 1">{{t.nr}}</div>
+        <div style="font-size: 10px; font-weight: 700; line-height: 1.1">{{t.info}}</div>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; font-weight: 600; padding: 0 2px">
+    <span style="display: flex; align-items: center; gap: 5px"><span style="width: 12px; height: 12px; border-radius: 4px; background: #0a0a0a"></span>Dienst</span>
+    <span style="display: flex; align-items: center; gap: 5px"><span style="width: 12px; height: 12px; border-radius: 4px; background: #ff8a3d; border: 1px solid #0a0a0a"></span>Feiertag</span>
+    <span style="display: flex; align-items: center; gap: 5px"><span style="width: 12px; height: 12px; border-radius: 4px; background: #ffffff; border: 1px solid #0a0a0a"></span>Urlaub</span>
+    <span style="display: flex; align-items: center; gap: 5px"><span style="width: 12px; height: 12px; border-radius: 4px; background: #c4b5fd; border: 1px solid #0a0a0a"></span>Krank</span>
+    <span style="display: flex; align-items: center; gap: 5px"><span style="width: 12px; height: 12px; border-radius: 4px; background: rgba(10,10,10,0.14)"></span>Frei</span>
+  </div>
+
+  <div style="background: #ffffff; border: 3px solid #0a0a0a; border-radius: 24px; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+    <div style="display: flex; justify-content: space-between; align-items: center">
+      <div style="font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px">Mittwoch, 14.10.</div>
+      <div style="font-size: 12px; font-weight: 700; background: #0a0a0a; color: {{accent}}; border-radius: 8px; padding: 3px 8px">Dienst 3104</div>
+    </div>
+    <div style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 40px; line-height: 0.95">05:12 – 13:40</div>
+    <div style="font-size: 14px; font-weight: 600; color: #333333">7:58 Std. bezahlt · 198,63 €</div>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 2px">
+      <button style="height: 48px; border-radius: 14px; border: none; background: #0a0a0a; color: {{accent}}; font-weight: 700; font-size: 15px">Bearbeiten</button>
+      <button style="height: 48px; border-radius: 14px; border: 2px solid #0a0a0a; background: #ffffff; color: #0a0a0a; font-weight: 700; font-size: 15px">In Google Kalender</button>
+    </div>
+  </div>
+
+  <div style="font-size: 13px; font-weight: 600; padding: 0 4px">Freien Tag antippen: Dienst erfassen, Krank, Urlaub oder Frei eintragen.</div>
+
+  <nav aria-label="Hauptmenü" style="position: absolute; left: 0; right: 0; bottom: 0; height: 84px; background: #0a0a0a; border-radius: 28px 28px 0 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: center; padding: 0 10px 8px 10px">
+    <button style="height: 56px; border: none; background: transparent; color: #d4d4d4; font-weight: 600; font-size: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d4d4d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11 12 4l9 7"></path><path d="M5 10v10h14V10"></path></svg>Start</button>
+    <button style="height: 56px; border: none; background: transparent; color: #d4d4d4; font-weight: 600; font-size: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d4d4d4" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>Erfassen</button>
+    <button style="height: 56px; margin: 0 4px; border: none; border-radius: 16px; background: {{accent}}; color: #0a0a0a; font-weight: 700; font-size: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"></rect><path d="M3 10h18"></path><path d="M8 3v4"></path><path d="M16 3v4"></path></svg>Kalender</button>
+    <button style="height: 56px; border: none; background: transparent; color: #d4d4d4; font-weight: 600; font-size: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d4d4d4" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 6h12"></path><path d="M8 12h12"></path><path d="M8 18h12"></path><path d="M4 6h.01"></path><path d="M4 12h.01"></path><path d="M4 18h.01"></path></svg>Liste</button>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#ffd100","options":["#ffd100","#ffc400","#ffdd33","#f5b800"]},"$preview":{"width":390,"height":1040}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#ffd100';
+    const basis = 'height: 58px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; box-sizing: border-box;';
+    const arten = {
+      leer: 'background: rgba(255,255,255,0.55); color: #0a0a0a;',
+      dienst: 'background: #0a0a0a; color: ' + accent + ';',
+      feiertag: 'background: #ff8a3d; color: #0a0a0a; border: 2px solid #0a0a0a;',
+      urlaub: 'background: #ffffff; color: #0a0a0a; border: 2px solid #0a0a0a;',
+      krank: 'background: #c4b5fd; color: #0a0a0a; border: 2px solid #0a0a0a;',
+      frei: 'background: rgba(10,10,10,0.14); color: #0a0a0a;'
+    };
+    const plan = {
+      1: ['dienst', '05:12'], 2: ['dienst', '13:05'], 3: ['feiertag', 'Feiert.'], 4: ['frei', 'Frei'],
+      5: ['dienst', '05:40'], 6: ['dienst', '05:40'], 7: ['dienst', '14:22'], 8: ['krank', 'Krank'],
+      9: ['dienst', '06:02'], 10: ['dienst', '12:48'], 11: ['frei', 'Frei'], 12: ['frei', 'Frei'],
+      14: ['dienst', '05:12'], 15: ['dienst', '05:12'], 16: ['dienst', '13:30'], 17: ['dienst', '13:30'],
+      19: ['urlaub', 'Urlaub'], 20: ['urlaub', 'Urlaub'], 21: ['urlaub', 'Urlaub'], 22: ['urlaub', 'Urlaub'], 23: ['urlaub', 'Urlaub']
+    };
+    const tage = [];
+    for (let i = 0; i < 3; i++) tage.push({ nr: '', info: '', stil: 'height: 58px;' });
+    for (let d = 1; d <= 31; d++) {
+      const p = plan[d] || ['leer', ''];
+      let stil = basis + arten[p[0]];
+      if (d === 13) stil += ' outline: 3px solid #0a0a0a; outline-offset: 2px;';
+      if (d === 14) stil += ' box-shadow: 0 0 0 3px #ffffff, 0 0 0 6px #0a0a0a;';
+      tage.push({ nr: String(d), info: p[1], stil });
+    }
+    return { accent, wochentage: ['MO', 'DI', 'MI', 'DO', 'FR', 'SA', 'SO'], tage };
+  }
+}
+</script>
+</body>
+</html>

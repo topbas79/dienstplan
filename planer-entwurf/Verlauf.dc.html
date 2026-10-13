@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Planer – Dienstverlauf</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&amp;family=Barlow:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font-family:inherit;cursor:pointer}
+a{color:#ffd100}a:hover{color:#ffe566}
+</style>
+</helmet>
+<div style="width: 390px; height: 1040px; box-sizing: border-box; background: {{accent}}; font-family: 'Barlow', sans-serif; color: #0a0a0a; position: relative; overflow: hidden; padding: 18px 16px 0 16px; display: flex; flex-direction: column; gap: 12px">
+
+  <div style="display: flex; align-items: center; gap: 12px; padding: 0 4px">
+    <button aria-label="Zurück" style="width: 44px; height: 44px; border-radius: 14px; border: none; background: #0a0a0a; display: flex; align-items: center; justify-content: center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffd100" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"></path></svg>
+    </button>
+    <div style="flex: 1; display: flex; flex-direction: column">
+      <div style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 34px; line-height: 1">Dienstverlauf</div>
+      <div style="font-size: 14px; font-weight: 700">Mi 14.10. · Dienst 3104</div>
+    </div>
+  </div>
+
+  <div style="background: #0a0a0a; color: #ffffff; border-radius: 24px; padding: 18px 16px 8px 16px; display: flex; flex-direction: column">
+    <sc-for list="{{punkte}}" as="p" hint-placeholder-count="6">
+      <div style="display: grid; grid-template-columns: 56px 20px minmax(0, 1fr); gap: 0 10px; min-height: 56px">
+        <div style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 22px; line-height: 1; color: {{p.zeitFarbe}}">{{p.zeit}}</div>
+        <div style="display: flex; flex-direction: column; align-items: center">
+          <div style="{{p.punkt}}"></div>
+          <div style="{{p.linie}}"></div>
+        </div>
+        <div style="padding-bottom: 12px">
+          <div style="font-weight: 700; font-size: 15px; line-height: 1.2">{{p.titel}}</div>
+          <div style="font-size: 13px; color: #c9c9c9">{{p.text}}</div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="background: #ffffff; border: 3px solid #0a0a0a; border-radius: 18px; padding: 12px 14px; display: flex; align-items: flex-start; gap: 10px">
+    <div style="width: 28px; height: 28px; border-radius: 8px; background: #0a0a0a; display: flex; align-items: center; justify-content: center; flex-shrink: 0">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffd100" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 8v5"></path><path d="M12 17h.01"></path></svg>
+    </div>
+    <div style="flex: 1; font-size: 14px; line-height: 1.35"><b>BVG-Meldung Linie 171</b><br>[Text der Meldung, z. B. Umleitung wegen Bauarbeiten]</div>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 10px; padding: 4px 4px 0 4px">
+    <div style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 22px; text-transform: uppercase; flex: 1">Ereignisse</div>
+    <button style="height: 44px; border-radius: 14px; border: none; background: #0a0a0a; color: {{accent}}; font-weight: 700; font-size: 15px; padding: 0 14px; display: flex; align-items: center; gap: 8px">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffd100" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8.5a2 2 0 0 1 2-2h1.2l1-1.5h7.6l1 1.5H19a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8.5Z"></path><circle cx="12" cy="13" r="3.3"></circle></svg>
+      Foto
+    </button>
+  </div>
+  <div style="background: #ffffff; border: 3px solid #0a0a0a; border-radius: 18px; padding: 10px; display: flex; gap: 12px; align-items: center">
+    <div style="width: 72px; height: 72px; border-radius: 12px; background: #e9e8e4; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #5c5a52; text-align: center; flex-shrink: 0">[Foto]</div>
+    <div style="flex: 1">
+      <div style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 20px">08:12</div>
+      <div style="font-size: 14px; font-weight: 600">[Titel des Ereignisses]</div>
+    </div>
+  </div>
+
+  <button style="height: 56px; border-radius: 18px; border: none; background: #0a0a0a; color: {{accent}}; font-weight: 800; font-size: 16px; display: flex; align-items: center; justify-content: center; gap: 10px">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffd100" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><path d="m8.6 13.5 6.8 4"></path><path d="m15.4 6.5-6.8 4"></path></svg>
+    Teilen (WhatsApp &amp; Co.)
+  </button>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#ffd100","options":["#ffd100","#ffc400","#ffdd33","#f5b800"]},"$preview":{"width":390,"height":1040}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#ffd100';
+    const roh = [
+      ['05:12', 'Dienstbeginn', 'Betriebshof', 'start'],
+      ['05:30', 'Übernahme Linie 171', 'Umlauf 5', ''],
+      ['06:41', 'U Johannisthaler Chaussee', 'Endhaltestelle', ''],
+      ['07:31', 'U Hermannplatz', 'Endhaltestelle', ''],
+      ['09:05', 'Pause', 'bis 09:35 · U Johannisthaler Ch.', 'pause'],
+      ['13:40', 'Dienstende', 'U Hermannplatz', 'ende']
+    ];
+    const punkte = roh.map((r, i) => {
+      const wichtig = r[3] === 'start' || r[3] === 'ende';
+      const punkt = 'width: 14px; height: 14px; border-radius: 7px; flex-shrink: 0; box-sizing: border-box; ' +
+        (wichtig ? 'background: ' + accent + ';' : r[3] === 'pause' ? 'background: #0a0a0a; border: 3px solid #ff8a3d;' : 'background: #0a0a0a; border: 3px solid #ffffff;');
+      const linie = i === roh.length - 1 ? 'flex: 1;' : 'flex: 1; width: 3px; background: #3a3a3f; margin: 2px 0;';
+      return { zeit: r[0], titel: r[1], text: r[2], punkt, linie, zeitFarbe: wichtig ? accent : '#ffffff' };
+    });
+    return { accent, punkte };
+  }
+}
+</script>
+</body>
+</html>

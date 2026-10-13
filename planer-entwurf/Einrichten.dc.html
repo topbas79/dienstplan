@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Planer – Verdienst einrichten</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&amp;family=Barlow:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button,select{font-family:inherit}
+button{cursor:pointer}
+a{color:#0a0a0a}a:hover{color:#333}
+</style>
+</helmet>
+<div style="width: 390px; height: 1040px; box-sizing: border-box; background: {{accent}}; font-family: 'Barlow', sans-serif; color: #0a0a0a; position: relative; overflow: hidden; padding: 40px 20px 0 20px; display: flex; flex-direction: column; gap: 16px">
+
+  <div style="font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.4px">Willkommen bei Planer</div>
+
+  <div style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 52px; line-height: 0.95">Verdienst<br>einrichten</div>
+  <div style="font-size: 16px; font-weight: 500; line-height: 1.4">Wähle deine Entgeltgruppe und Stufe. Das Monatsentgelt wird dann automatisch aus der TV-N-Berlin-Tabelle übernommen.</div>
+
+  <div style="background: #ffffff; border: 3px solid #0a0a0a; border-radius: 24px; padding: 18px; display: flex; flex-direction: column; gap: 14px">
+    <div>
+      <label for="v-eg" style="font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 6px">Entgeltgruppe</label>
+      <select id="v-eg" style="width: 100%; height: 54px; border-radius: 14px; border: 2px solid #0a0a0a; padding: 0 12px; font-size: 17px; font-weight: 700; background: #ffffff; color: #0a0a0a"><option>E 5</option></select>
+    </div>
+    <div>
+      <div style="font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px">Stufe</div>
+      <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px">
+        <button style="height: 48px; border-radius: 12px; border: 2px solid #0a0a0a; background: #ffffff; font-weight: 800; font-size: 17px">1</button>
+        <button style="height: 48px; border-radius: 12px; border: 2px solid #0a0a0a; background: #ffffff; font-weight: 800; font-size: 17px">2</button>
+        <button style="height: 48px; border-radius: 12px; border: 2px solid #0a0a0a; background: #0a0a0a; color: {{accent}}; font-weight: 800; font-size: 17px">3</button>
+        <button style="height: 48px; border-radius: 12px; border: 2px solid #0a0a0a; background: #ffffff; font-weight: 800; font-size: 17px">4</button>
+        <button style="height: 48px; border-radius: 12px; border: 2px solid #0a0a0a; background: #ffffff; font-weight: 800; font-size: 17px">5</button>
+        <button style="height: 48px; border-radius: 12px; border: 2px solid #0a0a0a; background: #ffffff; font-weight: 800; font-size: 17px">6</button>
+      </div>
+    </div>
+    <div style="background: #0a0a0a; color: #ffffff; border-radius: 16px; padding: 12px 14px; display: flex; align-items: baseline; justify-content: space-between">
+      <span style="font-size: 13px; font-weight: 700; color: #c9c9c9">Monatsentgelt</span>
+      <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 30px; color: {{accent}}">3.365,46 €</span>
+    </div>
+  </div>
+
+  <div style="flex: 1"></div>
+  <button style="height: 62px; border-radius: 20px; border: none; background: #0a0a0a; color: {{accent}}; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 22px; text-transform: uppercase; letter-spacing: 0.5px">Übernehmen und weiter</button>
+  <button style="height: 52px; margin-bottom: 30px; border-radius: 18px; border: 3px solid #0a0a0a; background: transparent; color: #0a0a0a; font-weight: 700; font-size: 16px">Später einrichten</button>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#ffd100","options":["#ffd100","#ffc400","#ffdd33","#f5b800"]},"$preview":{"width":390,"height":1040}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#ffd100' };
+  }
+}
+</script>
+</body>
+</html>

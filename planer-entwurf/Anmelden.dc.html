@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Planer – Anmelden</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&amp;family=Barlow:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button,input{font-family:inherit}
+button{cursor:pointer}
+a{color:#ffd100}a:hover{color:#ffe566}
+</style>
+</helmet>
+<div style="width: 390px; height: 1040px; box-sizing: border-box; background: {{accent}}; font-family: 'Barlow', sans-serif; color: #0a0a0a; position: relative; overflow: hidden; padding: 70px 20px 0 20px; display: flex; flex-direction: column; align-items: center; gap: 18px">
+
+  <div style="width: 132px; height: 132px; border-radius: 32px; background: {{accent}}; border: 4px solid #0a0a0a; position: relative; display: flex; align-items: center; justify-content: center; box-shadow: 8px 8px 0 #0a0a0a">
+    <svg width="78" height="78" viewBox="0 0 24 24" fill="#0a0a0a" aria-hidden="true"><path d="M7 2.5h10A3.5 3.5 0 0 1 20.5 6v10.5a1.5 1.5 0 0 1-1.5 1.5h-.5v2a1.5 1.5 0 0 1-1.5 1.5h-1a1.5 1.5 0 0 1-1.5-1.5v-2h-5v2A1.5 1.5 0 0 1 8 21.5H7A1.5 1.5 0 0 1 5.5 20v-2H5a1.5 1.5 0 0 1-1.5-1.5V6A3.5 3.5 0 0 1 7 2.5Zm-.5 3a1 1 0 0 0-1 1v3.5a1 1 0 0 0 1 1h4.75V5.5Zm6.25 0v5.5h4.75a1 1 0 0 0 1-1V6.5a1 1 0 0 0-1-1Zm-6.25 8a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5Zm11 0a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5Z"></path></svg>
+    <div style="position: absolute; right: -14px; bottom: -14px; width: 48px; height: 48px; border-radius: 14px; background: #0a0a0a; display: flex; align-items: center; justify-content: center">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffd100" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"></rect><path d="M3 10h18"></path><path d="M8 3v4"></path><path d="M16 3v4"></path></svg>
+    </div>
+  </div>
+
+  <div style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 56px; line-height: 1; margin-top: 10px">PLANER</div>
+  <div style="font-size: 16px; font-weight: 600; margin-top: -10px">Dienste und Verdienst im Blick</div>
+
+  <div style="align-self: stretch; background: #0a0a0a; color: #ffffff; border-radius: 28px; padding: 18px; display: flex; flex-direction: column; gap: 14px; margin-top: 10px">
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; background: #1c1c1e; border-radius: 16px; padding: 4px">
+      <button style="height: 46px; border-radius: 13px; border: none; background: {{accent}}; color: #0a0a0a; font-weight: 800; font-size: 15px">Anmelden</button>
+      <button style="height: 46px; border-radius: 13px; border: none; background: transparent; color: #ffffff; font-weight: 700; font-size: 15px">Registrieren</button>
+    </div>
+    <div>
+      <label for="a-mail" style="font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #c9c9c9; display: block; margin-bottom: 6px">E-Mail</label>
+      <input id="a-mail" type="email" placeholder="name@beispiel.de" style="width: 100%; height: 52px; box-sizing: border-box; border-radius: 14px; border: 2px solid #3a3a3f; background: #1c1c1e; color: #ffffff; padding: 0 14px; font-size: 16px">
+    </div>
+    <div>
+      <label for="a-pw" style="font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #c9c9c9; display: block; margin-bottom: 6px">Passwort</label>
+      <input id="a-pw" type="password" value="geheim123" style="width: 100%; height: 52px; box-sizing: border-box; border-radius: 14px; border: 2px solid #3a3a3f; background: #1c1c1e; color: #ffffff; padding: 0 14px; font-size: 16px">
+    </div>
+    <button style="height: 58px; border-radius: 18px; border: none; background: {{accent}}; color: #0a0a0a; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 22px; text-transform: uppercase; letter-spacing: 0.5px">Anmelden</button>
+    <a href="#" style="text-align: center; font-size: 14px; font-weight: 700; text-decoration: none">Passwort vergessen?</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#ffd100","options":["#ffd100","#ffc400","#ffdd33","#f5b800"]},"$preview":{"width":390,"height":1040}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#ffd100' };
+  }
+}
+</script>
+</body>
+</html>

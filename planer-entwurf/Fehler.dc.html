@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Planer – Fehlermeldungen</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&amp;family=Barlow:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button,input{font-family:inherit}
+button{cursor:pointer}
+a{color:#0a0a0a}a:hover{color:#333}
+</style>
+</helmet>
+<div style="width: 390px; height: 1040px; box-sizing: border-box; background: {{accent}}; font-family: 'Barlow', sans-serif; color: #0a0a0a; position: relative; overflow: hidden; padding: 18px 16px 0 16px; display: flex; flex-direction: column; gap: 12px">
+
+  <div style="display: flex; align-items: center; gap: 12px; padding: 0 4px">
+    <button aria-label="Zurück" style="width: 44px; height: 44px; border-radius: 14px; border: none; background: #0a0a0a; display: flex; align-items: center; justify-content: center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffd100" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"></path></svg>
+    </button>
+    <div style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 34px; line-height: 1; flex: 1">Fehlermeldungen</div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; background: rgba(10,10,10,0.1); border-radius: 18px; padding: 5px">
+    <button style="height: 48px; border-radius: 14px; border: none; background: #0a0a0a; color: {{accent}}; font-weight: 700; font-size: 15px">Solaris Urbino 12</button>
+    <button style="height: 48px; border-radius: 14px; border: none; background: transparent; color: #0a0a0a; font-weight: 700; font-size: 15px">ADL Enviro500</button>
+  </div>
+
+  <div style="position: relative">
+    <label for="fm-suche" style="position: absolute; left: -9999px">Symbol suchen</label>
+    <input id="fm-suche" placeholder="Suchen: Tür, Batterie, Retarder …" style="width: 100%; height: 52px; box-sizing: border-box; border-radius: 16px; border: 3px solid #0a0a0a; background: #ffffff; padding: 0 14px 0 44px; font-size: 16px; font-weight: 500; color: #0a0a0a">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2.4" stroke-linecap="round" aria-hidden="true" style="position: absolute; left: 15px; top: 16px"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+  </div>
+
+  <div style="background: #0a0a0a; color: #ffffff; border-radius: 22px; padding: 14px; display: flex; flex-direction: column; gap: 12px">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <span style="width: 14px; height: 14px; border-radius: 7px; background: #ef4444; flex-shrink: 0"></span>
+      <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 22px; text-transform: uppercase; flex: 1">Rot</span>
+      <span style="font-size: 13px; font-weight: 600; color: #c9c9c9">sofort anhalten</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">
+      <sc-for list="{{rot}}" as="b" hint-placeholder-count="8">
+        <button aria-label="{{b.text}}" style="aspect-ratio: 1 / 1; border-radius: 14px; border: 1px solid #333338; background: #2b2f36; padding: 0; overflow: hidden"><img src="{{b.src}}" alt="" style="width: 100%; height: 100%; object-fit: contain; display: block"></button>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="background: #0a0a0a; color: #ffffff; border-radius: 22px; padding: 14px; display: flex; flex-direction: column; gap: 12px">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <span style="width: 14px; height: 14px; border-radius: 7px; background: #ffd100; flex-shrink: 0"></span>
+      <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 22px; text-transform: uppercase; flex: 1">Gelb</span>
+      <span style="font-size: 13px; font-weight: 600; color: #c9c9c9">anhalten, Service melden</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">
+      <sc-for list="{{gelb}}" as="b" hint-placeholder-count="8">
+        <button aria-label="{{b.text}}" style="aspect-ratio: 1 / 1; border-radius: 14px; border: 1px solid #333338; background: #2b2f36; padding: 0; overflow: hidden"><img src="{{b.src}}" alt="" style="width: 100%; height: 100%; object-fit: contain; display: block"></button>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="font-size: 13px; font-weight: 600; padding: 0 4px">Symbol antippen, um die Bedeutung zu sehen.</div>
+
+  <nav aria-label="Hauptmenü" style="position: absolute; left: 0; right: 0; bottom: 0; height: 84px; background: #0a0a0a; border-radius: 28px 28px 0 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: center; padding: 0 10px 8px 10px">
+    <button style="height: 56px; border: none; background: transparent; color: #d4d4d4; font-weight: 600; font-size: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d4d4d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11 12 4l9 7"></path><path d="M5 10v10h14V10"></path></svg>Start</button>
+    <button style="height: 56px; border: none; background: transparent; color: #d4d4d4; font-weight: 600; font-size: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d4d4d4" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>Erfassen</button>
+    <button style="height: 56px; border: none; background: transparent; color: #d4d4d4; font-weight: 600; font-size: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d4d4d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"></rect><path d="M3 10h18"></path><path d="M8 3v4"></path><path d="M16 3v4"></path></svg>Kalender</button>
+    <button style="height: 56px; border: none; background: transparent; color: #d4d4d4; font-weight: 600; font-size: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d4d4d4" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 6h12"></path><path d="M8 12h12"></path><path d="M8 18h12"></path><path d="M4 6h.01"></path><path d="M4 12h.01"></path><path d="M4 18h.01"></path></svg>Liste</button>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#ffd100","options":["#ffd100","#ffc400","#ffdd33","#f5b800"]},"$preview":{"width":390,"height":1040}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      accent: this.props.accent ?? '#ffd100',
+      rot: [
+        { src: '/_blob/6222cfa19f0c08d8c528e8c45ab87270', text: 'Störung MUX' },
+        { src: '/_blob/80486c97f02c58affe22b77028c38953', text: 'Störung mehr als eines Multiplexers' },
+        { src: '/_blob/1f57eb313add314230af1f1dec824c83', text: 'CAN (PCAN)-Störung' },
+        { src: '/_blob/7ab7da040245c8bf191940b20cfc79ac', text: 'CAN (XCAN)-Störung' },
+        { src: '/_blob/811ab297e47276055f313b62a82ae62d', text: 'Nicht aufgeladen' },
+        { src: '/_blob/d528271469fb4198be44bfd997f0c947', text: 'Spannung unter 21 V' },
+        { src: '/_blob/29bb21d18097ddf0f424523655c23e17', text: 'Störung des Ladegeräts' },
+        { src: '/_blob/c20978d72b0874f5f869de77ac9b868f', text: 'Feststellbremse' }
+      ],
+      gelb: [
+        { src: '/_blob/77672bd79df510eaa8e62b37c0717cb5', text: 'Spannung unter 23 V' },
+        { src: '/_blob/c5cfe900e40c7f45498ddf54b8400270', text: 'Gelbes Symbol 2' },
+        { src: '/_blob/2a7383b48a20dd7dc5d5895b2a383502', text: 'Gelbes Symbol 3' },
+        { src: '/_blob/2b748068c307c103127b0532b4deb2c7', text: 'Gelbes Symbol 4' },
+        { src: '/_blob/8ea0e153d2df65066c18ab6f74241ead', text: 'Gelbes Symbol 5' },
+        { src: '/_blob/d42129c8ded0eb4fd897131c7f5d11c1', text: 'Gelbes Symbol 6' },
+        { src: '/_blob/b6a5b6d47c180c4d12aaca99b9fcf65d', text: 'Gelbes Symbol 7' },
+        { src: '/_blob/57ee73fe3695098e81657615213a53c2', text: 'Gelbes Symbol 8' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
